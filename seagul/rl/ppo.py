@@ -7,18 +7,18 @@ from torch.distributions import Normal, Categorical
 import matplotlib.pyplot as plt
 from tqdm import trange
 
-import gym_ucsb
+import scipy.signal
 
 torch.set_default_dtype(torch.double)
 
 # ============================================================================================
 
 #env_name = 'CartPole-v0' # Discrete
-#env_name = 'InvertedPendulum-v2' # Continous
+env_name = 'InvertedPendulum-v2' # Continous
 #env_name = 'su_cartpole-v0'
 
 #env_name = 'Walker2d-v2'
-env_name = 'lorenz-v0'
+#env_name = 'lorenz-v0'
 # Hard coded policy for the cartpole problem
 # Will eventually want to build up infrastructure to develop a policy depending on:
 # env.action_space
@@ -26,18 +26,7 @@ env_name = 'lorenz-v0'
 
 
 policy = nn.Sequential(
-    nn.Linear(3, 12),
-    nn.LeakyReLU(),
-    nn.Linear(12, 12),
-    nn.LeakyReLU(),
-    nn.Linear(12, 12),
-    nn.LeakyReLU(),
-    nn.Linear(12, 3),
-)
-
-
-value_fn = nn.Sequential(
-    nn.Linear(3, 12),
+    nn.Linear(4, 12),
     nn.LeakyReLU(),
     nn.Linear(12, 12),
     nn.LeakyReLU(),
@@ -46,8 +35,9 @@ value_fn = nn.Sequential(
     nn.Linear(12, 1),
 )
 
-q_fn = nn.Sequential(
-    nn.Linear(3+1, 12),
+
+value_fn = nn.Sequential(
+    nn.Linear(4, 12),
     nn.LeakyReLU(),
     nn.Linear(12, 12),
     nn.LeakyReLU(),
@@ -59,16 +49,19 @@ q_fn = nn.Sequential(
 policy_optimizer = optim.Adam(policy.parameters(), lr=1e-2)
 value_optimizer = optim.Adam(value_fn.parameters(), lr=1e-2)
 
-num_epochs = 20000
+num_epochs = 100
 batch_size = 500  # how many steps we want to use before we update our gradients
 num_steps = 500  # number of steps in an episode (unless we terminate early)
 max_reward = 101
+
+gamma = .99
+lam = .99
+
 
 # ============================================================================================
 
 
 # I guess we'll start with a categorical policy
-# TODO investigate the cost of action.detach.numpy() and torch.Tensor(state)
 variance = 0.1
 def select_action(policy, state):
 
@@ -89,7 +82,25 @@ def select_action(policy, state):
 #     return action.detach().numpy() , logprob
 
 
+def discount_cumsum(x, discount):
+    """
+    sgillen: taken from: https://github.com/openai/spinningup/blob/master/spinup/algos/ppo/core.py
+    magic from rllab for computing discounted cumulative sums of vectors.
+    input:
+        vector x,
+        [x0,
+         x1,
+         x2]
+    output:
+        [x0 + discount * x1 + discount^2 * x2,
+         x1 + discount * x2,
+         x2]
+    """
+    return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
 
+    #torch.sum()
+
+# ============================================================================================
 
 
 # def vanilla_policy_grad(env, policy, policy_optimizer):
@@ -149,12 +160,14 @@ for epoch in trange(num_epochs):
 
 
         # Now Calculate cumulative rewards for each action
-        action_rewards = torch.tensor([sum(reward_list[i:]) for i in range(len(reward_list))])
+        # action_rewards = torch.tensor([sum(reward_list[i:]) for i in range(len(reward_list))])
+
+        action_rewards = torch.as_tensor(np.ascontiguousarray(discount_cumsum(reward_list, gamma)))
         logprob_t = torch.stack(logprob_list)
 
         value_list = value_fn(torch.tensor(state_list)).squeeze()
         value_preds = torch.stack([torch.sum(value_list[i:]) for i in range(len(value_list))])
-        policy_rewards = (action_rewards - value_preds)
+        policy_rewards = (torch.as_tensor(action_rewards) - value_preds)
         policy_rewards = action_rewards
 
         policy_loss += torch.sum(logprob_t.transpose(-1,0) * policy_rewards)/traj_count
