@@ -7,18 +7,16 @@ from torch.distributions import Normal, Categorical
 import matplotlib.pyplot as plt
 from tqdm import trange
 
-import gym_ucsb_robolab
-
 torch.set_default_dtype(torch.double)
 
 # ============================================================================================
 
 #env_name = 'CartPole-v0' # Discrete
-#env_name = 'InvertedPendulum-v2' # Continous
+env_name = 'InvertedPendulum-v2' # Continous
 #env_name = 'su_cartpole-v0'
 
 #env_name = 'Walker2d-v2'
-env_name = 'lorenz-v0'
+#env_name = 'lorenz-v0'
 # Hard coded policy for the cartpole problem
 # Will eventually want to build up infrastructure to develop a policy depending on:
 # env.action_space
@@ -50,18 +48,18 @@ env_name = 'lorenz-v0'
 
 
 policy = nn.Sequential(
-    nn.Linear(3, 12),
+    nn.Linear(4, 12),
     nn.LeakyReLU(),
     nn.Linear(12, 12),
     nn.LeakyReLU(),
     nn.Linear(12, 12),
     nn.LeakyReLU(),
-    nn.Linear(12, 3),
+    nn.Linear(12, 1),
 )
 
 
 value_fn = nn.Sequential(
-    nn.Linear(3, 12),
+    nn.Linear(4, 12),
     nn.LeakyReLU(),
     nn.Linear(12, 12),
     nn.LeakyReLU(),
@@ -73,7 +71,7 @@ value_fn = nn.Sequential(
 policy_optimizer = optim.Adam(policy.parameters(), lr=1e-2)
 value_optimizer = optim.Adam(value_fn.parameters(), lr=1e-2)
 
-num_epochs = 20000
+num_epochs = 100
 batch_size = 500  # how many steps we want to use before we update our gradients
 num_steps = 500  # number of steps in an episode (unless we terminate early)
 max_reward = 101
@@ -101,9 +99,6 @@ def select_action(policy, state):
 #     action = m.sample()
 #     logprob = m.log_prob(action)
 #     return action.detach().numpy() , logprob
-
-
-
 
 
 # def vanilla_policy_grad(env, policy, policy_optimizer):
