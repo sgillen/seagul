@@ -6,6 +6,7 @@ import torch.optim as optim
 from torch.distributions import Normal, Categorical
 import matplotlib.pyplot as plt
 from tqdm import trange
+import copy
 
 import scipy.signal
 
@@ -35,6 +36,7 @@ policy = nn.Sequential(
     nn.Linear(12, 1),
 )
 
+old_policy = copy.deepcopy(policy)
 
 value_fn = nn.Sequential(
     nn.Linear(4, 12),
@@ -56,6 +58,7 @@ max_reward = 101
 
 gamma = .99
 lam = .99
+eps = .01
 
 
 # ============================================================================================
@@ -82,24 +85,37 @@ def select_action(policy, state):
 #     return action.detach().numpy() , logprob
 
 
-def discount_cumsum(x, discount):
-    """
-    sgillen: taken from: https://github.com/openai/spinningup/blob/master/spinup/algos/ppo/core.py
-    magic from rllab for computing discounted cumulative sums of vectors.
-    input:
-        vector x,
-        [x0,
-         x1,
-         x2]
-    output:
-        [x0 + discount * x1 + discount^2 * x2,
-         x1 + discount * x2,
-         x2]
-    """
-    return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
+    # def discount_cumsum(x, discount):
+    #     """
+    #     sgillen: taken from: https://github.com/openai/spinningup/blob/master/spinup/algos/ppo/core.py
+    #     magic from rllab for computing discounted cumulative sums of vectors.
+    #     input:
+    #         vector x,
+    #         [x0,
+    #          x1,
+    #          x2]
+    #     output:
+    #         [x0 + discount * x1 + discount^2 * x2,
+    #          x1 + discount * x2,
+    #          x2]
+    #     """
+    #     return scipy.signal.lfilter([1], [1, float(-discount)], x, axis=0)
+
+def discount_cumsum(rewards, discount):
+    future_cumulative_reward = 0
+    cumulative_rewards = torch.empty_like(torch.as_tensor(rewards))
+    for i in range(len(rewards) - 1, -1, -1):
+        cumulative_rewards[i] = rewards[i] + discount * future_cumulative_reward
+        future_cumulative_reward = cumulative_rewards[i]
+    return cumulative_rewards
 
     #torch.sum()
 
+def g(eps, A):
+    if A >= 0:
+        return (1 + eps)*A
+    else:
+        return (1 - eps)*A
 # ============================================================================================
 
 
@@ -140,14 +156,18 @@ for epoch in trange(num_epochs):
 
         state = env.reset()
         logprob_list = []
+        old_logprob_list = []
         reward_list = []
         state_list = []
 
         for t in range(num_steps):
 
+            _, old_logprob = select_action(old_policy, state)
             action, logprob = select_action(policy, state)
+
             state, reward, done, _ = env.step(action)
 
+            old_logprob_list.append(-old_logprob)
             logprob_list.append(-logprob)
             reward_list.append(reward)
             state_list.append(state)
@@ -159,31 +179,44 @@ for epoch in trange(num_epochs):
                 break
 
 
-        # Now Calculate cumulative rewards for each action
-        # action_rewards = torch.tensor([sum(reward_list[i:]) for i in range(len(reward_list))])
 
-        action_rewards = torch.as_tensor(np.ascontiguousarray(discount_cumsum(reward_list, gamma)))
+        # Now Calculate cumulative rewards for each action
+        action_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma))
         logprob_t = torch.stack(logprob_list)
+        old_logprob_t = torch.stack(old_logprob_list)
+
 
         value_list = value_fn(torch.tensor(state_list)).squeeze()
-        value_preds = torch.stack([torch.sum(value_list[i:]) for i in range(len(value_list))])
-        policy_rewards = (torch.as_tensor(action_rewards) - value_preds)
-        policy_rewards = action_rewards
+        value_preds = torch.as_tensor(discount_cumsum(value_list, gamma))
+        deltas = torch.as_tensor(reward_list[:-1]) + gamma*value_preds[1:] - value_list[:-1]
+        adv = discount_cumsum(deltas.detach(), gamma*lam)
+        policy_rewards = torch.as_tensor(adv)
 
-        policy_loss += torch.sum(logprob_t.transpose(-1,0) * policy_rewards)/traj_count
+        ratio = torch.exp(logprob_t - old_logprob_t)
+        gt = torch.tensor([g(eps,A) for A in adv])
+
+        ep_policy_loss = torch.sum(torch.min(ratio * adv, gt))/ traj_count
+
+        #policy_loss += torch.sum(logprob_t[:-1].transpose(-1,0) * policy_rewards)/traj_count
+        policy_loss += ep_policy_loss
         value_loss += torch.sum(torch.pow(action_rewards - value_preds, 2))/(traj_count*num_steps)
 
         episode_reward_sum.append(sum(reward_list))
 
-        value_preds_hist.append(value_preds.detach())
+        value_preds_hist.append(value_list.detach())
         value_loss_hist.append(value_loss.detach())
         policy_loss_hist.append(policy_loss.detach())
 
+
         if total_steps > batch_size:
 
-            policy_loss.backward()
-            value_loss.backward()
+            old_policy = copy.deepcopy(policy)
 
+            try:
+                policy_loss.backward()
+                value_loss.backward()
+            except:
+                pass
             policy_optimizer.step()
             policy_optimizer.zero_grad()
 
@@ -197,6 +230,8 @@ for epoch in trange(num_epochs):
             traj_count = 1
 
             break
+
+
 
 # ============================================================================================
 
