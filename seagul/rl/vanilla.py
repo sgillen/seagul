@@ -45,8 +45,6 @@ num_steps = 200  # number of steps in an episode (unless we terminate early)
 # ============================================================================================
 
 
-# I guess we'll start with a categorical policy
-# TODO investigate the cost of action.detach.numpy() and torch.Tensor(state)
 def select_action(policy, state):
     m = Categorical(policy(torch.Tensor(state)))
     action = m.sample()

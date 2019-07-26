@@ -107,7 +107,7 @@ def fit_model(model, state_train, action_train, num_epochs, learning_rate = 1e-2
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    for epoch in trange(num_epochs):
+    for epoch in range(num_epochs):
         epoch_loss = 0
 
         for local_states, local_actions in training_generator:
@@ -128,7 +128,9 @@ def fit_model(model, state_train, action_train, num_epochs, learning_rate = 1e-2
         # after each epoch append the average loss
         loss_hist.append(epoch_loss.detach().numpy() / len(state_train))
 
-    return loss_hist
+    return epoch_loss
+
+
 
 
 def policy_render_loop(policy, env, select_action):

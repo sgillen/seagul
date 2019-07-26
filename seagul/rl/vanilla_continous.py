@@ -78,9 +78,6 @@ max_reward = 101
 
 # ============================================================================================
 
-
-# I guess we'll start with a categorical policy
-# TODO investigate the cost of action.detach.numpy() and torch.Tensor(state)
 variance = 0.1
 def select_action(policy, state):
 
@@ -94,11 +91,6 @@ def select_action(policy, state):
     return action.detach().numpy(), logprob
 
 
-# def select_action(policy, state):
-#     m = Categorical(policy(torch.as_tensor(state)))
-#     action = m.sample()
-#     logprob = m.log_prob(action)
-#     return action.detach().numpy() , logprob
 
 
 # def vanilla_policy_grad(env, policy, policy_optimizer):
@@ -140,6 +132,7 @@ for epoch in trange(num_epochs):
         logprob_list = []
         reward_list = []
         state_list = []
+        action_list = []
 
         for t in range(num_steps):
 
@@ -149,6 +142,7 @@ for epoch in trange(num_epochs):
             logprob_list.append(-logprob)
             reward_list.append(reward)
             state_list.append(state)
+            action_list.append(action)
 
             total_steps += 1
 
