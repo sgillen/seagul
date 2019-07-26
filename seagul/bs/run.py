@@ -155,6 +155,3 @@ def load_model(save_path):
     model, env = baselines.run.main(argv_list)
 
     return model, env
-
-if __name__ == '__main__':
-    play_baselines('discrete1')
