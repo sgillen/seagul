@@ -70,12 +70,12 @@ value_fn = nn.Sequential(
 
 # Define our hyper parameters
 num_epochs = 200
-batch_size = 500  # how many steps we want to use before we update our gradients
-num_steps = 200  # number of steps in an episode (unless we terminate early)
+batch_size = 2048  # how many steps we want to use before we update our gradients
+num_steps = 1000   # number of steps in an episode (unless we terminate early)
 max_reward = num_steps
-p_batch_size = 500
+p_batch_size = 1024
 v_epochs = 1
-p_epochs = 1
+p_epochs = 10
 p_lr = 1e-2
 v_lr = 1e-2
 

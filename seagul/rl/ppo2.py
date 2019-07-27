@@ -31,34 +31,35 @@ device = torch.device("cuda:0" if use_cuda else "cpu")
 #env_name = 'CartPole-v0' # Discrete
 #env_name = 'InvertedPendulum-v2' # Continuous
 #env_name = 'su_cartpole-v0'
-#env_name = 'Walker2d-v2'
+env_name = 'Walker2d-v2'
 #env_name = 'lorenz-v0'
 
-env_name = 'CartPole-v0'
+#env_name = 'CartPole-v0'
 
 
 # create policy and value networks
-# policy = nn.Sequential(
-#     nn.Linear(4, 12),
-#     nn.Tanh(),
-#     nn.Linear(12, 12),
-#     nn.Tanh(),
-#     nn.Linear(12, 1),
-# )
 
 policy = nn.Sequential(
-    nn.Linear(4, 12),
-    nn.LeakyReLU(),
+    nn.Linear(17, 12),
+    nn.Tanh(),
     nn.Linear(12, 12),
-    nn.LeakyReLU(),
-    nn.Linear(12, 2),
-    nn.Softmax(dim=-1)
+    nn.Tanh(),
+    nn.Linear(12, 6),
 )
+
+# policy = nn.Sequential(
+#     nn.Linear(4, 12),
+#     nn.LeakyReLU(),
+#     nn.Linear(12, 12),
+#     nn.LeakyReLU(),
+#     nn.Linear(12, 2),
+#     nn.Softmax(dim=-1)
+# )
 
 old_policy = pickle.loads(pickle.dumps(policy))
 
 value_fn = nn.Sequential(
-    nn.Linear(4, 12),
+    nn.Linear(17, 12),
     nn.LeakyReLU(),
     nn.Linear(12, 12),
     nn.LeakyReLU(),
@@ -83,7 +84,7 @@ gamma = .99
 lam = .99
 eps = .2
 
-variance = 0.1 # feel like there should be a better way to do this...
+variance = 0.2 # feel like there should be a better way to do this...
 optimizer = torch.optim.Adam(policy.parameters(), lr=p_lr)
 v_optimizer = torch.optim.Adam(value_fn.parameters(), lr=p_lr)
 
@@ -93,33 +94,33 @@ v_optimizer = torch.optim.Adam(value_fn.parameters(), lr=p_lr)
 
 
 # takes a policy and the states and sample an action from it... (can we make this faster?)
-# def select_action(policy, state):
-#     means = policy(torch.as_tensor(state))
-#     m = Normal(loc = means, scale = torch.ones_like(means)*variance)
-#     action = m.sample()*2
-#     logprob = m.log_prob(action)
-#     return action.detach().numpy(), logprob
-
-
-# given a policy plus a state/action pair, what is the log liklihood of having taken that action?
-# def get_logp(policy, states, actions):
-#     means = policy(torch.as_tensor(states))
-#     m = Normal(loc = means, scale = torch.ones_like(means)*variance)
-#     logprob = m.log_prob(actions)
-#     return logprob
-
-
-
 def select_action(policy, state):
-    m = Categorical(policy(torch.as_tensor(state)))
+    means = policy(torch.as_tensor(state)).squeeze()
+    m = Normal(loc = means, scale = torch.ones_like(means)*variance)
     action = m.sample()
     logprob = m.log_prob(action)
     return action.detach(), logprob
 
-def get_logp(policy, state, action):
-    m = Categorical(policy(torch.as_tensor(state)))
-    logprob = m.log_prob(action)
+
+# given a policy plus a state/action pair, what is the log liklihood of having taken that action?
+def get_logp(policy, states, actions):
+    means = policy(torch.as_tensor(states)).squeeze()
+    m = Normal(loc = means, scale = torch.ones_like(means)*variance)
+    logprob = m.log_prob(actions)
     return logprob
+
+
+
+# def select_action(policy, state):
+#     m = Categorical(policy(torch.as_tensor(state)))
+#     action = m.sample()
+#     logprob = m.log_prob(action)
+#     return action.detach(), logprob
+#
+# def get_logp(policy, state, action):
+#     m = Categorical(policy(torch.as_tensor(state)))
+#     logprob = m.log_prob(action)
+#     return logprob
 
 
 def discount_cumsum(rewards, discount):
@@ -162,7 +163,7 @@ for epoch in trange(num_epochs):
     disc_rewards = torch.empty(0)
     state_tensor = torch.empty(0)
     logp_t = torch.empty(0)
-    action_tensor = torch.empty(0, dtype=torch.long)
+    action_tensor = torch.empty(0)
 
     loss = torch.zeros(1)
     v_loss = torch.zeros(1)
@@ -185,14 +186,12 @@ for epoch in trange(num_epochs):
         log_prob_list = []
         traj_steps = 0
 
-
-
         for t in range(num_steps):
 
             state_list.append(state)
 
             action, logprob = select_action(policy, state)
-            state_np, reward, done, _ = env.step(action.item())
+            state_np, reward, done, _ = env.step(action.numpy())
             state = torch.as_tensor(state_np)
 
             log_prob_list.append(logprob)
@@ -212,10 +211,9 @@ for epoch in trange(num_epochs):
             break
 
 
-
         # Now Calculate cumulative rewards for each action
         ep_state_tensor = torch.stack(state_list).reshape(-1,env.observation_space.shape[0])
-        ep_action_tensor = torch.stack(action_list).reshape(-1,1)
+        ep_action_tensor = torch.stack(action_list).reshape(-1,env.action_space.shape[0])
         ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
 
         value_preds = value_fn(ep_state_tensor)
@@ -255,15 +253,15 @@ for epoch in trange(num_epochs):
                     #local_states, local_actions, local_adv = local_states.to(device), local_actions.to(device), local_adv.to(device)
 
                     # predict and calculate loss for the batch
-                    logp = get_logp(policy, local_states, local_actions.squeeze()).reshape(-1,1)
-                    old_logp = get_logp(old_policy, local_states, local_actions.squeeze()).reshape(-1,1)
+                    logp = get_logp(policy, local_states, local_actions.squeeze()).reshape(-1,env.action_space.shape[0])
+                    old_logp = get_logp(old_policy, local_states, local_actions.squeeze()).reshape(-1,env.action_space.shape[0])
                     r = torch.exp(logp - old_logp)
 
                     #loss =  -torch.sum(local_logp_t.squeeze() * local_adv.squeeze())
 
                     #loss =  -torch.sum(logp * local_adv)
                     #loss = -torch.sum(local_logp_t.reshape(-1,1) * local_adv)
-                    loss = -torch.sum(torch.min(r*local_adv, local_adv*torch.clamp(r, (1 - eps), (1 + eps))))
+                    loss = -torch.sum(torch.min(r*local_adv, local_adv*torch.clamp(r, (1 - eps), (1 + eps))))/r.shape[0]
                     #loss = -torch.sum(r * local_adv)
 
                     #loss = torch.sum(logp*local_adv)/logp.shape[0]
@@ -289,5 +287,7 @@ for epoch in trange(num_epochs):
 #torch.save(policy.state_dict(), save_path )
 
 plt.plot(avg_reward_hist, 'b')
+print(avg_reward_hist)
+
 plt.title('ppo2')
 plt.show()
