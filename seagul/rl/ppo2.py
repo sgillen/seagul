@@ -73,9 +73,9 @@ num_epochs = 200
 batch_size = 500  # how many steps we want to use before we update our gradients
 num_steps = 200  # number of steps in an episode (unless we terminate early)
 max_reward = num_steps
-p_batch_size = 500
+p_batch_size = 1024
 v_epochs = 1
-p_epochs = 1
+p_epochs = 10
 p_lr = 1e-2
 v_lr = 1e-2
 
@@ -189,6 +189,8 @@ for epoch in trange(num_epochs):
 
         for t in range(num_steps):
 
+            state_list.append(state)
+
             action, logprob = select_action(policy, state)
             state_np, reward, done, _ = env.step(action.item())
             state = torch.as_tensor(state_np)
@@ -196,7 +198,6 @@ for epoch in trange(num_epochs):
             log_prob_list.append(logprob)
             reward_list.append(reward)
             action_list.append(action)
-            state_list.append(state)
 
             total_steps += 1
             traj_steps += 1
@@ -214,6 +215,7 @@ for epoch in trange(num_epochs):
 
         # Now Calculate cumulative rewards for each action
         ep_state_tensor = torch.stack(state_list).reshape(-1,env.observation_space.shape[0])
+        ep_action_tensor = torch.stack(action_list).reshape(-1,1)
         ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
 
         value_preds = value_fn(ep_state_tensor)
@@ -222,72 +224,59 @@ for epoch in trange(num_epochs):
         deltas = torch.as_tensor(reward_list[:-1]) + gamma*value_preds[1:].squeeze() - value_preds[:-1].squeeze()
         ep_adv = discount_cumsum(deltas.detach(), gamma*lam).reshape(-1,1)
 
-        action_tensor = torch.cat((action_tensor, torch.tensor(action_list[:-1])))
         state_tensor  = torch.cat((state_tensor , ep_state_tensor[:-1]))
+        action_tensor = torch.cat((action_tensor, ep_action_tensor[:-1]))
         disc_rewards  = torch.cat((disc_rewards , ep_disc_rewards[:-1]))
-        adv = torch.cat((adv,torch.tensor(ep_disc_rewards[:-1])))
+        #adv = torch.cat((adv,torch.tensor(ep_disc_rewards[:-1])))
 
-        logp_t = torch.cat((logp_t, torch.tensor(log_prob_list[:-1])))
+        logp_t = torch.cat((logp_t, torch.stack(log_prob_list[:-1])))
         #old_logp = get_logp(old_policy, ep_state_tensor, torch.tensor(action_list))
-        #adv = torch.cat((adv, ep_adv))
+        adv = torch.cat((adv, ep_adv))
 
         episode_reward_sum.append(sum(reward_list))
-
-        loss -= torch.sum(torch.stack(log_prob_list).reshape(-1,1) * ep_disc_rewards)
 
         #loss += -torch.sum(torch.stack(log_prob_list) * ep_adv) / (total_steps)
         #r = torch.exp(torch.tensor(log_prob_list) - old_logp)
         #loss = -torch.sum(torch.min(r * ep_adv, ep_adv * torch.clamp(r, (1 - eps), (1 + eps)))) / (traj_steps)
 
-        v_loss += torch.sum(torch.pow(ep_disc_rewards - value_preds,2))/(traj_steps)
+
 
         if total_steps > batch_size:
-            # loss /= total_steps
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-            loss = torch.zeros(1)
-
-            v_loss.backward()
-            v_optimizer.step()
-            v_optimizer.zero_grad()
-            v_loss = torch.zeros(1)
-
-
             avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
 
+            v_hist = fit_model(value_fn, state_tensor, disc_rewards, v_epochs, v_lr, shuffle=True)
 
-        # if total_steps > batch_size:
-        #
-        #     v_hist = fit_model(value_fn, state_tensor, disc_rewards, v_epochs, v_lr, shuffle=False)
-        #
-        #     training_data = data.TensorDataset(state_tensor, action_tensor, adv)
-        #     training_generator = data.DataLoader(training_data, batch_size=p_batch_size, shuffle=False)
-        #     p_loss = []
-        #     for epoch in range(p_epochs):
-        #         for local_states, local_actions, local_adv in training_generator:
-        #             # Transfer to GPU (if GPU is enabled, else this does nothing)
-        #             local_states, local_actions, local_adv = local_states.to(device), local_actions.to(device), local_adv.to(device)
-        #
-        #             # predict and calculate loss for the batch
-        #             logp = get_logp(policy, local_states, local_actions)
-        #             old_logp = get_logp(old_policy, local_states, local_actions)
-        #             r = torch.exp(logp - old_logp)
-        #             loss = -torch.sum(logp * local_adv) / (p_batch_size)
-        #             # loss = -torch.sum(torch.min(r*local_adv, local_adv*torch.clamp(r, (1 - eps), (1 + eps))))/batch_size
-        #             #loss = -torch.sum(r * local_adv) / batch_size
-        #
-        #             #loss = torch.sum(logp*local_adv)/logp.shape[0]
-        #             p_loss.append(loss.detach())
-        #             # do the normal pytorch update
-        #             loss.backward()
-        #             optimizer.step()
-        #             optimizer.zero_grad()
+            training_data = data.TensorDataset(state_tensor, action_tensor, adv, logp_t)
+            training_generator = data.DataLoader(training_data, batch_size=p_batch_size, shuffle=True)
+            p_loss = []
+            for epoch in range(p_epochs):
+                for local_states, local_actions, local_adv, local_logp_t in training_generator:
+                    # Transfer to GPU (if GPU is enabled, else this does nothing)
+                    #local_states, local_actions, local_adv = local_states.to(device), local_actions.to(device), local_adv.to(device)
+
+                    # predict and calculate loss for the batch
+                    logp = get_logp(policy, local_states, local_actions.squeeze()).reshape(-1,1)
+                    old_logp = get_logp(old_policy, local_states, local_actions.squeeze()).reshape(-1,1)
+                    r = torch.exp(logp - old_logp)
+
+                    #loss =  -torch.sum(local_logp_t.squeeze() * local_adv.squeeze())
+
+                    #loss =  -torch.sum(logp * local_adv)
+                    #loss = -torch.sum(local_logp_t.reshape(-1,1) * local_adv)
+                    loss = -torch.sum(torch.min(r*local_adv, local_adv*torch.clamp(r, (1 - eps), (1 + eps))))
+                    #loss = -torch.sum(r * local_adv)
+
+                    #loss = torch.sum(logp*local_adv)/logp.shape[0]
+                    p_loss.append(loss.detach())
+                    # do the normal pytorch update
+                    loss.backward(retain_graph=True)
+                    optimizer.step()
+                    optimizer.zero_grad()
 
 
 #            policy_loss_hist.append(sum(p_loss)/len(p_loss))
 #            value_loss_hist.append(v_hist)
-
+            loss.backward()
             old_policy = pickle.loads(pickle.dumps(policy))
 
             #old_policy = copy.deepcopy(policy)
@@ -300,5 +289,5 @@ for epoch in trange(num_epochs):
 #torch.save(policy.state_dict(), save_path )
 
 plt.plot(avg_reward_hist, 'b')
-plt.title('ppo')
+plt.title('ppo2')
 plt.show()
