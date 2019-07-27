@@ -40,11 +40,13 @@ env_name = 'Walker2d-v2'
 # create policy and value networks
 
 policy = nn.Sequential(
-    nn.Linear(17, 12),
-    nn.Tanh(),
-    nn.Linear(12, 12),
-    nn.Tanh(),
-    nn.Linear(12, 6),
+    nn.Linear(17, 48),
+    nn.ReLU(),
+    nn.Linear(48, 48),
+    nn.ReLU(),
+    nn.Linear(48, 48),
+    nn.ReLU(),
+    nn.Linear(48, 6),
 )
 
 # policy = nn.Sequential(
@@ -57,22 +59,21 @@ policy = nn.Sequential(
 # )
 
 old_policy = pickle.loads(pickle.dumps(policy))
-
 value_fn = nn.Sequential(
-    nn.Linear(17, 12),
-    nn.LeakyReLU(),
-    nn.Linear(12, 12),
-    nn.LeakyReLU(),
-    nn.Linear(12, 12),
-    nn.LeakyReLU(),
-    nn.Linear(12, 1),
+    nn.Linear(17, 48),
+    nn.ReLU(),
+    nn.Linear(48, 48),
+    nn.ReLU(),
+    nn.Linear(48, 48),
+    nn.ReLU(),
+    nn.Linear(48, 1),
 )
 
 
 # Define our hyper parameters
-num_epochs = 200
-batch_size = 500  # how many steps we want to use before we update our gradients
-num_steps = 200  # number of steps in an episode (unless we terminate early)
+num_epochs = 20
+batch_size = 2048  # how many steps we want to use before we update our gradients
+num_steps = 1000 # number of steps in an episode (unless we terminate early)
 max_reward = num_steps
 p_batch_size = 1024
 v_epochs = 1
@@ -87,7 +88,6 @@ eps = .2
 variance = 0.2 # feel like there should be a better way to do this...
 optimizer = torch.optim.Adam(policy.parameters(), lr=p_lr)
 v_optimizer = torch.optim.Adam(value_fn.parameters(), lr=p_lr)
-
 
 
 # ============================================================================================
@@ -258,9 +258,9 @@ for epoch in trange(num_epochs):
                     r = torch.exp(logp - old_logp)
 
                     #loss =  -torch.sum(local_logp_t.squeeze() * local_adv.squeeze())
-
                     #loss =  -torch.sum(logp * local_adv)
                     #loss = -torch.sum(local_logp_t.reshape(-1,1) * local_adv)
+
                     loss = -torch.sum(torch.min(r*local_adv, local_adv*torch.clamp(r, (1 - eps), (1 + eps))))/r.shape[0]
                     #loss = -torch.sum(r * local_adv)
 
