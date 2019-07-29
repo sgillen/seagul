@@ -19,7 +19,7 @@ torch.set_default_dtype(torch.double)
 torch.manual_seed(seed)
 np.random.seed(seed)
 
-
+use_gpu = False
 use_cuda = torch.cuda.is_available() and use_gpu
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
@@ -71,7 +71,7 @@ value_fn = nn.Sequential(
 
 
 # Define our hyper parameters
-num_epochs = 20
+num_epochs = 100
 batch_size = 2048  # how many steps we want to use before we update our gradients
 num_steps = 1000 # number of steps in an episode (unless we terminate early)
 max_reward = num_steps
