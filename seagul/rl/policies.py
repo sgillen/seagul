@@ -13,6 +13,7 @@ class MLP(nn.Module):
         self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers )])
         self.output_layer = nn.Linear(layer_size, output_size)
 
+    # This is probably super slow...
     def forward(self, data):
         for layer in self.layers:
             data = self.activation(layer(data))
