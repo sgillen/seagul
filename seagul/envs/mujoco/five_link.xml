@@ -1,0 +1,131 @@
+<mujoco model='5linkwalkerv3'>
+    <compiler inertiafromgeom='false' angle='degree'/>
+
+    <default>
+        <joint limited='true' damping='0' armature='0' stiffness='0' />
+        <geom contype='1' conaffinity='1' condim='1' rgba='0.8 0.6 .4 1' friction='0.5 0.5 0.5'
+        	margin="0.001" solref=".02 1" solimp=".8 .8 .01" material="geom"/>
+
+
+    <default class="mot">
+        <motor ctrlrange='-1 1' ctrllimited='true' gear='100'/>
+    </default>
+
+    <default class="prop">
+        <position kp='3000' gear='1' ctrllimited='false'/>
+    </default>
+
+    <default class="deriv">
+        <velocity kv='20' gear='1' ctrllimited="false"/>
+    </default>
+  </default>
+
+    <option timestep='0.002' iterations="50" tolerance="1e-10" solver="Newton" jacobian="dense" cone="elliptic" integrator="RK4"/>
+
+    <size nstack="1000000"/>
+
+    <visual>
+        <map fogstart="3" fogend="5" force="0.1" znear="0.5"/>
+        <quality shadowsize="2048" offsamples="8"/>
+        <global offwidth="800" offheight="800"/>
+    </visual>
+
+    <asset>
+        <texture type="skybox" builtin="gradient" width="128" height="128" rgb1=".4 .6 .8"
+            rgb2="0 0 0"/>
+        <texture name="texgeom" type="cube" builtin="flat" mark="cross" width="127" height="1278"
+            rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" markrgb="1 1 1" random="0.01"/>
+        <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2"
+            width="512" height="512"/>
+
+        <material name='MatPlane' reflectance='0.3' texture="texplane" texrepeat="1 1" texuniform="true"/>
+        <material name='geom' texture="texgeom" texuniform="true"/>
+    </asset>
+
+    <worldbody>
+        <geom name='floor' pos='0 0 0' size='5 5 .125' type='plane' material="MatPlane" condim='3'/>
+
+        <light mode='targetbodycom' target='torso' directional='false' diffuse='.8 .8 .8' specular='0.3 0.3 0.3' pos='0 0 4.0' dir='0 0 -1'/>
+
+		    <camera name='targeting' pos='1 1 2' mode='targetbodycom' target='torso'/>
+        <!--
+        <body name='slope_box' pos='0 0 0' euler='0 0 0'>
+          <inertial pos='0 0 0' mass='10' diaginertia='1 1 1'/>
+          <!--
+          <joint name ='slope_box_y' type='hinge' pos='0 0 0' axis='0 1 0' range='-90 90'/>
+          <joint name ='slope_box_slide' type='slide' pos='0 0 0' axis='0 0 1' range='-10 10'/>
+          --
+          <geom name = 'slope_box_shape' type='box' size='1 1 0.37' pos='0 0 0' condim='3' friction='0.5 0.5 0.5'/>
+        </body>
+        -->
+        <body name='torso' pos='0 0 1.6'>
+            <inertial pos='0 0 -0.385' mass='50' diaginertia='2.5954 2.5954 0.25'/>
+
+			      <camera name='tracking' pos='0 -5 0' zaxis="0 -1 0" mode='trackcom'/>
+
+            <!--<freejoint name="root"/>-->
+            <joint name ='free_x' type='slide' pos='0 0 0' axis='1 0 0' range='-100 100'/>
+            <joint name ='free_z' type='slide' pos='0 0 0' axis='0 0 1' range='-100 100'/>
+            <joint name ='torso_global' type='hinge' pos='0 0 0' axis='0 1 0' range='-90 90'/>
+            <geom name='torso1' type='capsule' fromto='0 0 0 0 0 -0.77'  size='0.07'/>
+              <body name='right_thigh' pos='0 -0.1 -0.77' >
+                  <inertial pos='0 0 -0.2' mass='7' diaginertia='0.0977 0.0977 0.00875'/>
+                  <joint name='right_hip_y' type='hinge' pos='0 0 0' axis='0 1 0' range='-120 120'  />
+                  <geom name='right_thigh1' type='capsule' fromto='0 0.0 0 0 0.0 -0.4'  size='0.06' />
+                  <body name='right_shin' pos='0 0.0 -0.4' >
+                      <inertial pos='0 0 -0.215' mass='3' diaginertia='0.0481 0.0481 0.00375'/>
+                      <joint name='right_knee' type='hinge' pos='0 0.0 0.04' axis='0 1 0' range='2 160' />
+                      <geom name='right_shin1' type='capsule' fromto='0 0.0 0.0 0 0 -0.42'   size='0.01' />
+
+                  </body>
+              </body>
+              <body name='left_thigh' pos='0 0.1 -0.77' >
+                  <inertial pos='0 0 -0.2' mass='7' diaginertia='0.0977 0.0977 0.00875' />
+                  <joint name='left_hip_y' type='hinge' pos='0 0 0' axis='0 1 0' range='-120 120' />
+                  <geom name='left_thigh1' type='capsule' fromto='0 0.0 0 0 0.0 -0.4'  size='0.06' />
+                  <body name='left_shin' pos='0 0.0 -0.4' >
+                      <inertial pos='0 0 -0.215' mass='3' diaginertia='0.0481 0.0481 0.00375' />
+                      <joint name='left_knee' type='hinge' pos='0 0.0 0.04' axis='0 1 0' range='2 160' />
+                      <geom name='left_shin1' type='capsule' fromto='0 0.0 0.0 0 0 -0.42'   size='0.01' />
+
+                  </body>
+
+              </body>
+
+        </body>
+    </worldbody>
+
+    <actuator>
+
+        <motor name='right_hip_y' class='mot'     joint='right_hip_y' />
+
+        <motor name='right_knee' class="mot"      joint='right_knee' />
+
+        <motor name='left_hip_y' class="mot"      joint='left_hip_y' />
+
+        <motor name='left_knee' class="mot"       joint='left_knee' />
+
+-->
+<!--
+
+        <position name='right_hip_y' class="prop" joint='right_hip_y' />
+
+        <position name='right_knee' class="prop"   joint='right_knee' />
+
+        <position name='left_hip_y' class="prop"   joint='left_hip_y' />
+
+        <position name='left_knee' class="prop"    joint='left_knee' />
+
+-->
+<!--
+        <velocity name='right_hip_y_vel' class="deriv" joint='right_hip_y' />
+
+        <velocity name='right_knee_vel' class="deriv"   joint='right_knee' />
+
+        <velocity name='left_hip_y_vel' class="deriv"   joint='left_hip_y' />
+
+        <velocity name='left_knee_vel' class="deriv"    joint='left_knee' />
+-->
+    </actuator>
+
+</mujoco>

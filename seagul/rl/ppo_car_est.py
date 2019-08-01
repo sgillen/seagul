@@ -4,19 +4,21 @@ from tqdm import trange
 import copy
 
 import torch
+import pybullet_envs
 from torch.utils import data
 from torch.distributions import Normal, Categorical
 
-variance = .7
+variance = .1
 
 #============================================================================================
-def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
+def ppo_est(env_name, num_epochs, policy, value_fn, agl_fn, epoch_batch_size = 2048,
         gamma = .99, lam = .99, eps = .2, seed=0, policy_batch_size = 1024,
-        value_batch_size = 1024, policy_lr = 1e-3, value_lr = 1e-3, p_epochs = 10,
+        value_batch_size = 1024,agl_batch_size=1024,  policy_lr = 1e-3, value_lr = 1e-3, agl_lr = 1e-3,  p_epochs = 10,
         v_epochs = 1, use_gpu = False, reward_stop = None):
 
     """
-    Implements proximal policy optimization with clipping
+
+    Implements a proximal policy optimization with clipping
 
     :param env_name: name of the openAI gym environment to solve
     :param num_epochs: number of epochs to run the PPO for
@@ -39,6 +41,10 @@ def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
     """
 
     env = gym.make(env_name)
+
+    #car_env = env.envs[0].env.env
+    env.num_steps = 250 # TODO
+
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         raise NotImplementedError("Discrete action spaces are not implemnted yet, why are you using PPO for a discrete action space anyway?")
         #select_action = select_discrete_action
@@ -56,9 +62,9 @@ def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
     old_policy = copy.deepcopy(policy)
 
     # intialize our optimizers
-    p_optimizer = torch.optim.Adam(policy.parameters(),     lr=policy_lr)
+    p_optimizer = torch.optim.Adam(policy.parameters(), lr=policy_lr)
     v_optimizer = torch.optim.Adam(value_fn.parameters(), lr=value_lr)
-
+    a_optimizer = torch.optim.Adam(agl_fn.parameters(), lr=agl_lr)
 
     # seed all our RNGs
     env.seed(seed)
@@ -82,10 +88,12 @@ def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
 
 
         # tensors for holding training information for each batch
-        adv_tensor = torch.empty(0)
+        adv_tensor = torch.empty(0);
         disc_rewards_tensor = torch.empty(0)
         state_tensor = torch.empty(0)
         action_tensor = torch.empty(0)
+        agl_tensor = torch.empty(0, dtype=torch.long)
+        agl_state_tensor = torch.empty(0)
 
 
         # Check if we have maxed out the reward, so that we can stop early
@@ -94,7 +102,7 @@ def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
                 break
 
 
-        # keep doing rollouts until we fill  a single batch of examples
+        # keep doing rollouts until we fill a single batch of examples
         while True:
             # reset the environment
             state = torch.as_tensor(env.reset())
@@ -117,6 +125,13 @@ def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
                 traj_steps += 1
 
                 if done:
+                    if traj_steps < env.num_steps:
+                        agl_tensor = torch.cat((agl_tensor, torch.tensor([0])))
+                        agl_state_tensor = torch.cat((agl_state_tensor, state_list[0].reshape(-1,1)),1)
+                    else:
+                        agl_tensor = torch.cat((agl_tensor, torch.tensor([1])))
+                        agl_state_tensor = torch.cat((agl_state_tensor, state_list[0].reshape(-1,1)),1)
+
                     traj_count += 1
                     break
 
@@ -126,9 +141,9 @@ def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
                 break
 
             # make a tensor storing the current episodes state, actions, and rewards
-            ep_state_tensor = torch.stack(state_list).reshape(-1,env.observation_space.shape[0])
+            ep_state_tensor  = torch.stack(state_list).reshape(-1,env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
-            ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
+            ep_disc_rewards  = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
 
             # calculate our advantage for this rollout
             value_preds = value_fn(ep_state_tensor)
@@ -144,13 +159,12 @@ def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
             # keep track of rewards for metrics later
             episode_reward_sum.append(sum(reward_list))
 
-
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
 
+
                 # keep track of rewards for metrics later
                 avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
-
                 # construct a training data generator
                 training_data = data.TensorDataset(state_tensor, action_tensor, adv_tensor)
                 training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
@@ -174,7 +188,6 @@ def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
 
                 p_loss.backward()
 
-
                 # Now we do the update for our value function
                 # construct a training data generator
                 training_data = data.TensorDataset(state_tensor, disc_rewards_tensor)
@@ -197,6 +210,26 @@ def ppo(env_name, num_epochs, policy, value_fn, epoch_batch_size = 2048,
 
                 old_policy = copy.deepcopy(policy)
 
+                # Now we do the update for our value function
+                # construct a training data generator
+                training_data = data.TensorDataset(agl_state_tensor.transpose(0,1), agl_tensor)
+                training_generator = data.DataLoader(training_data, batch_size=agl_batch_size, shuffle=True)
+                agl_loss_fn = nn.BCELoss()
+                for epoch in range(v_epochs):
+                    for local_states, local_values in training_generator:
+                        # Transfer to GPU (if GPU is enabled, else this does nothing)
+                        local_states, local_agl = local_states.to(device), local_values.to(device)
+
+                        # predict and calculate loss for the batch
+                        agl_preds = agl_fn(local_states)
+                        agl_loss = agl_loss_fn(agl_preds, torch.as_tensor(local_agl,dtype=torch.double))
+
+                        # do the normal pytorch update
+                        a_optimizer.zero_grad()
+                        agl_loss.backward()
+                        a_optimizer.step()
+
+                old_policy = copy.deepcopy(policy)
 
                 break
 
@@ -250,7 +283,7 @@ def discount_cumsum(rewards, discount):
 #============================================================================================
 if __name__ == '__main__':
     import torch.nn as nn
-    from seagul.rl.ppo2 import ppo
+    from seagul.rl.ppo import ppo
     from seagul.rl.policies import Categorical_MLP, MLP
     import torch
 
@@ -258,8 +291,10 @@ if __name__ == '__main__':
     torch.set_default_dtype(torch.double)
 
     #policy = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    policy =  MLP(input_size=11, output_size=3, layer_size=12, num_layers=2, activation=nn.ReLU)
-    value_fn = MLP(input_size=11, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    policy =  MLP(input_size=7, output_size=2, layer_size=12, num_layers=2, activation=nn.ReLU)
+    value_fn = MLP(input_size=7, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    agl_fn = Categorical_MLP(input_size=7, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+
 
     # Define our hyper parameters
     num_epochs = 100
@@ -279,4 +314,4 @@ if __name__ == '__main__':
     variance = 0.2  # feel like there should be a better way to do this...
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    env2, t_policy, t_val, rewards = ppo('Hopper-v2', 100, policy, value_fn)
+    env2, t_policy, t_val, rewards = ppo_est('bullet_car-v0', 100, policy, value_fn, agl_fn)

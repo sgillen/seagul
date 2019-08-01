@@ -30,13 +30,17 @@ class Categorical_MLP(nn.Module):
         self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
         self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers )])
         self.output_layer = nn.Linear(layer_size, output_size)
-        self.softmax = nn.Softmax(dim=-1)
+
+        if output_size == 1:
+            self.output_norm = nn.Sigmoid()
+        else:
+            self.output_norm = nn.Softmax(dim=-1)
 
     def forward(self, data):
         for layer in self.layers:
             data = self.activation(layer(data))
 
-        return self.softmax(self.output_layer(data))
+        return self.output_norm(self.output_layer(data))
 
 
 
