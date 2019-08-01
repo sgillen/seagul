@@ -1,1 +1,1 @@
-from gym_ucsb_robolab.simple_nonlinear.lorenz import LorenzEnv
+from seagul.envs.simple_nonlinear.lorenz import LorenzEnv
