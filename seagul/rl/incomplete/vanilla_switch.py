@@ -1,4 +1,4 @@
-import gym_ucsb_robolab
+import seagul.envs
 
 import gym
 import numpy as np
