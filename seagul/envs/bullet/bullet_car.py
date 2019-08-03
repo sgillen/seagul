@@ -65,7 +65,6 @@ class RacecarGymEnv_v1(gym.Env):
         self._ballUniqueId = -1
         self._envStepCounter = 0
         self._renders = renders
-        self._renders = renders
         self._isDiscrete = isDiscrete
         if self._renders:
             self._p = bullet_client.BulletClient(
