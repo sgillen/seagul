@@ -129,7 +129,7 @@ class RacecarGymEnvAst_v1(gym.Env):
             self._p.loadURDF(os.path.join(self._urdfRoot,"plane.urdf"))
 
             self._p.setGravity(0,0,-10)
-            self._racecar = rc_car.RcCar(self._p, urdfRootPath=self._urdfRoot, timeStep=self._timeStep)
+            self._racecar = rc_car.RcCar(self._p, timeStep=self._timeStep)
 
             for i in range(100):
                 self._p.stepSimulation()
