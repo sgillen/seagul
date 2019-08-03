@@ -12,7 +12,7 @@ class SUCartPoleEnv(gym.Env):
     """
     Environment for for a classic_control cartpole pendulum.
 
-    mostly just a rewrite of sgillen_research/cartpole/cartpole_class.py
+    mostly just a rewrite of sgillen_research/cartpole/cartpole.py
 
     Attributes:
         L: length of the pendulum in (m)
@@ -29,7 +29,7 @@ class SUCartPoleEnv(gym.Env):
         'video.frames_per_second': 15
     }
 
-    def __init__(self, num_steps  = 1500, dt = .01):
+    def __init__(self, num_steps  = 1500, dt = .005):
         self.L = 1.0   # length of the pole (m)
         self.mc = 4.0  # mass of the cart (kg)
         self.mp = 1.0  # mass of the ball at the end of the pole
@@ -42,14 +42,14 @@ class SUCartPoleEnv(gym.Env):
         self.state = None
 
         # THETA_MAX is implict (-pi, pi)
-        self.X_MAX = 100.0
+        self.X_MAX = 50.0
 
         # might impose an upper limit on these but it would only end the episode
         self.DTHETA_MAX = 100.0*pi
         self.DX_MAX = 500.0
 
 
-        self.state_noise_max = 0.0
+        self.state_noise_max = 0
         high = np.array([pi, self.X_MAX, self.DTHETA_MAX, self.DX_MAX])
         low = -high
         self.observation_space = gym.spaces.Box(low=low, high=high)
@@ -83,14 +83,14 @@ class SUCartPoleEnv(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)*100
-
+        #torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)*100
+        torque = action
         # Add noise to the force action
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
-        #ns = rk4(self._derivs, torque, 0, self.dt, self.state)
-        ns = euler(self._derivs, torque, 0, self.dt, self.state)
+        ns = rk4(self._derivs, torque, 0, self.dt, self.state)
+        #ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
         self.state[0] = wrap(ns[0], -pi,  pi)
         #self.state[0] = ns[0]

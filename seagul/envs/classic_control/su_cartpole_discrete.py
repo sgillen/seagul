@@ -13,7 +13,7 @@ class SUCartPoleDiscEnv(gym.Env):
     """
     Environment for for a classic_control cartpole pendulum.
 
-    mostly just a rewrite of sgillen_research/cartpole/cartpole_class.py
+    mostly just a rewrite of sgillen_research/cartpole/cartpole.py
 
     Attributes:
         L: length of the pendulum in (m)

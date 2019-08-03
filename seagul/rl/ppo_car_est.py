@@ -284,7 +284,7 @@ def discount_cumsum(rewards, discount):
 if __name__ == '__main__':
     import torch.nn as nn
     from seagul.rl.ppo import ppo
-    from seagul.rl.policies import Categorical_MLP, MLP
+    from seagul.nn import Categorical_MLP, MLP
     import torch
 
     import matplotlib.pyplot as plt

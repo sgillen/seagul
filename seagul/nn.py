@@ -168,7 +168,7 @@ def policy_render_loop(policy, env, select_action):
                 nn.Linear(12, 1),
             )
 
-            load_path = '/Users/sgillen/work_dir/ucsb/research/rl/cont_working'
+            load_path = '/Users/sgillen/work_dir/ucsb/notebooks/rl/cont_working'
             policy.load_state_dict(torch.load(load_path))
 
 
