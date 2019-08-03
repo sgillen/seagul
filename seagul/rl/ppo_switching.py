@@ -1,4 +1,5 @@
 import gym
+import seagul.envs
 import numpy as np
 from tqdm import trange
 import copy
@@ -8,10 +9,12 @@ import pybullet_envs
 from torch.utils import data
 from torch.distributions import Normal, Categorical
 
+from numpy import pi, sin, cos
+
 variance = .1
 
 #============================================================================================
-def ppo_est(env_name, num_epochs, policy, value_fn, gate_fn, epoch_batch_size = 2048,
+def ppo_switch(env_name, num_epochs, policy, value_fn, gate_fn, epoch_batch_size = 2048,
             gamma = .99, lam = .99, eps = .2, seed=0, policy_batch_size = 1024,
             value_batch_size = 1024, gate_batch_size=1024, policy_lr = 1e-3, value_lr = 1e-3, gate_lr = 1e-3, p_epochs = 10,
             v_epochs = 1, use_gpu = False, reward_stop = None):
@@ -64,7 +67,7 @@ def ppo_est(env_name, num_epochs, policy, value_fn, gate_fn, epoch_batch_size = 
     # intialize our optimizers
     p_optimizer = torch.optim.Adam(policy.parameters(), lr=policy_lr)
     v_optimizer = torch.optim.Adam(value_fn.parameters(), lr=value_lr)
-    a_optimizer = torch.optim.Adam(gate_fn.parameters(), lr=gate_lr)
+    g_optimizer = torch.optim.Adam(gate_fn.parameters(), lr=gate_lr)
 
     # seed all our RNGs
     env.seed(seed)
@@ -88,11 +91,10 @@ def ppo_est(env_name, num_epochs, policy, value_fn, gate_fn, epoch_batch_size = 
 
 
         # tensors for holding training information for each batch
-        adv_tensor = torch.empty(0);
+        adv_tensor = torch.empty(0)
         disc_rewards_tensor = torch.empty(0)
-        disc_nnrewards_tensor = torch.empty(0)
         state_tensor = torch.empty(0)
-        nn_action_tensor = torch.empty(0)
+        action_tensor = torch.empty(0)
         path_tensor = torch.empty(0, dtype=torch.long)
 
 
@@ -111,7 +113,7 @@ def ppo_est(env_name, num_epochs, policy, value_fn, gate_fn, epoch_batch_size = 
             traj_steps = 0
 
             # Do a single policy rollout
-            for t in range(env._max_episode_steps):
+            for t in range(env.num_steps):
 
                 state_list.append(state)
 
@@ -124,14 +126,6 @@ def ppo_est(env_name, num_epochs, policy, value_fn, gate_fn, epoch_batch_size = 
 
                 state_np, reward, done, _ = env.step(action.numpy())
                 state = torch.as_tensor(state_np)
-
-                if (path):
-                    nn_state_list.append(state_list[-1])
-                    nn_reward_list.append(reward)
-                    nn_action_list.append(action)
-                else:
-                    action = control(env, state)
-
 
                 path_list.append(path)
                 reward_list.append(reward)
@@ -151,29 +145,21 @@ def ppo_est(env_name, num_epochs, policy, value_fn, gate_fn, epoch_batch_size = 
 
             # make a tensor storing the current episodes state, actions, and rewards
             ep_state_tensor  = torch.stack(state_list).reshape(-1,env.observation_space.shape[0])
-            ep_nnstate_tensor  = torch.stack(nn_state_list).reshape(-1,env.observation_space.shape[0])
-            ep_nnaction_tensor = torch.stack(nn_action_list).reshape(-1, action_size)
-            ep_nndisc_rewards  = torch.as_tensor(discount_cumsum(nn_reward_list, gamma)).reshape(-1, 1)
+            ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
             ep_disc_rewards  = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
-            ep_path_tensor   = torch.stack(path_list).reshape(-1, path_list)
+            ep_path_tensor   = torch.stack(path_list).reshape(-1, 1)
 
             # calculate our advantage for this rollout
             value_preds = value_fn(ep_state_tensor)
             deltas = torch.as_tensor(reward_list[:-1]) + gamma*value_preds[1:].squeeze() - value_preds[:-1].squeeze()
             ep_adv = discount_cumsum(deltas.detach(), gamma*lam).reshape(-1,1)
 
-            nn_value_preds = value_fn(ep_nnstate_tensor)
-            nn_deltas = torch.as_tensor(nn_reward_list[:-1]) + gamma * nn_value_preds[1:].squeeze() - nn_value_preds[:-1].squeeze()
-            nn_ep_adv = discount_cumsum(nn_deltas.detach(), gamma * lam).reshape(-1, 1)
-
             # append to the tensors storing information for the whole batch
             state_tensor  = torch.cat((state_tensor , ep_state_tensor[:-1]))
-            nn_state_tensor = torch.cat((nn_state_tensor, ep_nnstate_tensor[:-1]))
-            nn_action_tensor = torch.cat((nn_action_tensor, ep_nnaction_tensor[:-1]))
-            disc_nnrewards_tensor  = torch.cat((disc_nnrewards_tensor , ep_nndisc_rewards[:-1]))
+            action_tensor = torch.cat((action_tensor, ep_action_tensor[:-1]))
             disc_rewards_tensor  = torch.cat((disc_rewards_tensor , ep_disc_rewards[:-1]))
             adv_tensor    = torch.cat((adv_tensor, ep_adv))
-            path_tensor   = torch.cat((path_tensor, ep_path_tensor))
+            path_tensor   = torch.cat((path_tensor, ep_path_tensor[:-1]))
 
             # keep track of rewards for metrics later
             episode_reward_sum.append(sum(reward_list))
@@ -181,31 +167,43 @@ def ppo_est(env_name, num_epochs, policy, value_fn, gate_fn, epoch_batch_size = 
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
 
+                p_state_list = []; p_action_list = []; p_adv_list = [];
+                for state, action, adv, path in zip(state_tensor, action_tensor, adv_tensor, path_tensor):
+                    if(path):
+                        p_state_list.append(state)
+                        p_action_list.append(action)
+                        p_adv_list.append(adv)
 
-                # keep track of rewards for metrics later
-                avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
-                # construct a training data generator
-                training_data = data.TensorDataset(state_tensor, nn_action_tensor, adv_tensor)
-                training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
 
-                # iterate through the data, doing the updates for our policy
-                for epoch in range(p_epochs):
-                    for local_states, local_actions, local_adv in training_generator:
-                        # Transfer to GPU (if GPU is enabled, else this does nothing)
-                        local_states, local_actions, local_adv = local_states.to(device), local_actions.to(device), local_adv.to(device)
+                if(len(p_state_list)):
+                    p_state_tensor  = torch.stack(p_state_list).reshape(-1, env.observation_space.shape[0])
+                    p_action_tensor = torch.stack(p_action_list).reshape(-1, action_size)
+                    p_adv_tensor    = torch.stack(p_adv_list).reshape(-1, 1)
 
-                        # predict and calculate loss for the batch
-                        logp = get_logp(policy, local_states, local_actions.squeeze()).reshape(-1,action_size)
-                        old_logp = get_logp(old_policy, local_states, local_actions.squeeze()).reshape(-1,action_size)
-                        r = torch.exp(logp - old_logp)
-                        p_loss = -torch.sum(torch.min(r*local_adv, local_adv*torch.clamp(r, (1 - eps), (1 + eps))))/r.shape[0]
+                    # keep track of rewards for metrics later
+                    avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
+                    # construct a training data generator
+                    training_data = data.TensorDataset(p_state_tensor, p_action_tensor, p_adv_tensor)
+                    training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
 
-                        # do the normal pytorch update
-                        p_loss.backward(retain_graph=True)
-                        p_optimizer.step()
-                        p_optimizer.zero_grad()
+                    # iterate through the data, doing the updates for our policy
+                    for epoch in range(p_epochs):
+                        for local_states, local_actions, local_adv in training_generator:
+                            # Transfer to GPU (if GPU is enabled, else this does nothing)
+                            local_states, local_actions, local_adv = local_states.to(device), local_actions.to(device), local_adv.to(device)
 
-                p_loss.backward()
+                            # predict and calculate loss for the batch
+                            logp = get_logp(policy, local_states, local_actions.squeeze()).reshape(-1,action_size)
+                            old_logp = get_logp(old_policy, local_states, local_actions.squeeze()).reshape(-1,action_size)
+                            r = torch.exp(logp - old_logp)
+                            p_loss = -torch.sum(torch.min(r*local_adv, local_adv*torch.clamp(r, (1 - eps), (1 + eps))))/r.shape[0]
+
+                            # do the normal pytorch update
+                            p_loss.backward(retain_graph=True)
+                            p_optimizer.step()
+                            p_optimizer.zero_grad()
+
+                    p_loss.backward()
 
                 # Now we do the update for our value function
                 # construct a training data generator
@@ -233,20 +231,20 @@ def ppo_est(env_name, num_epochs, policy, value_fn, gate_fn, epoch_batch_size = 
                 # construct a training data generator
                 training_data = data.TensorDataset(state_tensor, path_tensor)
                 training_generator = data.DataLoader(training_data, batch_size=gate_batch_size, shuffle=True)
-                agl_loss_fn = nn.BCELoss()
+                gate_loss_fn = nn.BCELoss()
                 for epoch in range(v_epochs):
                     for local_states, local_values in training_generator:
                         # Transfer to GPU (if GPU is enabled, else this does nothing)
                         local_states, local_agl = local_states.to(device), local_values.to(device)
 
                         # predict and calculate loss for the batch
-                        agl_preds = gate_fn(local_states)
-                        agl_loss = agl_loss_fn(agl_preds, torch.as_tensor(local_agl,dtype=torch.double))
+                        path_preds = gate_fn(local_states)
+                        gate_loss = gate_loss_fn(path_preds, torch.as_tensor(local_agl,dtype=torch.double))
 
                         # do the normal pytorch update
-                        a_optimizer.zero_grad()
-                        agl_loss.backward()
-                        a_optimizer.step()
+                        g_optimizer.zero_grad()
+                        gate_loss.backward()
+                        g_optimizer.step()
 
                 old_policy = copy.deepcopy(policy)
 
@@ -278,7 +276,8 @@ def get_cont_logp(policy, states, actions):
 
 # takes a policy and the states and sample an action from it... (can we make this faster?)
 def select_discrete_action(policy, state):
-    m = Categorical(policy(torch.as_tensor(state)))
+    probs = torch.tensor([policy(torch.as_tensor(state)), 1 - policy(torch.as_tensor(state))])
+    m = Categorical(probs)
     action = m.sample()
     logprob = m.log_prob(action)
     return action.detach(), logprob
@@ -336,9 +335,9 @@ if __name__ == '__main__':
     torch.set_default_dtype(torch.double)
 
     #policy = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    policy =  MLP(input_size=7, output_size=2, layer_size=12, num_layers=2, activation=nn.ReLU)
-    value_fn = MLP(input_size=7, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    agl_fn = Categorical_MLP(input_size=7, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    policy =  MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    gate_fn = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
 
 
     # Define our hyper parameters
@@ -359,4 +358,6 @@ if __name__ == '__main__':
     variance = 0.2  # feel like there should be a better way to do this...
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    env2, t_policy, t_val, rewards = ppo_est('bullet_car-v0', 100, policy, value_fn, agl_fn)
+    env2, t_policy, t_val, rewards = ppo_switch('su_cartpole-v0', 30, policy, value_fn, gate_fn)
+
+    print(rewards)
