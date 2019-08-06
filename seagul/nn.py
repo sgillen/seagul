@@ -46,17 +46,35 @@ def make_histories(states, history_length, sampling_sparsity=1):
     num_set = states.shape[0]
     z_ext = np.zeros(((history_length - 1) * sampling_sparsity, states.shape[1]))
     states = np.concatenate((z_ext, states), axis=0)
-    histories = np.zeros((num_set,) + (states.shape[1],) + (history_length,)) # initialize output matrix
+    histories = np.zeros(
+        (num_set,) + (states.shape[1],) + (history_length,)
+    )  # initialize output matrix
     step = 0
 
-    while(step<num_set):
+    while step < num_set:
         # select vectors according to history_length and sampling_sparsity
-        histories[step, :, :] = np.transpose(states[step:(history_length - 1) * sampling_sparsity + 1 + step:sampling_sparsity, :])
-        step+=1
+        histories[step, :, :] = np.transpose(
+            states[
+                step : (history_length - 1) * sampling_sparsity
+                + 1
+                + step : sampling_sparsity,
+                :,
+            ]
+        )
+        step += 1
     return histories
 
 
-def fit_model(model, state_train, action_train, num_epochs, learning_rate = 1e-2, batch_size=32, shuffle=True, loss_fn = torch.nn.MSELoss()):
+def fit_model(
+    model,
+    state_train,
+    action_train,
+    num_epochs,
+    learning_rate=1e-2,
+    batch_size=32,
+    shuffle=True,
+    loss_fn=torch.nn.MSELoss(),
+):
     """
     Trains a pytorch module model to predict actions from states for num_epochs passes through the dataset.
 
@@ -99,11 +117,13 @@ def fit_model(model, state_train, action_train, num_epochs, learning_rate = 1e-2
     # TODO this might belong in module body
     use_cuda = torch.cuda.is_available()
     # device = torch.device("cuda:0" if use_cuda else "cpu")
-    device=torch.device("cpu")
-    state_tensor = torch.as_tensor(state_train) # make sure that our input is a tensor
+    device = torch.device("cpu")
+    state_tensor = torch.as_tensor(state_train)  # make sure that our input is a tensor
     action_tensor = torch.as_tensor(action_train)
     training_data = data.TensorDataset(state_tensor, action_tensor)
-    training_generator = data.DataLoader(training_data, batch_size=batch_size, shuffle=shuffle)
+    training_generator = data.DataLoader(
+        training_data, batch_size=batch_size, shuffle=shuffle
+    )
 
     # action_size = action_train.size()[1]
 
@@ -117,12 +137,15 @@ def fit_model(model, state_train, action_train, num_epochs, learning_rate = 1e-2
         for local_states, local_actions in training_generator:
 
             # Transfer to GPU (if GPU is enabled, else this does nothing)
-            local_states, local_actions = local_states.to(device), local_actions.to(device)
+            local_states, local_actions = (
+                local_states.to(device),
+                local_actions.to(device),
+            )
 
             # predict and calculate loss for the batch
             action_preds = model(local_states)
             loss = loss_fn(action_preds, local_actions)
-            epoch_loss += loss # only used for metrics
+            epoch_loss += loss  # only used for metrics
 
             # do the normal pytorch update
             optimizer.zero_grad()
@@ -133,6 +156,7 @@ def fit_model(model, state_train, action_train, num_epochs, learning_rate = 1e-2
         loss_hist.append(epoch_loss.detach().numpy() / len(state_train))
 
     return epoch_loss
+
 
 def policy_render_loop(policy, env, select_action):
 
@@ -205,16 +229,27 @@ def policy_render_loop(policy, env, select_action):
         env.close()
 
 
-
 class MLP(nn.Module):
-
-    def __init__(self, input_size , output_size, num_layers, layer_size, activation):
+    """
+    Policy designed to be used with seaguls rl module.
+    Simple MLP that has a linear layer at the output
+    """
+    def __init__(self, input_size, output_size, num_layers, layer_size, activation):
+        """
+         :param input_size: how many inputs
+         :param output_size: how many outputs
+         :param num_layers: how many HIDDEN layers
+         :param layer_size: how big each hidden layer should be
+         :param activation: which activation function to use
+         """
         super(MLP, self).__init__()
 
         self.activation = activation()
 
         self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
-        self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers )])
+        self.layers.extend(
+            [nn.Linear(layer_size, layer_size) for _ in range(num_layers)]
+        )
         self.output_layer = nn.Linear(layer_size, output_size)
 
     def forward(self, data):
@@ -225,14 +260,26 @@ class MLP(nn.Module):
 
 
 class Categorical_MLP(nn.Module):
-
-    def __init__(self, input_size , output_size, num_layers, layer_size, activation):
+    """
+    Policy designed to be used with seaguls rl module.
+    Simple MLP that will output class label probs
+    """
+    def __init__(self, input_size, output_size, num_layers, layer_size, activation):
+        """
+        :param input_size: how many inputs
+        :param output_size: how many outputs
+        :param num_layers: how many HIDDEN layers
+        :param layer_size: how big each hidden layer should be
+        :param activation: which activation function to use
+        """
         super(Categorical_MLP, self).__init__()
 
         self.activation = activation()
 
         self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
-        self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers )])
+        self.layers.extend(
+            [nn.Linear(layer_size, layer_size) for _ in range(num_layers)]
+        )
         self.output_layer = nn.Linear(layer_size, output_size)
 
         if output_size == 1:
@@ -247,11 +294,30 @@ class Categorical_MLP(nn.Module):
         return self.output_norm(self.output_layer(data))
 
 
+class DummyNet(nn.Module):
+    """
+    This is a dummy network used for debugging, it will always output zero
+    """
+
+    def __init__(self, input_size, output_size, num_layers, layer_size, activation):
+        """
+        :param input_size: how many inputs
+        :param output_size: how many outputs
+        :param num_layers: ignored
+        :param layer_size: ingnored
+        :param activation: ignored
+        """
+        super(DummyNet, self).__init__()
+        self.output_size = output_size
+        self.layer = nn.Linear(input_size,output_size, bias=False)  #
+
+    def forward(self, data):
+        return self.layer(data)*torch.zeros(self.output_size)
 
 
-if __name__ == '__main__':
-    policy = MLP(input_size = 4, output_size = 1, num_layers = 3, layer_size = 12, activation=nn.ReLU)
-    print(policy(torch.randn(1,4)))
-
-
-
+# One day this might be a unit test
+if __name__ == "__main__":
+    policy = MLP(
+        input_size=4, output_size=1, num_layers=3, layer_size=12, activation=nn.ReLU
+    )
+    print(policy(torch.randn(1, 4)))

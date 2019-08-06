@@ -25,17 +25,17 @@ switching_policy = nn.Sequential(
     nn.ReLU(),
     nn.Linear(64, 64),
     nn.ReLU(),
-    nn.Linear(64, 7)
+    nn.Linear(64, 7),
 )
 
 # Swingup sub controller
 swingup_policy = nn.Sequential(
     nn.Linear(3, 12),
     nn.Tanh(),
-    nn.Linear(12, 12), 
+    nn.Linear(12, 12),
     nn.Tanh(),
     nn.Linear(12, 2),
-    nn.Softmax(dim=-1)
+    nn.Softmax(dim=-1),
 )
 
 # Value function approximator used for the baseline
@@ -48,7 +48,7 @@ switching_policy = nn.Sequential(
     nn.ReLU(),
     nn.Linear(64, 64),
     nn.ReLU(),
-    nn.Linear(64, 1)
+    nn.Linear(64, 1),
 )
 
 
@@ -61,8 +61,8 @@ def select_action(switching_policy, swingup_policy, state):
     controller = switch_dist.sample()
     logprob_switch = switch_dist.log_prob(controller)
 
-   # if controller.item() == 0:
-    #print("hello")
+    # if controller.item() == 0:
+    # print("hello")
     torque_limit = 100.0
     swingup_dist = Categorical(swingup_policy(t_state))
     dir = swingup_dist.sample()
@@ -73,21 +73,21 @@ def select_action(switching_policy, swingup_policy, state):
 
     logprob_swingup = swingup_dist.log_prob(dir)
 
-    #else:
-        #print("goodbye")
-        # balancing
-        # LQR: K values from MATLAB
-      #  K = 1 / 50
-      #  k1 = 3
-      #  k2 = 140
-      #  k3 = 8
-      #  k4 = 42
-      #  action = K * (k1 * state[0] + k2 * state[1] + k3 * state[2] + k4 * state[3])
+    # else:
+    # print("goodbye")
+    # balancing
+    # LQR: K values from MATLAB
+    #  K = 1 / 50
+    #  k1 = 3
+    #  k2 = 140
+    #  k3 = 8
+    #  k4 = 42
+    #  action = K * (k1 * state[0] + k2 * state[1] + k3 * state[2] + k4 * state[3])
 
     return action, logprob_switch, logprob_swingup
 
-# ============================================================================================
 
+# ============================================================================================
 
 
 switching_optimizer = optim.Adam(switching_policy.parameters(), lr=1e-2)
@@ -96,18 +96,18 @@ value_optimizer = optim.Adam(value_fn.parameters(), lr=1e-2)
 
 num_epochs = 2000  # number of batches to train on
 batch_size = 500  # how many steps we want to use before we update our gradients
-num_steps = 200   # number of steps in an episode (unless we terminate early)
+num_steps = 200  # number of steps in an episode (unless we terminate early)
 
 
-env_name = 'Pendulum-v0'
+env_name = "Pendulum-v0"
 
 # def vanilla_policy_grad(env, policy, policy_optimizer):
 
 env = gym.make(env_name)
 env.num_steps = 3000
-env.state_noise_max = .01
+env.state_noise_max = 0.01
 env.torque_limit = 200.0
-env.dt = .01
+env.dt = 0.01
 env.X_MAX = 20.0
 
 avg_reward_hist = []
@@ -130,7 +130,9 @@ for epoch in trange(num_epochs):
 
         for t in range(num_steps):
 
-            action, logprob_switch, logprob_swingup = select_action(switching_policy, swingup_policy, state)
+            action, logprob_switch, logprob_swingup = select_action(
+                switching_policy, swingup_policy, state
+            )
             state, reward, done, _ = env.step(action)
 
             swingup_logprob_list.append(-logprob_switch)
@@ -146,33 +148,31 @@ for epoch in trange(num_epochs):
                 traj_count += 1
                 break
 
-
-
         try:
 
             # Now Calculate cumulative rewards for each action
-            action_rewards = torch.tensor([sum(reward_list[i:]) for i in range(len(reward_list))])
+            action_rewards = torch.tensor(
+                [sum(reward_list[i:]) for i in range(len(reward_list))]
+            )
             logprob_sw = torch.stack(switching_logprob_list)
 
-
-
             value_preds = value_fn(torch.tensor(state_list)).squeeze()
-            policy_rewards = (action_rewards - value_preds)
+            policy_rewards = action_rewards - value_preds
 
-            sw_policy_loss = torch.sum(logprob_sw * policy_rewards)/(traj_count)
+            sw_policy_loss = torch.sum(logprob_sw * policy_rewards) / (traj_count)
             sw_policy_loss.backward(retain_graph=True)
 
             logprob_su = torch.stack(swingup_logprob_list)
             su_policy_loss = torch.sum(logprob_su * policy_rewards) / (traj_count)
             su_policy_loss.backward(retain_graph=True)
 
-
-            value_loss = torch.sum(value_preds - action_rewards)/(traj_count*num_steps)
+            value_loss = torch.sum(value_preds - action_rewards) / (
+                traj_count * num_steps
+            )
             value_loss.backward(retain_graph=True)
 
         except RuntimeError:
             pass
-
 
         episode_reward_sum.append(sum(reward_list))
 
@@ -193,9 +193,8 @@ for epoch in trange(num_epochs):
 # ============================================================================================
 
 plt.plot(avg_reward_hist)
-plt.title('new')
+plt.title("new")
 plt.show()
-
 
 
 def policy_render_loop(sw_policy, su_policy, env, select_action):
@@ -258,7 +257,7 @@ def policy_render_loop(sw_policy, su_policy, env, select_action):
     try:
         state = env.reset()
         while True:
-            action, _, _ = select_action(sw_policy, su_policy,  state)
+            action, _, _ = select_action(sw_policy, su_policy, state)
             state, reward, done, _ = env.step(action)
             env.render()
 
@@ -267,9 +266,3 @@ def policy_render_loop(sw_policy, su_policy, env, select_action):
 
     except KeyboardInterrupt:
         env.close()
-
-
-
-
-
-

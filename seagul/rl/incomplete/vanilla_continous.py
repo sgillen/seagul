@@ -11,12 +11,12 @@ torch.set_default_dtype(torch.double)
 
 # ============================================================================================
 
-#env_name = 'CartPole-v0' # Discrete
-env_name = 'InvertedPendulum-v2' # Continous
-#env_name = 'su_cartpole-v0'
+# env_name = 'CartPole-v0' # Discrete
+env_name = "InvertedPendulum-v2"  # Continous
+# env_name = 'su_cartpole-v0'
 
-#env_name = 'Walker2d-v2'
-#env_name = 'lorenz-v0'
+# env_name = 'Walker2d-v2'
+# env_name = 'lorenz-v0'
 # Hard coded policy for the cartpole problem
 # Will eventually want to build up infrastructure to develop a policy depending on:
 # env.action_space
@@ -79,18 +79,18 @@ max_reward = 101
 # ============================================================================================
 
 variance = 0.1
+
+
 def select_action(policy, state):
 
     # loc is the mean, scale is the variance
-    #m = Normal(loc = policy(torch.tensor(state))[0], scale = abs(policy(torch.tensor(state))[1]))
+    # m = Normal(loc = policy(torch.tensor(state))[0], scale = abs(policy(torch.tensor(state))[1]))
 
     means = policy(torch.as_tensor(state))
-    m = Normal(loc = means, scale = torch.ones_like(means)*variance)
+    m = Normal(loc=means, scale=torch.ones_like(means) * variance)
     action = m.sample()
     logprob = m.log_prob(action)
     return action.detach().numpy(), logprob
-
-
 
 
 # def vanilla_policy_grad(env, policy, policy_optimizer):
@@ -117,7 +117,6 @@ for epoch in trange(num_epochs):
 
     policy_loss = torch.tensor([0], dtype=torch.double)
     value_loss = torch.tensor([0], dtype=torch.double)
-
 
     # Check if we have completed the task early
     try:
@@ -150,18 +149,25 @@ for epoch in trange(num_epochs):
                 traj_count += 1
                 break
 
-
         # Now Calculate cumulative rewards for each action
-        action_rewards = torch.tensor([sum(reward_list[i:]) for i in range(len(reward_list))])
+        action_rewards = torch.tensor(
+            [sum(reward_list[i:]) for i in range(len(reward_list))]
+        )
         logprob_t = torch.stack(logprob_list)
 
         value_list = value_fn(torch.tensor(state_list)).squeeze()
-        value_preds = torch.stack([torch.sum(value_list[i:]) for i in range(len(value_list))])
-        policy_rewards = (action_rewards - value_preds)
+        value_preds = torch.stack(
+            [torch.sum(value_list[i:]) for i in range(len(value_list))]
+        )
+        policy_rewards = action_rewards - value_preds
         policy_rewards = action_rewards
 
-        policy_loss += torch.sum(logprob_t.transpose(-1,0) * policy_rewards)/traj_count
-        value_loss += torch.sum(torch.pow(action_rewards - value_preds, 2))/(traj_count*num_steps)
+        policy_loss += (
+            torch.sum(logprob_t.transpose(-1, 0) * policy_rewards) / traj_count
+        )
+        value_loss += torch.sum(torch.pow(action_rewards - value_preds, 2)) / (
+            traj_count * num_steps
+        )
 
         episode_reward_sum.append(sum(reward_list))
 
@@ -181,7 +187,7 @@ for epoch in trange(num_epochs):
             value_optimizer.zero_grad()
 
             policy_loss *= 0
-            value_loss  += 0
+            value_loss += 0
 
             avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
             traj_count = 1
@@ -191,12 +197,10 @@ for epoch in trange(num_epochs):
 # ============================================================================================
 
 save_path = "./data/lorenz1"
-torch.save(policy.state_dict(), save_path )
+torch.save(policy.state_dict(), save_path)
 
 plt.plot(avg_reward_hist)
-plt.title('Average Reward')
-plt.xlabel('Epoch')
-plt.ylabel('Avg Reward')
+plt.title("Average Reward")
+plt.xlabel("Epoch")
+plt.ylabel("Avg Reward")
 plt.show()
-
-

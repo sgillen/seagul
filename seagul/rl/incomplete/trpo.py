@@ -12,7 +12,7 @@ torch.set_default_dtype(torch.double)
 
 # ============================================================================================
 
-env_name = 'HalfCheetah-v2'
+env_name = "HalfCheetah-v2"
 
 # Hard coded policy for the cartpole problem
 # Will eventually want to build up infrastructure to develop a policy depending on:
@@ -22,18 +22,14 @@ env_name = 'HalfCheetah-v2'
 policy = nn.Sequential(
     nn.Linear(4, 12),
     nn.Tanh(),
-    #nn.Linear(12, 12),
-    #nn.Tanh(),
+    # nn.Linear(12, 12),
+    # nn.Tanh(),
     nn.Linear(12, 2),
-    nn.Softmax(dim=-1)
+    nn.Softmax(dim=-1),
 )
 
 value_fn = nn.Sequential(
-    nn.Linear(4,12),
-    nn.Tanh(),
-    nn.Linear(12,12),
-    nn.Tanh(),
-    nn.Linear(12,1)
+    nn.Linear(4, 12), nn.Tanh(), nn.Linear(12, 12), nn.Tanh(), nn.Linear(12, 1)
 )
 policy_optimizer = optim.Adam(policy.parameters(), lr=1e-2)
 value_optimizer = optim.Adam(value_fn.parameters(), lr=1e-2)
@@ -87,13 +83,14 @@ for epoch in trange(num_epochs):
             if done:
                 break
 
-
         # Now Calculate cumulative rewards for each action
-        action_rewards = torch.tensor([sum(reward_list[i:]) for i in range(len(reward_list))])
+        action_rewards = torch.tensor(
+            [sum(reward_list[i:]) for i in range(len(reward_list))]
+        )
         logprob_t = torch.stack(logprob_list)
 
         value_preds = value_fn(torch.tensor(state_list)).squeeze()
-        policy_rewards = (action_rewards - value_preds)
+        policy_rewards = action_rewards - value_preds
 
         policy_loss = torch.sum(logprob_t * policy_rewards)
         policy_loss.backward(retain_graph=True)
@@ -117,5 +114,5 @@ for epoch in trange(num_epochs):
 # ============================================================================================
 
 plt.plot(avg_reward_hist)
-plt.title('new')
+plt.title("new")
 plt.show()
