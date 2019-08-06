@@ -31,9 +31,7 @@ class SUPendulumEnv(gym.Env):
         # else:
         #    reward = 0
 
-        ob = solve_ivp(
-            lambda t, y: self._derivs(t, y, action), self.state, [0, self.dt]
-        )
+        ob = solve_ivp(lambda t, y: self._derivs(t, y, action), self.state, [0, self.dt])
         self.state = ob
 
         reward = np.sin(ob[0])
@@ -45,9 +43,7 @@ class SUPendulumEnv(gym.Env):
         return ob, reward, done, {}
 
     def reset_model(self):
-        self.state = (
-            self.init_state
-        )  # + self.np_random.uniform(size=self.model.nq, low=-0.01, high=0.01)
+        self.state = self.init_state  # + self.np_random.uniform(size=self.model.nq, low=-0.01, high=0.01)
         self.cur_step = 0
         return self._get_obs()
 
@@ -58,9 +54,7 @@ class SUPendulumEnv(gym.Env):
         y1 = -self.L * cos(y[:, 0])
 
         fig = plt.figure()
-        ax = fig.add_subplot(
-            111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3)
-        )
+        ax = fig.add_subplot(111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3))
         ax.grid()
 
         line1, = ax.plot([], [], "o-", lw=2)
@@ -77,14 +71,7 @@ class SUPendulumEnv(gym.Env):
             time_text.set_text(time_template % (i * dt))
             return [line1, time_text]
 
-        return animation.FuncAnimation(
-            fig,
-            animate_step,
-            np.arange(1, len(y)),
-            interval=5,
-            blit=True,
-            init_func=init,
-        )
+        return animation.FuncAnimation(fig, animate_step, np.arange(1, len(y)), interval=5, blit=True, init_func=init)
 
     def _get_obs(self):
         return self.state

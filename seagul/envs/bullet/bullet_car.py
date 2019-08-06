@@ -85,9 +85,7 @@ class RacecarGymEnv_v1(gym.Env):
             self._action_bound = 1
             action_high = np.array([self._action_bound] * action_dim)
             self.action_space = spaces.Box(-action_high, action_high, dtype=np.float32)
-        self.observation_space = spaces.Box(
-            -observation_high, observation_high, dtype=np.float32
-        )
+        self.observation_space = spaces.Box(-observation_high, observation_high, dtype=np.float32)
         self.viewer = None
         self.goal = []
         self.useSphere = False
@@ -140,21 +138,15 @@ class RacecarGymEnv_v1(gym.Env):
         else:
             # just reset car body to 0
             self._p.resetBasePositionAndOrientation(
-                self._racecar.racecarUniqueId,
-                self.starting_carpos,
-                self.starting_carorn,
+                self._racecar.racecarUniqueId, self.starting_carpos, self.starting_carorn
             )
-            self._p.resetBaseVelocity(
-                self._racecar.racecarUniqueId, [0, 0, 0], [0, 0, 0]
-            )
+            self._p.resetBaseVelocity(self._racecar.racecarUniqueId, [0, 0, 0], [0, 0, 0])
 
         self._envStepCounter = 0
         ballx, bally, ballz = self.set_new_goal()
 
         if self.useSphere:
-            self._ballUniqueId = self._p.loadURDF(
-                os.path.join(self._urdfRoot, "sphere2.urdf"), [ballx, bally, ballz]
-            )
+            self._ballUniqueId = self._p.loadURDF(os.path.join(self._urdfRoot, "sphere2.urdf"), [ballx, bally, ballz])
 
         if self.useSphere:
             self._observation = self.getExtendedObservation()
@@ -171,14 +163,10 @@ class RacecarGymEnv_v1(gym.Env):
 
     def getExtendedObservation(self):
         self._observation = []  # self._racecar.getObservation()
-        carpos, carorn = self._p.getBasePositionAndOrientation(
-            self._racecar.racecarUniqueId
-        )
+        carpos, carorn = self._p.getBasePositionAndOrientation(self._racecar.racecarUniqueId)
         ballpos, ballorn = self._p.getBasePositionAndOrientation(self._ballUniqueId)
         invCarPos, invCarOrn = self._p.invertTransform(carpos, carorn)
-        ballPosInCar, ballOrnInCar = self._p.multiplyTransforms(
-            invCarPos, invCarOrn, ballpos, ballorn
-        )
+        ballPosInCar, ballOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, ballpos, ballorn)
 
         self._observation.extend([ballPosInCar[0], ballPosInCar[1]])
         return self._observation
@@ -216,9 +204,7 @@ class RacecarGymEnv_v1(gym.Env):
         ang2Goal = angle_between(body_dir_vec, body_goal_vec)
 
         # include information on thf, velocities in x and y directions ( linVel[0:2] )
-        steering_jointStates = self._p.getJointStates(
-            self._racecar.racecarUniqueId, self._racecar.steeringLinks
-        )
+        steering_jointStates = self._p.getJointStates(self._racecar.racecarUniqueId, self._racecar.steeringLinks)
         steering_jointPositions = np.array([x[0] for x in steering_jointStates])
         steering_jointVelocities = np.array([x[1] for x in steering_jointStates])
 
@@ -234,9 +220,7 @@ class RacecarGymEnv_v1(gym.Env):
         return [distCurrPos2Goal, ang2Goal, thf, dxb, dyb, dthb, dthf]
 
     def dist2Goal(self):
-        _, _, _, _, base_pos, orn = self._p.getLinkState(
-            self._racecar.racecarUniqueId, 20
-        )
+        _, _, _, _, base_pos, orn = self._p.getLinkState(self._racecar.racecarUniqueId, 20)
         base_pos = np.array(base_pos[0:2])
         goal = np.array(self.goal[0:2])
         dist_to_goal = np.linalg.norm(base_pos - goal)
@@ -246,13 +230,9 @@ class RacecarGymEnv_v1(gym.Env):
         prev_dist_to_goal = self.dist2Goal()
 
         if self._renders:
-            basePos, orn = self._p.getBasePositionAndOrientation(
-                self._racecar.racecarUniqueId
-            )
+            basePos, orn = self._p.getBasePositionAndOrientation(self._racecar.racecarUniqueId)
             # self._p.resetDebugVisualizerCamera(1, 30, -40, basePos)
-            self._p.addUserDebugText(
-                text="GOAL", textPosition=self.goal, textSize=2, lifeTime=1
-            )
+            self._p.addUserDebugText(text="GOAL", textPosition=self.goal, textSize=2, lifeTime=1)
 
         if self._isDiscrete:
             fwd = [-1, -1, -1, 0, 0, 0, 1, 1, 1]
@@ -277,27 +257,19 @@ class RacecarGymEnv_v1(gym.Env):
             else:
                 self._observation = self.getExtendedObservationGoal()
                 after_dist_to_goal = self.dist2Goal()
-                if self._termination() or (
-                    after_dist_to_goal < self.dist_to_goal_threshold
-                ):
+                if self._termination() or (after_dist_to_goal < self.dist_to_goal_threshold):
                     break
 
             self._envStepCounter += 1
 
-        _, _, _, _, base_pos, orn = self._p.getLinkState(
-            self._racecar.racecarUniqueId, 20
-        )
+        _, _, _, _, base_pos, orn = self._p.getLinkState(self._racecar.racecarUniqueId, 20)
 
         if self.useSphere:
             reward = self._reward()
             done = self._termination()
         else:
-            reward = (prev_dist_to_goal - after_dist_to_goal) / (
-                self._actionRepeat * self._timeStep
-            )
-            done = self._termination() or (
-                after_dist_to_goal < self.dist_to_goal_threshold
-            )
+            reward = (prev_dist_to_goal - after_dist_to_goal) / (self._actionRepeat * self._timeStep)
+            done = self._termination() or (after_dist_to_goal < self.dist_to_goal_threshold)
 
             # if done:
             #    print("counter", self._envStepCounter, "goal", self.goal, "end_pos", base_pos)
@@ -307,9 +279,7 @@ class RacecarGymEnv_v1(gym.Env):
     def render(self, mode="human", close=False):
         if mode != "rgb_array":
             return np.array([])
-        base_pos, orn = self._p.getBasePositionAndOrientation(
-            self._racecar.racecarUniqueId
-        )
+        base_pos, orn = self._p.getBasePositionAndOrientation(self._racecar.racecarUniqueId)
         view_matrix = self._p.computeViewMatrixFromYawPitchRoll(
             cameraTargetPosition=base_pos,
             distance=self._cam_dist,
@@ -319,10 +289,7 @@ class RacecarGymEnv_v1(gym.Env):
             upAxisIndex=2,
         )
         proj_matrix = self._p.computeProjectionMatrixFOV(
-            fov=60,
-            aspect=float(RENDER_WIDTH) / RENDER_HEIGHT,
-            nearVal=0.1,
-            farVal=100.0,
+            fov=60, aspect=float(RENDER_WIDTH) / RENDER_HEIGHT, nearVal=0.1, farVal=100.0
         )
         (_, _, px, _, _) = self._p.getCameraImage(
             width=RENDER_WIDTH,
@@ -339,9 +306,7 @@ class RacecarGymEnv_v1(gym.Env):
         return self._envStepCounter > 1000
 
     def _reward(self):
-        closestPoints = self._p.getClosestPoints(
-            self._racecar.racecarUniqueId, self._ballUniqueId, 10000
-        )
+        closestPoints = self._p.getClosestPoints(self._racecar.racecarUniqueId, self._ballUniqueId, 10000)
 
         numPt = len(closestPoints)
         reward = -1000

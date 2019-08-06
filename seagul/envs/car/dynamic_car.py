@@ -40,9 +40,7 @@ class DynCarEnv(gym.Env):
 
         self.T_MAX = 10
 
-        car_state_max = np.array(
-            [self.X_MAX, self.Y_MAX, pi, self.DX_MAX, self.DY_MAX, self.DTHETA_MAX]
-        )
+        car_state_max = np.array([self.X_MAX, self.Y_MAX, pi, self.DX_MAX, self.DY_MAX, self.DTHETA_MAX])
         goal_state_max = np.array([self.X_MAX, self.Y_MAX, self.T_MAX])
 
         aug_state_max = np.concatenate((car_state_max, goal_state_max))
@@ -68,9 +66,7 @@ class DynCarEnv(gym.Env):
 
         self.state[8] = self.state[8] - self.dt
 
-        reward = (self.state[6] - self.state[0]) ** 2 + (
-            self.state[7] - self.state[1]
-        ) ** 2
+        reward = (self.state[6] - self.state[0]) ** 2 + (self.state[7] - self.state[1]) ** 2
 
         if self.state[8] < 0:
             done = True
@@ -112,9 +108,7 @@ class DynCarEnv(gym.Env):
         return self.state
 
     def _get_ob(self):
-        return self.state + self.np_random.uniform(
-            -self.state_noise_max, self.state_noise_max, size=(9,)
-        )
+        return self.state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max, size=(9,))
 
 
 def wrap(x, m, M):

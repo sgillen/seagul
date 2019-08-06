@@ -41,9 +41,7 @@ class LorenzEnv(gym.Env):
         y_max = 100
         z_max = 100
         self.state_max = np.array([x_max, y_max, z_max])
-        self.observation_space = gym.spaces.Box(
-            low=-self.state_max, high=self.state_max, dtype=np.float64
-        )
+        self.observation_space = gym.spaces.Box(low=-self.state_max, high=self.state_max, dtype=np.float64)
         self.state_noise_max = 0.0
 
         # Action (Control) parameters
@@ -51,9 +49,7 @@ class LorenzEnv(gym.Env):
         uy_max = 100
         uz_max = 100
         self.action_max = np.array([ux_max, uy_max, uz_max])
-        self.action_space = gym.spaces.Box(
-            low=-self.action_max, high=self.action_max, dtype=np.float64
-        )
+        self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float64)
         self.u_noise_max = 0.0
 
         self.seed()
@@ -64,17 +60,13 @@ class LorenzEnv(gym.Env):
         return [seed]
 
     def reset(self):
-        self.state = self.init_state + self.np_random.uniform(
-            -self.state_noise_max, self.state_noise_max
-        )
+        self.state = self.init_state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
         self.cur_step = 0
 
         return self.state
 
     def _get_ob(self):
-        return self.state + self.np_random.uniform(
-            -self.state_noise_max, self.state_noise_max
-        )
+        return self.state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
 
     def step(self, action):
         done = False
@@ -84,9 +76,7 @@ class LorenzEnv(gym.Env):
 
         # Add noise to the force action (if noise is zero this will do nothing)
         if self.u_noise_max > 0:
-            action += self.np_random.uniform(
-                -self.torque_noise_max, self.torque_noise_max
-            )
+            action += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         ds = self._derivs(0, self.state, action)
         self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)

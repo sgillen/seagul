@@ -21,9 +21,7 @@ class FiveLinkWalkerEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.lfoot = 0
         self.rfoot = 0
         # print("Reached", id(self))
-        mujoco_env.MujocoEnv.__init__(
-            self, os.path.dirname(__file__) + "/five_link.xml", 4
-        )
+        mujoco_env.MujocoEnv.__init__(self, os.path.dirname(__file__) + "/five_link.xml", 4)
         utils.EzPickle.__init__(self)
         # print("Can't reach", id(self))
 
