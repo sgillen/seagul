@@ -32,9 +32,7 @@ def animate_pend(y):
     y2 = L2 * sin(th1 + th2) + y1
 
     fig = plt.figure()
-    ax = fig.add_subplot(
-        111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3)
-    )
+    ax = fig.add_subplot(111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3))
     ax.grid()
 
     line1, = ax.plot([], [], "o-", lw=2)
@@ -55,9 +53,7 @@ def animate_pend(y):
         time_text.set_text(time_template % (i * dt))
         return [line1, line2, time_text]
 
-        return animation.FuncAnimation(
-            fig, animate, np.arange(1, len(y)), interval=40, blit=True, init_func=init
-        )
+        return animation.FuncAnimation(fig, animate, np.arange(1, len(y)), interval=40, blit=True, init_func=init)
 
 
 # @jit(nopython=False)

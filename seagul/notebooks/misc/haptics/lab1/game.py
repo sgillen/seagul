@@ -29,9 +29,7 @@ f = 15  # sine frequency, Hz
 
 wave = abs((sin(2 * pi * np.arange(fs * duration) * f / fs)).astype(np.float32))
 # wave = sawtooth(2*pi*np.arange(fs*duration)*f/fs).astype(np.float32)
-wave_play = (
-    wave.copy()
-)  # Make a copy of the wave for the modified version that actually gets sent to the motor
+wave_play = wave.copy()  # Make a copy of the wave for the modified version that actually gets sent to the motor
 
 baseline = 70
 static_gain = 0.01
@@ -42,9 +40,7 @@ while True:
     # run the marker detection
     re, img = cap.read()
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(
-        gray, aruco_dict, parameters=aruco_parameters
-    )
+    corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=aruco_parameters)
 
     # found = aruco.drawDetectedMarkers(img, corners, ids)
     # cv2.imshow('Markers', found)

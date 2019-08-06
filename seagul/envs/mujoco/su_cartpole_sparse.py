@@ -10,9 +10,7 @@ class MJSUCartPoleSparseEnv(mujoco_env.MujocoEnv):
         self.num_steps = num_steps
         self.cur_step = 0
 
-        mujoco_env.MujocoEnv.__init__(
-            self, os.path.dirname(__file__) + "/su_cartpole.xml", 1
-        )
+        mujoco_env.MujocoEnv.__init__(self, os.path.dirname(__file__) + "/su_cartpole.xml", 1)
         # super(SUCartPoleEnv, self).__init__(os.path.dirname(__file__) + '/su_cartpole.xml', 1)
 
         self.init_qpos = np.array([0, pi])
@@ -41,12 +39,8 @@ class MJSUCartPoleSparseEnv(mujoco_env.MujocoEnv):
         return ob, reward, done, {}
 
     def reset_model(self):
-        qpos = (
-            self.init_qpos
-        )  # + self.np_random.uniform(size=self.model.nq, low=-0.01, high=0.01)
-        qvel = (
-            self.init_qvel
-        )  # + self.np_random.uniform(size=self.model.nv, low=-0.01, high=0.01)
+        qpos = self.init_qpos  # + self.np_random.uniform(size=self.model.nq, low=-0.01, high=0.01)
+        qvel = self.init_qvel  # + self.np_random.uniform(size=self.model.nv, low=-0.01, high=0.01)
         self.set_state(qpos, qvel)
         self.cur_step = 0
         return self._get_obs()

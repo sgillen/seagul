@@ -75,9 +75,7 @@ class SUCartPoleDiscEnv(gym.Env):
         return self.state
 
     def _get_ob(self):
-        return self.state + self.np_random.uniform(
-            -self.state_noise_max, self.state_noise_max, size=(4,)
-        )
+        return self.state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max, size=(4,))
 
     def step(self, action):
         done = False
@@ -89,9 +87,7 @@ class SUCartPoleDiscEnv(gym.Env):
 
         # Add noise to the force action
         if self.torque_noise_max > 0:
-            torque += self.np_random.uniform(
-                -self.torque_noise_max, self.torque_noise_max
-            )
+            torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         # ns = rk4(self._derivs, torque, 0, self.dt, self.state)
         ns = euler(self._derivs, torque, 0, self.dt, self.state)
@@ -150,12 +146,7 @@ class SUCartPoleDiscEnv(gym.Env):
             self.carttrans = rendering.Transform()
             cart.add_attr(self.carttrans)
             self.viewer.add_geom(cart)
-            l, r, t, b = (
-                -polewidth / 2,
-                polewidth / 2,
-                polelen - polewidth / 2,
-                -polewidth / 2,
-            )
+            l, r, t, b = (-polewidth / 2, polewidth / 2, polelen - polewidth / 2, -polewidth / 2)
             pole = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
             pole.set_color(0.8, 0.6, 0.4)
             self.poletrans = rendering.Transform(translation=(0, axleoffset))

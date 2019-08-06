@@ -42,13 +42,11 @@ class CGWalkerPlant(VectorSystem):
 
         torque_from_point_mass = -self.m * self.l * self.g * math.sin(theta)
         torque_from_damping = -self.b * theta_dot
-        accel_from_base_acceleration = (
-            -self.C * self.l * self.w ** 2 * base_position * math.cos(theta)
-        )
+        accel_from_base_acceleration = -self.C * self.l * self.w ** 2 * base_position * math.cos(theta)
 
-        theta_ddot = accel_from_base_acceleration + (
-            torque_from_damping + torque_from_point_mass + u
-        ) / (self.m * self.l ** 2)
+        theta_ddot = accel_from_base_acceleration + (torque_from_damping + torque_from_point_mass + u) / (
+            self.m * self.l ** 2
+        )
 
         xdot[0] = theta_dot
         xdot[1] = theta_ddot
@@ -94,9 +92,7 @@ class PendulumController(VectorSystem):
         y[:] = self.feedback_rule(context.get_time(), u[0], u[1])
 
 
-def RunPendulumSimulation(
-    pendulum_plant, pendulum_controller, x0=[0.9, 0.0], duration=10
-):
+def RunPendulumSimulation(pendulum_plant, pendulum_controller, x0=[0.9, 0.0], duration=10):
     """
         Accepts a pendulum_plant (which should be a
         DampedOscillatingPendulumPlant) and simulates it for 
@@ -130,12 +126,7 @@ def RunPendulumSimulation(
     simulator.set_publish_every_time_step(False)
 
     # Set the initial conditions for the simulation.
-    state = (
-        simulator.get_mutable_context()
-        .get_mutable_state()
-        .get_mutable_continuous_state()
-        .get_mutable_vector()
-    )
+    state = simulator.get_mutable_context().get_mutable_state().get_mutable_continuous_state().get_mutable_vector()
     state.SetFromVector(x0)
 
     # Simulate for the requested duration.

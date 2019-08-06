@@ -20,12 +20,12 @@ care of loading a trained model just by specifying the name you saved it with
 """
 
 
-
-def run_and_save(arg_dict, run_name=None, description=None, base_path="/data/", backend='baselines'):
-    if backend == 'baselines':
+def run_and_save(arg_dict, run_name=None, description=None, base_path="/data/", backend="baselines"):
+    if backend == "baselines":
         _run_and_save_bs(arg_dict, run_name, description, base_path)
-    if backend == 'seagul':
+    if backend == "seagul":
         _run_and_save_sg(arg_dict, run_name, description, base_path)
+
 
 def _run_and_save_sg(arg_dict, run_name=None, description=None, base_path="/data/"):
     return NotImplementedError
@@ -75,8 +75,7 @@ def _run_and_save_sg(arg_dict, run_name=None, description=None, base_path="/data
     save_path = save_dir + "saved_model"
     arg_dict["save_path"] = save_path
 
-
-    env_name = arg_dict['env']
+    env_name = arg_dict["env"]
 
     start_time = time.time()
     # if(arg_dict['alg'] == "ppo2" or arg_dict['alg'] == "ppo"):
@@ -93,15 +92,12 @@ def _run_and_save_sg(arg_dict, run_name=None, description=None, base_path="/data
         json.dump(
             {
                 "args": arg_dict,
-                "metadata": {
-                    "date_time": datetime_str,
-                    "total runtime": runtime_str,
-                    "description": description,
-                },
+                "metadata": {"date_time": datetime_str, "total runtime": runtime_str, "description": description},
             },
             outfile,
             indent=4,
         )
+
 
 def _run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/"):
 
@@ -172,17 +168,14 @@ def _run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data
         json.dump(
             {
                 "args": arg_dict,
-                "metadata": {
-                    "date_time": datetime_str,
-                    "total runtime": runtime_str,
-                    "description": description,
-                },
+                "metadata": {"date_time": datetime_str, "total runtime": runtime_str, "description": description},
             },
             outfile,
             indent=4,
         )
 
-def load_model(save_path, backend='baselines'):
+
+def load_model(save_path, backend="baselines"):
 
     """
     Loads and plays back a trained model.
@@ -206,13 +199,12 @@ def load_model(save_path, backend='baselines'):
         model, env = play_baseline('./data/run1')
     """
 
-
-    if backend == 'baselines':
+    if backend == "baselines":
         return _load_model_bs(save_path)
-    elif backend == 'seagul' :
+    elif backend == "seagul":
         return _load_model_sg(save_path)
     else:
-        raise ValueError('unrecognized backend: ', backend)
+        raise ValueError("unrecognized backend: ", backend)
 
 
 def _load_model_sg(save_path):

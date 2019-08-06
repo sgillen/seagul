@@ -30,12 +30,7 @@ switching_policy = nn.Sequential(
 
 # Swingup sub controller
 swingup_policy = nn.Sequential(
-    nn.Linear(3, 12),
-    nn.Tanh(),
-    nn.Linear(12, 12),
-    nn.Tanh(),
-    nn.Linear(12, 2),
-    nn.Softmax(dim=-1),
+    nn.Linear(3, 12), nn.Tanh(), nn.Linear(12, 12), nn.Tanh(), nn.Linear(12, 2), nn.Softmax(dim=-1)
 )
 
 # Value function approximator used for the baseline
@@ -130,9 +125,7 @@ for epoch in trange(num_epochs):
 
         for t in range(num_steps):
 
-            action, logprob_switch, logprob_swingup = select_action(
-                switching_policy, swingup_policy, state
-            )
+            action, logprob_switch, logprob_swingup = select_action(switching_policy, swingup_policy, state)
             state, reward, done, _ = env.step(action)
 
             swingup_logprob_list.append(-logprob_switch)
@@ -151,9 +144,7 @@ for epoch in trange(num_epochs):
         try:
 
             # Now Calculate cumulative rewards for each action
-            action_rewards = torch.tensor(
-                [sum(reward_list[i:]) for i in range(len(reward_list))]
-            )
+            action_rewards = torch.tensor([sum(reward_list[i:]) for i in range(len(reward_list))])
             logprob_sw = torch.stack(switching_logprob_list)
 
             value_preds = value_fn(torch.tensor(state_list)).squeeze()
@@ -166,9 +157,7 @@ for epoch in trange(num_epochs):
             su_policy_loss = torch.sum(logprob_su * policy_rewards) / (traj_count)
             su_policy_loss.backward(retain_graph=True)
 
-            value_loss = torch.sum(value_preds - action_rewards) / (
-                traj_count * num_steps
-            )
+            value_loss = torch.sum(value_preds - action_rewards) / (traj_count * num_steps)
             value_loss.backward(retain_graph=True)
 
         except RuntimeError:

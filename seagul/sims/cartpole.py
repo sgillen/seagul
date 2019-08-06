@@ -78,9 +78,7 @@ class Cartpole:
         y2 = -self.L * cos(y[:, 0]) + y1
 
         fig = plt.figure()
-        ax = fig.add_subplot(
-            111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3)
-        )
+        ax = fig.add_subplot(111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3))
         ax.grid()
 
         line, = ax.plot([], [], "o-", lw=2)
@@ -100,9 +98,7 @@ class Cartpole:
             time_text.set_text(time_template % (i * dt))
             return line, time_text
 
-        return animation.FuncAnimation(
-            fig, animate, np.arange(1, len(y)), interval=40, blit=True, init_func=init
-        )
+        return animation.FuncAnimation(fig, animate, np.arange(1, len(y)), interval=40, blit=True, init_func=init)
 
     # @jit(nopython=False)
     def control(self, t, q):
@@ -124,20 +120,14 @@ class Cartpole:
         if (q[0] < 140 * pi / 180) or (q[0] > 220 * pi / 180):
             # swing up
             # energy error: Ee
-            Ee = 0.5 * self.mp * self.L * self.L * q[
-                2
-            ] ** 2 - self.mp * self.g * self.L * (1 + cos(q[0]))
+            Ee = 0.5 * self.mp * self.L * self.L * q[2] ** 2 - self.mp * self.g * self.L * (1 + cos(q[0]))
             # energy control gain:
             k = 0.23
             # input acceleration: A (of cart)
             A = k * Ee * cos(q[0]) * q[2]
             # convert A to u (using EOM)
             delta = self.mp * sin(q[0]) ** 2 + self.mc
-            u = (
-                A * delta
-                - self.mp * self.L * (q[2] ** 2) * sin(q[0])
-                - self.mp * self.g * sin(q[2]) * cos(q[2])
-            )
+            u = A * delta - self.mp * self.L * (q[2] ** 2) * sin(q[0]) - self.mp * self.g * sin(q[2]) * cos(q[2])
         else:
             # balancing
             # LQR: K values from MATLAB
@@ -357,21 +347,13 @@ class Cartpole:
                 if i == 0:
                     AX[i][j].set_title(LABEL_COLS[j])
                 if j == 0:
-                    AX[i][j].text(
-                        -0.2,
-                        0.55,
-                        LABEL_ROWS[i],
-                        transform=AX[i][j].transAxes,
-                        rotation=90,
-                    )
+                    AX[i][j].text(-0.2, 0.55, LABEL_ROWS[i], transform=AX[i][j].transAxes, rotation=90)
                 # Create line objects
                 LINE[sub2ind(dim_sub, i, j) - 1], = AX[i][j].plot([], [], "o-", lw=2)
                 # Add info text to plot
                 AX[i][j].text(0.05, 0.1, info[i][j], transform=AX[i][j].transAxes)
                 # Add time text to plot
-                TIME_TEXT[sub2ind(dim_sub, i, j) - 1] = AX[i][j].text(
-                    0.05, 0.9, "", transform=AX[i][j].transAxes
-                )
+                TIME_TEXT[sub2ind(dim_sub, i, j) - 1] = AX[i][j].text(0.05, 0.9, "", transform=AX[i][j].transAxes)
         # Append text objects to line objects (necessary for using matplotlib FuncAnimation)
         LINE += TIME_TEXT
         # Init for FuncAnimation
@@ -391,11 +373,7 @@ class Cartpole:
                     thisx = [X1[k, i, j], X2[k, i, j]]
                     thisy = [Y1, Y2[k, i, j]]
                     LINE[sub2ind(dim_sub, i, j) - 1].set_data(thisx, thisy)
-                    LINE[Nplot + sub2ind(dim_sub, i, j) - 1].set_text(
-                        time_template % (k * dt)
-                    )
+                    LINE[Nplot + sub2ind(dim_sub, i, j) - 1].set_text(time_template % (k * dt))
             return LINE
 
-        return animation.FuncAnimation(
-            fig, animate, np.arange(1, N), interval=5, blit=True, init_func=init
-        )
+        return animation.FuncAnimation(fig, animate, np.arange(1, N), interval=5, blit=True, init_func=init)

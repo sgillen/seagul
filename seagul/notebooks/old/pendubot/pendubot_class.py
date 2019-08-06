@@ -40,9 +40,7 @@ class Acrobot:
         y2 = self.L2 * sin(th1 + th2) + y1
 
         fig = plt.figure()
-        ax = fig.add_subplot(
-            111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3)
-        )
+        ax = fig.add_subplot(111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3))
         ax.grid()
 
         line1, = ax.plot([], [], "o-", lw=2)
@@ -63,9 +61,7 @@ class Acrobot:
             time_text.set_text(time_template % (i * dt))
             return [line1, line2, time_text]
 
-        return animation.FuncAnimation(
-            fig, animate, np.arange(1, len(y)), interval=5, blit=True, init_func=init
-        )
+        return animation.FuncAnimation(fig, animate, np.arange(1, len(y)), interval=5, blit=True, init_func=init)
 
     # @jit(nopython=False)
     def control(self, q, t=0):
@@ -90,13 +86,8 @@ class Acrobot:
         M21 = self.L1 * self.L2c * self.m2 * cos(th1 - th2)
         M22 = self.J2 + self.L2c ** 2 * self.m2
 
-        C1 = (
-            self.g * self.m1 * cos(th1) * self.L1c
-            + self.L2c * self.m2 * sin(th1 - th2) * dth2 ** 2 * self.L1
-        )
-        C2 = self.g * self.L2c * self.m2 * cos(
-            th2 + th1
-        ) + dth1 ** 2 * self.L1 * self.L2c * self.m2 * sin(th1 - th2)
+        C1 = self.g * self.m1 * cos(th1) * self.L1c + self.L2c * self.m2 * sin(th1 - th2) * dth2 ** 2 * self.L1
+        C2 = self.g * self.L2c * self.m2 * cos(th2 + th1) + dth1 ** 2 * self.L1 * self.L2c * self.m2 * sin(th1 - th2)
 
         M = np.array([[M11, M12], [M21, M22]])
         C = np.array([C1, C2])

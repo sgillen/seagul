@@ -62,11 +62,7 @@ def derivs(q, t):
         - u * cos(q[0]) / delta / L
     )
 
-    dqdt[3] = (
-        m * L * (q[2] ** 2) * sin(q[0]) / delta
-        + m * L * g * sin(q[0]) * cos(q[0]) / delta / L
-        + u / delta
-    )
+    dqdt[3] = m * L * (q[2] ** 2) * sin(q[0]) / delta + m * L * g * sin(q[0]) * cos(q[0]) / delta / L + u / delta
 
     return dqdt
 
@@ -87,9 +83,7 @@ for i in range(num_trials):
     # initial conditions
     theta = 0
     x = 0.0
-    th_dot = (
-        2 * (i / num_trials) - 1
-    )  # an initial velocity, triggers the swing up control
+    th_dot = 2 * (i / num_trials) - 1  # an initial velocity, triggers the swing up control
     xdot = 0.0
 
     # initial state

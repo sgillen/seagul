@@ -56,15 +56,11 @@ if TEST_ARUCO_MARKER_DETECTION:
 
     parameters = Aruco.DetectorParameters_create()
     image = cv2.imread("board_aruco_57.png")
-    corners, ids, rejectedImgPoints = Aruco.detectMarkers(
-        image, aruco_Dict, parameters=parameters
-    )
+    corners, ids, rejectedImgPoints = Aruco.detectMarkers(image, aruco_Dict, parameters=parameters)
     print(corners, ids, rejectedImgPoints)
     found = Aruco.drawDetectedMarkers(image, corners, ids)
     cv2.imshow("f", found)
-    reject = Aruco.drawDetectedMarkers(
-        image, rejectedImgPoints, borderColor=(100, 100, 240)
-    )
+    reject = Aruco.drawDetectedMarkers(image, rejectedImgPoints, borderColor=(100, 100, 240))
     cv2.imshow("r", reject)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -87,17 +83,13 @@ if TEST_ARUCO_MARKER_DETECTION:
         while True:
             re, img = cap.read()
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            corners, ids, rejectedImgPoints = Aruco.detectMarkers(
-                gray, aruco_Dict, parameters=parameters
-            )
+            corners, ids, rejectedImgPoints = Aruco.detectMarkers(gray, aruco_Dict, parameters=parameters)
             print(corners, ids, rejectedImgPoints)
             img2 = np.copy(img)
             cv2.imshow("Raw Video", img)
             found = Aruco.drawDetectedMarkers(img, corners, ids)
             cv2.imshow("Markers", found)
-            reject = Aruco.drawDetectedMarkers(
-                img2, rejectedImgPoints, borderColor=(100, 100, 240)
-            )
+            reject = Aruco.drawDetectedMarkers(img2, rejectedImgPoints, borderColor=(100, 100, 240))
             cv2.imshow("Rejects", reject)
 
             if cv2.waitKey(1) == ord("q"):

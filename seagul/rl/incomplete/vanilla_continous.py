@@ -150,24 +150,16 @@ for epoch in trange(num_epochs):
                 break
 
         # Now Calculate cumulative rewards for each action
-        action_rewards = torch.tensor(
-            [sum(reward_list[i:]) for i in range(len(reward_list))]
-        )
+        action_rewards = torch.tensor([sum(reward_list[i:]) for i in range(len(reward_list))])
         logprob_t = torch.stack(logprob_list)
 
         value_list = value_fn(torch.tensor(state_list)).squeeze()
-        value_preds = torch.stack(
-            [torch.sum(value_list[i:]) for i in range(len(value_list))]
-        )
+        value_preds = torch.stack([torch.sum(value_list[i:]) for i in range(len(value_list))])
         policy_rewards = action_rewards - value_preds
         policy_rewards = action_rewards
 
-        policy_loss += (
-            torch.sum(logprob_t.transpose(-1, 0) * policy_rewards) / traj_count
-        )
-        value_loss += torch.sum(torch.pow(action_rewards - value_preds, 2)) / (
-            traj_count * num_steps
-        )
+        policy_loss += torch.sum(logprob_t.transpose(-1, 0) * policy_rewards) / traj_count
+        value_loss += torch.sum(torch.pow(action_rewards - value_preds, 2)) / (traj_count * num_steps)
 
         episode_reward_sum.append(sum(reward_list))
 

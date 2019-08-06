@@ -11,11 +11,7 @@ def train(env_id, num_timesteps, seed=0):
 
     def policy_fn(name, ob_space, ac_space):
         return cartpole_policy.CartPolePolicy(
-            name=name,
-            ob_space=ob_space,
-            ac_space=ac_space,
-            hid_size=6,
-            num_hid_layers=2,
+            name=name, ob_space=ob_space, ac_space=ac_space, hid_size=6, num_hid_layers=2
         )
 
     env = make_mujoco_env(env_id, seed)

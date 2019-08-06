@@ -4,9 +4,7 @@
 # tree = RigidBodyTree(FindResource("../../drake/examples/compass_gait/CompassGait.urdf"), FloatingBaseType.kFixed)
 
 
-tree = RigidBodyTree(
-    FindResource("../../notebooks/three_link.urdf"), FloatingBaseType.kFixed
-)
+tree = RigidBodyTree(FindResource("../../notebooks/three_link.urdf"), FloatingBaseType.kFixed)
 
 box_depth = 100
 
@@ -22,9 +20,7 @@ X = Isometry3(rotation=R, translation=[0, 0, -5.0])
 
 color = np.array([0.9297, 0.7930, 0.6758, 1])
 tree.world().AddVisualElement(VisualElement(Box([100.0, 1.0, 10.0]), X, color))
-tree.addCollisionElement(
-    CollisionElement(Box([100.0, 1.0, 10.0]), X), tree.world(), "the_ground"
-)
+tree.addCollisionElement(CollisionElement(Box([100.0, 1.0, 10.0]), X), tree.world(), "the_ground")
 tree.compile()
 
 # Set up a block diagram with the robot (dynamics) and a visualization block.
@@ -35,9 +31,7 @@ logger = builder.AddSystem(SignalLogger(robot.get_output_port(0).size()))
 logger._DeclarePeriodicPublish(1.0 / 30.0, 0.0)
 
 builder.Connect(robot.get_output_port(0), logger.get_input_port(0))
-builder.ExportInput(
-    robot.get_input_port(0)
-)  # this allows the outside world to see push inputs in (or whatever)
+builder.ExportInput(robot.get_input_port(0))  # this allows the outside world to see push inputs in (or whatever)
 
 diagram = builder.Build()
 
@@ -50,9 +44,7 @@ simulator.set_publish_every_time_step(False)
 context = simulator.get_mutable_context()
 context.FixInputPort(0, BasicVector([0.0, 0.0]))  # Zero input torques
 state = context.get_mutable_continuous_state_vector()
-state.SetFromVector(
-    (pi + pi / 8, pi / 2 + pi / 4, 3 * pi / 2, 0.0, 0.0, 0)
-)  # initial condition
+state.SetFromVector((pi + pi / 8, pi / 2 + pi / 4, 3 * pi / 2, 0.0, 0.0, 0))  # initial condition
 
 # Simulate for 10 seconds
 simulator.StepTo(3)

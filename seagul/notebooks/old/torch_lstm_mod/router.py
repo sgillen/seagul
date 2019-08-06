@@ -137,11 +137,7 @@ if __name__ == "__main__":
 
         log_interval = 100
         if i_episode % log_interval == 0:
-            print(
-                "Episode {}\tLast length: {:5d}\tAverage length: {:.2f}".format(
-                    i_episode, t, running_reward
-                )
-            )
+            print("Episode {}\tLast length: {:5d}\tAverage length: {:.2f}".format(i_episode, t, running_reward))
 
     state = env.reset()
     while True:

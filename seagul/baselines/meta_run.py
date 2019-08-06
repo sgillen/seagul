@@ -19,6 +19,4 @@ arg_dict = {
 
 run_name = "bullet debug"
 run_desc = "asdasd"
-run_and_save(
-    arg_dict, run_name=run_name, description=run_desc, base_path="/data/bullet_car_ast/"
-)
+run_and_save(arg_dict, run_name=run_name, description=run_desc, base_path="/data/bullet_car_ast/")

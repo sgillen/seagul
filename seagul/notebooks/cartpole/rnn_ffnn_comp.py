@@ -107,9 +107,7 @@ plt.figure()
 # an ugly hack todo make this and the one above compatible
 def make_fflb_controller(model):
     def nn_controller(q):
-        if (q[0, look_back - 1] < (140 * (pi / 180))) or (
-            q[0, look_back - 1] > (220 * (pi / 180))
-        ):
+        if (q[0, look_back - 1] < (140 * (pi / 180))) or (q[0, look_back - 1] > (220 * (pi / 180))):
             u = model.predict(q.reshape(1, q.shape[0], q.shape[1]))
             return u[0, 0]
         else:

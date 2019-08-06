@@ -14,19 +14,13 @@ class RcCar:
         # car = self._p.loadURDF(os.path.join(self.urdfRootPath,"racecar/racecar_differential.urdf"), [0,0,.2],useFixedBase=False)
         print(self.urdfRootPath + "/racecar_differential_me.urdf")
 
-        car = self._p.loadURDF(
-            self.urdfRootPath + "/racecar_differential_me.urdf",
-            [0, 0, 0.05],
-            useFixedBase=False,
-        )
+        car = self._p.loadURDF(self.urdfRootPath + "/racecar_differential_me.urdf", [0, 0, 0.05], useFixedBase=False)
 
         self.racecarUniqueId = car
         # for i in range (self._p.getNumJoints(car)):
         # 	print (self._p.getJointInfo(car,i))
         for wheel in range(self._p.getNumJoints(car)):
-            self._p.setJointMotorControl2(
-                car, wheel, self._p.VELOCITY_CONTROL, targetVelocity=0, force=0
-            )
+            self._p.setJointMotorControl2(car, wheel, self._p.VELOCITY_CONTROL, targetVelocity=0, force=0)
             self._p.getJointInfo(car, wheel)
 
         # self._p.setJointMotorControl2(car,10,self._p.VELOCITY_CONTROL,targetVelocity=1,force=10)
@@ -161,9 +155,7 @@ class RcCar:
 
         roll, pitch, yaw = self._p.getEulerFromQuaternion(orn)
 
-        steering_jointStates = self._p.getJointStates(
-            self.racecarUniqueId, self.steeringLinks
-        )
+        steering_jointStates = self._p.getJointStates(self.racecarUniqueId, self.steeringLinks)
         steering_jointPositions = np.array([x[0] for x in steering_jointStates])
         steering_jointVelocities = np.array([x[1] for x in steering_jointStates])
 
@@ -203,9 +195,5 @@ class RcCar:
             )
         for steer in self.steeringLinks:
             self._p.setJointMotorControl2(
-                self.racecarUniqueId,
-                steer,
-                self._p.POSITION_CONTROL,
-                targetPosition=steeringAngle,
-                force=self.maxForce,
+                self.racecarUniqueId, steer, self._p.POSITION_CONTROL, targetPosition=steeringAngle, force=self.maxForce
             )

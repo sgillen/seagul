@@ -18,11 +18,7 @@ def train(env_id, num_timesteps, seed=0):
         # return cartpole_policy.CartPolePolicy(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=12, num_hid_layers=2)
         # return mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=64, num_hid_layers=64)
         return mlp_relu_policy.ReluMlpPolicy(
-            name=name,
-            ob_space=ob_space,
-            ac_space=ac_space,
-            hid_size=64,
-            num_hid_layers=64,
+            name=name, ob_space=ob_space, ac_space=ac_space, hid_size=64, num_hid_layers=64
         )
 
     env = make_mujoco_env(env_id, seed)

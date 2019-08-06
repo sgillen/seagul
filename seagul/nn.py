@@ -8,7 +8,7 @@ import torch.nn as nn
 from tqdm import trange
 
 """
-Utility functions used for my imitation learning.
+Utility functions for seagul, all vaguely related to nerual networks
 """
 
 
@@ -46,20 +46,13 @@ def make_histories(states, history_length, sampling_sparsity=1):
     num_set = states.shape[0]
     z_ext = np.zeros(((history_length - 1) * sampling_sparsity, states.shape[1]))
     states = np.concatenate((z_ext, states), axis=0)
-    histories = np.zeros(
-        (num_set,) + (states.shape[1],) + (history_length,)
-    )  # initialize output matrix
+    histories = np.zeros((num_set,) + (states.shape[1],) + (history_length,))  # initialize output matrix
     step = 0
 
     while step < num_set:
         # select vectors according to history_length and sampling_sparsity
         histories[step, :, :] = np.transpose(
-            states[
-                step : (history_length - 1) * sampling_sparsity
-                + 1
-                + step : sampling_sparsity,
-                :,
-            ]
+            states[step : (history_length - 1) * sampling_sparsity + 1 + step : sampling_sparsity, :]
         )
         step += 1
     return histories
@@ -121,9 +114,7 @@ def fit_model(
     state_tensor = torch.as_tensor(state_train)  # make sure that our input is a tensor
     action_tensor = torch.as_tensor(action_train)
     training_data = data.TensorDataset(state_tensor, action_tensor)
-    training_generator = data.DataLoader(
-        training_data, batch_size=batch_size, shuffle=shuffle
-    )
+    training_generator = data.DataLoader(training_data, batch_size=batch_size, shuffle=shuffle)
 
     # action_size = action_train.size()[1]
 
@@ -137,10 +128,7 @@ def fit_model(
         for local_states, local_actions in training_generator:
 
             # Transfer to GPU (if GPU is enabled, else this does nothing)
-            local_states, local_actions = (
-                local_states.to(device),
-                local_actions.to(device),
-            )
+            local_states, local_actions = (local_states.to(device), local_actions.to(device))
 
             # predict and calculate loss for the batch
             action_preds = model(local_states)
@@ -234,6 +222,7 @@ class MLP(nn.Module):
     Policy designed to be used with seaguls rl module.
     Simple MLP that has a linear layer at the output
     """
+
     def __init__(self, input_size, output_size, num_layers, layer_size, activation):
         """
          :param input_size: how many inputs
@@ -247,9 +236,7 @@ class MLP(nn.Module):
         self.activation = activation()
 
         self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
-        self.layers.extend(
-            [nn.Linear(layer_size, layer_size) for _ in range(num_layers)]
-        )
+        self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers)])
         self.output_layer = nn.Linear(layer_size, output_size)
 
     def forward(self, data):
@@ -264,6 +251,7 @@ class Categorical_MLP(nn.Module):
     Policy designed to be used with seaguls rl module.
     Simple MLP that will output class label probs
     """
+
     def __init__(self, input_size, output_size, num_layers, layer_size, activation):
         """
         :param input_size: how many inputs
@@ -277,9 +265,7 @@ class Categorical_MLP(nn.Module):
         self.activation = activation()
 
         self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
-        self.layers.extend(
-            [nn.Linear(layer_size, layer_size) for _ in range(num_layers)]
-        )
+        self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers)])
         self.output_layer = nn.Linear(layer_size, output_size)
 
         if output_size == 1:
@@ -309,15 +295,13 @@ class DummyNet(nn.Module):
         """
         super(DummyNet, self).__init__()
         self.output_size = output_size
-        self.layer = nn.Linear(input_size,output_size, bias=False)  #
+        self.layer = nn.Linear(input_size, output_size, bias=False)  #
 
     def forward(self, data):
-        return self.layer(data)*torch.zeros(self.output_size)
+        return self.layer(data) * torch.zeros(self.output_size)
 
 
 # One day this might be a unit test
 if __name__ == "__main__":
-    policy = MLP(
-        input_size=4, output_size=1, num_layers=3, layer_size=12, activation=nn.ReLU
-    )
+    policy = MLP(input_size=4, output_size=1, num_layers=3, layer_size=12, activation=nn.ReLU)
     print(policy(torch.randn(1, 4)))

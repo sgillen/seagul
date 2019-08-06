@@ -14,18 +14,14 @@ class CartPoleSim:
 
     # TODO make this a decorator?
 
-    __isfrozen = (
-        False
-    )  # freeze all the classes so I can't accidentally add new variables when i typo
+    __isfrozen = False  # freeze all the classes so I can't accidentally add new variables when i typo
 
     # This is obviously a hack
     abs_dir = "/Users/sgillen/work_dir/sgillen_notebooks/ICRA2019/cartpole/"
 
     def __init__(self, xml_file=(abs_dir + "cartpole.xml")):
         model_xml = open(xml_file).read()
-        model = mj.load_model_from_xml(
-            model_xml
-        )  # sim has it's own model you can access, sim.model
+        model = mj.load_model_from_xml(model_xml)  # sim has it's own model you can access, sim.model
 
         self.sim = mj.MjSim(model)
 
@@ -92,13 +88,9 @@ class CartPoleSim:
         else:
             self.c_hist.append(-1)
             # stable control
-            self._error_sum = np.clip(
-                self._error_sum + q_pos, -self.i_clip, self.i_clip
-            )
+            self._error_sum = np.clip(self._error_sum + q_pos, -self.i_clip, self.i_clip)
             self.u = self.total_gain * (
-                np.sum(stable_q_pos * self.Kp)
-                + np.sum(q_vel * self.Kd)
-                + np.sum(self._error_sum * self.Ki)
+                np.sum(stable_q_pos * self.Kp) + np.sum(q_vel * self.Kd) + np.sum(self._error_sum * self.Ki)
             )
 
         self.u = np.clip(self.u, -self.total_clip, self.total_clip)

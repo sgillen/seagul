@@ -37,9 +37,7 @@ class RNN(nn.Module):
         hidden = torch.randn(self.hidden_size)
         outputs = []
 
-        for i in torch.unbind(
-            input_, dim=0
-        ):  # this could work or could be a terrible mistake
+        for i in torch.unbind(input_, dim=0):  # this could work or could be a terrible mistake
             # import ipdb; ipdb.set_trace()
 
             _, hidden = self.cell(i, hidden)

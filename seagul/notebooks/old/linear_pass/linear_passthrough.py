@@ -64,9 +64,7 @@ def criterion(out, label):
 
 
 def skipcriterion(out, label):
-    return (label - out) ** 2 + (
-        torch.abs(net.fc1.weight).sum() + torch.abs(net.fc2.weight).sum()
-    ) / 2048
+    return (label - out) ** 2 + (torch.abs(net.fc1.weight).sum() + torch.abs(net.fc2.weight).sum()) / 2048
 
 
 # data = [(1,3), (2,6), (3,9), (4,12), (5,15), (6,18)]
@@ -81,8 +79,7 @@ linear_data = [(3 * x) for x in range(0, num_points)]
 quad_points = 25
 scaling_factor = 0.15
 quad = [
-    -scaling_factor * (x - quad_points / 2) ** 2
-    + scaling_factor * (quad_points / 2) ** 2
+    -scaling_factor * (x - quad_points / 2) ** 2 + scaling_factor * (quad_points / 2) ** 2
     for x in range(0, quad_points)
 ]
 

@@ -38,9 +38,7 @@ class Pendulum:
         y1 = -self.L * cos(y[:, 0])
 
         fig = plt.figure()
-        ax = fig.add_subplot(
-            111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3)
-        )
+        ax = fig.add_subplot(111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3))
         ax.grid()
 
         line1, = ax.plot([], [], "o-", lw=2)
@@ -57,14 +55,7 @@ class Pendulum:
             time_text.set_text(time_template % (i * dt))
             return [line1, time_text]
 
-        return animation.FuncAnimation(
-            fig,
-            animate_step,
-            np.arange(1, len(y)),
-            interval=5,
-            blit=True,
-            init_func=init,
-        )
+        return animation.FuncAnimation(fig, animate_step, np.arange(1, len(y)), interval=5, blit=True, init_func=init)
 
     # @jit(nopython=False)
     # default controller does nothing, overwrite this with something useful

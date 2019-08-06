@@ -48,9 +48,7 @@ for i in range(num_trials):
     # initial conditions
     theta = 0
     x = 0.0
-    th_dot = (
-        2 * (i / num_trials) - 1
-    )  # an initial velocity, triggers the swing up control
+    th_dot = 2 * (i / num_trials) - 1  # an initial velocity, triggers the swing up control
     xdot = 0.0
 
     # initial state
@@ -162,12 +160,6 @@ HTML(ani.to_jshtml())
 # messing with multiindexing
 # TODO probably move this to the misc folder, preferably as a more complete example than this one.
 
-names = [
-    ("state", "theta"),
-    ("state", "x"),
-    ("state", "thetadot"),
-    ("state", "xdot"),
-    ("control", "u"),
-]
+names = [("state", "theta"), ("state", "x"), ("state", "thetadot"), ("state", "xdot"), ("control", "u")]
 
 yf = pd.DataFrame(data=data, index=t_index, columns=pd.MultiIndex.from_tuples(names))
