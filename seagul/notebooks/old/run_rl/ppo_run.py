@@ -17,17 +17,29 @@ def train(env_id, num_timesteps, seed=0):
     def policy_fn(name, ob_space, ac_space):
         # return cartpole_policy.CartPolePolicy(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=12, num_hid_layers=2)
         # return mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=64, num_hid_layers=64)
-        return mlp_relu_policy.ReluMlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space, hid_size=64,
-                                             num_hid_layers=64)
+        return mlp_relu_policy.ReluMlpPolicy(
+            name=name,
+            ob_space=ob_space,
+            ac_space=ac_space,
+            hid_size=64,
+            num_hid_layers=64,
+        )
 
     env = make_mujoco_env(env_id, seed)
-    pi = pposgd_simple.learn(env, policy_fn,
-                             max_timesteps=num_timesteps,
-                             timesteps_per_actorbatch=2048,
-                             clip_param=0.2, entcoeff=0.0,
-                             optim_epochs=10, optim_stepsize=3e-4, optim_batchsize=64,
-                             gamma=0.99, lam=0.95, schedule='linear',
-                             )
+    pi = pposgd_simple.learn(
+        env,
+        policy_fn,
+        max_timesteps=num_timesteps,
+        timesteps_per_actorbatch=2048,
+        clip_param=0.2,
+        entcoeff=0.0,
+        optim_epochs=10,
+        optim_stepsize=3e-4,
+        optim_batchsize=64,
+        gamma=0.99,
+        lam=0.95,
+        schedule="linear",
+    )
     env.close()
 
     return pi
@@ -67,6 +79,7 @@ def save_results(filename, description=None):
 
     os.rename("./tmp_logs/", save_dir + "tensorboard")
 
+
 if __name__ == "__main__":
 
     name = "please enter a name for this run"
@@ -90,4 +103,3 @@ if __name__ == "__main__":
         pi = train(env_name, num_timesteps=num_timesteps, seed=seed)
 
     runtime = time.time() - start_time
-

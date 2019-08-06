@@ -4,14 +4,19 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 from numba import jit
+
 # Define constants (geometry and mass properties):
 
-m1 = 1; m2 = 1;
-L1 = 1; L2 = 1;
-L1c = .5; L2c = .5;
-J1 = 1; J2 = 1;
+m1 = 1
+m2 = 1
+L1 = 1
+L2 = 1
+L1c = 0.5
+L2c = 0.5
+J1 = 1
+J2 = 1
 
-g = 9.8;
+g = 9.8
 rad = np.pi / 1
 
 
@@ -27,19 +32,20 @@ def animate_pend(y):
     y2 = L2 * sin(th1 + th2) + y1
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, autoscale_on=False, aspect='equal', \
-                         xlim=(-3, 3), ylim=(-3, 3))
+    ax = fig.add_subplot(
+        111, autoscale_on=False, aspect="equal", xlim=(-3, 3), ylim=(-3, 3)
+    )
     ax.grid()
 
-    line1, = ax.plot([], [], 'o-', lw=2)
-    line2, = ax.plot([], [], 'o-', lw=2)
-    time_template = 'time = %.1fs'
-    time_text = ax.text(0.05, 0.9, '', transform=ax.transAxes)
+    line1, = ax.plot([], [], "o-", lw=2)
+    line2, = ax.plot([], [], "o-", lw=2)
+    time_template = "time = %.1fs"
+    time_text = ax.text(0.05, 0.9, "", transform=ax.transAxes)
 
     def init():
         line1.set_data([], [])
         line2.set_data([], [])
-        time_text.set_text('')
+        time_text.set_text("")
         return line1, line2, time_text
 
     def animate(i):
@@ -49,17 +55,19 @@ def animate_pend(y):
         time_text.set_text(time_template % (i * dt))
         return [line1, line2, time_text]
 
-        return animation.FuncAnimation(fig, animate, np.arange(1, len(y)), interval=40, blit=True, init_func=init)
+        return animation.FuncAnimation(
+            fig, animate, np.arange(1, len(y)), interval=40, blit=True, init_func=init
+        )
 
 
-#@jit(nopython=False)
-def control(self, q,t=0):
+# @jit(nopython=False)
+def control(self, q, t=0):
     print("1")
     return 0
 
 
 # state vector: q = transpose([theta, x, d(theta)/dt, dx/dt])
-#@jit(nopython=False)
+# @jit(nopython=False)
 def derivs(t, q):
 
     u = control(q, t)
@@ -88,7 +96,8 @@ def derivs(t, q):
     # TODO, unwrap our angles
 
     # Combine states to define parameters to be directly controlled:
-    umat = np.array([0, 1]);  # Which EOMs does u affect?
+    umat = np.array([0, 1])
+    # Which EOMs does u affect?
     d2th = np.linalg.solve(M, (-C + umat * u))
 
     return np.array([q[2], q[3], d2th[0], d2th[1]])

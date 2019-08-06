@@ -3,9 +3,7 @@ import torch as th
 import torch.nn as nn
 
 
-
 class LSTMCell(nn.Module):
-
     def __init__(self, input_size, hidden_size, bias=True):
         super(LSTMCell, self).__init__()
         self.input_size = input_size
@@ -34,11 +32,11 @@ class LSTMCell(nn.Module):
         preact = self.i2h(x) + self.h2h(h)
 
         # activations
-        gates = preact[:, :3 * self.hidden_size].sigmoid()
-        g_t = preact[:, 3 * self.hidden_size:].tanh()
-        i_t = gates[:, :self.hidden_size]
-        f_t = gates[:, self.hidden_size:2 * self.hidden_size]
-        o_t = gates[:, -self.hidden_size:]
+        gates = preact[:, : 3 * self.hidden_size].sigmoid()
+        g_t = preact[:, 3 * self.hidden_size :].tanh()
+        i_t = gates[:, : self.hidden_size]
+        f_t = gates[:, self.hidden_size : 2 * self.hidden_size]
+        o_t = gates[:, -self.hidden_size :]
 
         c_t = th.mul(c, f_t) + th.mul(i_t, g_t)
 
@@ -50,15 +48,14 @@ class LSTMCell(nn.Module):
 
     @staticmethod
     def _init_hidden(input_):
-        #h = th.zeros_like(input_.view(1, input_.size(1), -1))
-        #c = th.zeros(1, input_.size(1), self.hidden_size))
+        # h = th.zeros_like(input_.view(1, input_.size(1), -1))
+        # c = th.zeros(1, input_.size(1), self.hidden_size))
 
-        #return h, c
+        # return h, c
         return
 
 
 class LSTM(nn.Module):
-
     def __init__(self, input_size, hidden_size, bias=True):
         super().__init__()
         self.lstm_cell = LSTMCell(input_size, hidden_size, bias)
@@ -74,28 +71,25 @@ class LSTM(nn.Module):
         return th.stack(outputs, dim=1)
 
 
-
 if __name__ == "__main__":
 
-    lstm_cell = LSTMCell(input_size = 4, hidden_size = 12, bias=False)
+    lstm_cell = LSTMCell(input_size=4, hidden_size=12, bias=False)
 
-    x = th.randn(4,1)
-    h = th.randn(12,1)
-    c = th.randn(12,1)
+    x = th.randn(4, 1)
+    h = th.randn(12, 1)
+    c = th.randn(12, 1)
 
-    yc, (hc,cc) = lstm_cell.forward(x,(h,c))
+    yc, (hc, cc) = lstm_cell.forward(x, (h, c))
 
-    print("yc shape: " , yc.shape)
-    print("hc shape: " , hc.shape)
-    print("cc shape: " , cc.shape)
+    print("yc shape: ", yc.shape)
+    print("hc shape: ", hc.shape)
+    print("cc shape: ", cc.shape)
 
+    lstm = LSTM(input_size=4, hidden_size=12, bias=False)
 
-    lstm = LSTM(input_size = 4, hidden_size = 12, bias=False)
+    x = th.randn(4, 100, 1)
+    h = th.randn(12, 1)
 
-    x = th.randn(4,100,1)
-    h = th.randn(12,1)
-
-    y = lstm.forward(x, hidden = (h,h))
+    y = lstm.forward(x, hidden=(h, h))
 
     print("y shape: ", y.shape)
-

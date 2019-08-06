@@ -29,16 +29,16 @@ def rk4(derivs, a, t0, dt, s0):
 
     """
 
-    k1 = dt * derivs(t0, s0, a);
-    k2 = dt * derivs(t0 + dt / 2, s0 + k1 / 2, a);
-    k3 = dt * derivs(t0 + dt / 2, s0 + k2 / 2, a);
-    k4 = dt * derivs(t0 + dt, s0 + k3, a);
+    k1 = dt * derivs(t0, s0, a)
+    k2 = dt * derivs(t0 + dt / 2, s0 + k1 / 2, a)
+    k3 = dt * derivs(t0 + dt / 2, s0 + k2 / 2, a)
+    k4 = dt * derivs(t0 + dt, s0 + k3, a)
 
-    return  s0 + 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
+    return s0 + 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
 
 
 def euler(derivs, a, t0, dt, s0):
     """
     Single step of an euler integtation, exactly the same parameters and usage as rk4 above
     """
-    return s0 + dt*derivs(t0+dt, s0, a)
+    return s0 + dt * derivs(t0 + dt, s0, a)

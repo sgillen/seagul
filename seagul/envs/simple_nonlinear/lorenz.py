@@ -19,15 +19,15 @@ class LorenzEnv(gym.Env):
 
     """
 
-    def __init__(self, num_steps  = 100, dt = .01):
+    def __init__(self, num_steps=100, dt=0.01):
 
         # Lorenz system constants
         self.s = 10
-        self.b = 8/3
+        self.b = 8 / 3
         self.r = 28
 
         # Intial state that we will reset to
-        self.init_state = np.array([0,1,1.05])
+        self.init_state = np.array([0, 1, 1.05])
 
         # Simulation/integration parameters
         self.dt = dt
@@ -36,18 +36,24 @@ class LorenzEnv(gym.Env):
         self.state = None
         self.integrator = rk4
 
-
         # Observation (state) paramaters
-        x_max = 100; y_max = 100; z_max = 100;
+        x_max = 100
+        y_max = 100
+        z_max = 100
         self.state_max = np.array([x_max, y_max, z_max])
-        self.observation_space = gym.spaces.Box(low=-self.state_max, high=self.state_max, dtype=np.float64)
+        self.observation_space = gym.spaces.Box(
+            low=-self.state_max, high=self.state_max, dtype=np.float64
+        )
         self.state_noise_max = 0.0
 
-
         # Action (Control) parameters
-        ux_max = 100; uy_max = 100; uz_max = 100;
+        ux_max = 100
+        uy_max = 100
+        uz_max = 100
         self.action_max = np.array([ux_max, uy_max, uz_max])
-        self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float64)
+        self.action_space = gym.spaces.Box(
+            low=-self.action_max, high=self.action_max, dtype=np.float64
+        )
         self.u_noise_max = 0.0
 
         self.seed()
@@ -58,13 +64,17 @@ class LorenzEnv(gym.Env):
         return [seed]
 
     def reset(self):
-        self.state = self.init_state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
+        self.state = self.init_state + self.np_random.uniform(
+            -self.state_noise_max, self.state_noise_max
+        )
         self.cur_step = 0
 
         return self.state
 
     def _get_ob(self):
-        return self.state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
+        return self.state + self.np_random.uniform(
+            -self.state_noise_max, self.state_noise_max
+        )
 
     def step(self, action):
         done = False
@@ -74,13 +84,15 @@ class LorenzEnv(gym.Env):
 
         # Add noise to the force action (if noise is zero this will do nothing)
         if self.u_noise_max > 0:
-            action += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
+            action += self.np_random.uniform(
+                -self.torque_noise_max, self.torque_noise_max
+            )
 
         ds = self._derivs(0, self.state, action)
         self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
 
         # Should reward be something we pass in ? I do like to mess with them a lot...
-        if (0 < self.state[0] < 20  and 0 < self.state[1] < 30 and 0 < self.state[2] < 50):
+        if 0 < self.state[0] < 20 and 0 < self.state[1] < 30 and 0 < self.state[2] < 50:
             reward = 1.0
         else:
             reward = -1.0
@@ -93,9 +105,8 @@ class LorenzEnv(gym.Env):
 
         return self.state, reward, done, {}
 
-    def render(self, mode='human'):
-       raise NotImplementedError
-
+    def render(self, mode="human"):
+        raise NotImplementedError
 
     def _derivs(self, t, q, u):
         """
@@ -111,10 +122,10 @@ class LorenzEnv(gym.Env):
         """
 
         xdot = self.s * (q[1] - q[0]) - u[0]
-        ydot = self.r * q[0] - q[1] - q[0]*q[2] - u[1]
+        ydot = self.r * q[0] - q[1] - q[0] * q[2] - u[1]
         zdot = q[0] * q[1] - self.b * q[2] - u[2]
 
-        return np.array([xdot,ydot,zdot])
+        return np.array([xdot, ydot, zdot])
 
 
 def rk4(derivs, a, t0, dt, s0):
@@ -148,13 +159,13 @@ def rk4(derivs, a, t0, dt, s0):
 
     """
 
-    k1 = dt * derivs(t0, s0, a);
-    k2 = dt * derivs(t0 + dt / 2, s0 + k1 / 2, a);
-    k3 = dt * derivs(t0 + dt / 2, s0 + k2 / 2, a);
-    k4 = dt * derivs(t0 + dt, s0 + k3, a);
+    k1 = dt * derivs(t0, s0, a)
+    k2 = dt * derivs(t0 + dt / 2, s0 + k1 / 2, a)
+    k3 = dt * derivs(t0 + dt / 2, s0 + k2 / 2, a)
+    k4 = dt * derivs(t0 + dt, s0 + k3, a)
 
-    return  s0 + 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
+    return s0 + 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
 
 
 def euler(derivs, a, t0, dt, s0):
-    return s0 + dt*derivs(t0+dt, s0, a)
+    return s0 + dt * derivs(t0 + dt, s0, a)

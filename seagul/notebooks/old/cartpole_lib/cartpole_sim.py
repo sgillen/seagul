@@ -4,6 +4,7 @@ from numpy import pi
 import copy
 import matplotlib.pyplot as plt
 
+
 class CartPoleSim:
     """
     Encapsulates everything you need for simulation and simple state feedback of a cartpole in Mujoco
@@ -13,14 +14,18 @@ class CartPoleSim:
 
     # TODO make this a decorator?
 
-    __isfrozen = False  # freeze all the classes so I can't accidentally add new variables when i typo
+    __isfrozen = (
+        False
+    )  # freeze all the classes so I can't accidentally add new variables when i typo
 
     # This is obviously a hack
-    abs_dir = '/Users/sgillen/work_dir/sgillen_notebooks/ICRA2019/cartpole/'
+    abs_dir = "/Users/sgillen/work_dir/sgillen_notebooks/ICRA2019/cartpole/"
 
-    def __init__(self, xml_file = (abs_dir + 'cartpole.xml')):
+    def __init__(self, xml_file=(abs_dir + "cartpole.xml")):
         model_xml = open(xml_file).read()
-        model = mj.load_model_from_xml(model_xml)  # sim has it's own model you can access, sim.model
+        model = mj.load_model_from_xml(
+            model_xml
+        )  # sim has it's own model you can access, sim.model
 
         self.sim = mj.MjSim(model)
 
@@ -30,21 +35,20 @@ class CartPoleSim:
 
         self.num_steps = 400  # modify this yourself, if you want to
 
-
         # TODO be really careful with your state, some of this stuff should probably be CLASS vars
         self.default_state = copy.deepcopy(self.sim.get_state())
         self.default_state[1][1] = 0  # initial angle up
 
         # TODO probably move these somewhere else? not sure
-        self.Kp = np.array([.1, 1])
-        self.Kd = np.array([.2, .4])
-        self.Ki = np.array([.1, 1])
+        self.Kp = np.array([0.1, 1])
+        self.Kd = np.array([0.2, 0.4])
+        self.Ki = np.array([0.1, 1])
         self.i_clip = 3
         self.total_gain = 10
         self._error_sum = 0
 
         self.swingup_gain = 2.5
-        self.catch_range = .2
+        self.catch_range = 0.2
 
         self.q_pos_hist = np.zeros((self.num_steps, self.default_state[1].size))
         self.q_vel_hist = np.zeros((self.num_steps, self.default_state[2].size))
@@ -53,7 +57,7 @@ class CartPoleSim:
         self.stable_q_hist = []
 
         self.u = self.swingup_gain
-        self.swingup_travel = .1
+        self.swingup_travel = 0.1
 
         self.total_clip = 10
 
@@ -66,32 +70,36 @@ class CartPoleSim:
         stable_q_pos = copy.copy(q_pos)
         stable_q_pos[1] % (2 * pi)  # make sure we are between 0 and 2*pi
         if stable_q_pos[1] > pi:
-            stable_q_pos[1] = (stable_q_pos[1] - (2 * pi))
-
+            stable_q_pos[1] = stable_q_pos[1] - (2 * pi)
 
         self.stable_q_hist.append(stable_q_pos[1])
         # figure out what controller to use and apply it
         if np.abs(stable_q_pos[1]) > self.catch_range:
             # swing up control
             self.c_hist.append(1)
-            #self.u =  self.swingup_gain*q_vel[1]*np.cos(q_pos[1])
-            #self.u = self.swingup_gain
-            #if(q_vel[1] <= 0):
-                #self.u = -self.swingup_gain
-            #else:
-                #self.u = self.swingup_gain
+            # self.u =  self.swingup_gain*q_vel[1]*np.cos(q_pos[1])
+            # self.u = self.swingup_gain
+            # if(q_vel[1] <= 0):
+            # self.u = -self.swingup_gain
+            # else:
+            # self.u = self.swingup_gain
 
-
-            if(q_pos[0] < self.swingup_travel):
+            if q_pos[0] < self.swingup_travel:
                 self.u = self.swingup_gain
-            elif(q_pos[0] > -self.swingup_travel ):
+            elif q_pos[0] > -self.swingup_travel:
                 self.u = -self.swingup_gain
 
         else:
             self.c_hist.append(-1)
             # stable control
-            self._error_sum = np.clip(self._error_sum + q_pos, -self.i_clip, self.i_clip)
-            self.u = self.total_gain * (np.sum(stable_q_pos * self.Kp) + np.sum(q_vel * self.Kd) + np.sum(self._error_sum * self.Ki))
+            self._error_sum = np.clip(
+                self._error_sum + q_pos, -self.i_clip, self.i_clip
+            )
+            self.u = self.total_gain * (
+                np.sum(stable_q_pos * self.Kp)
+                + np.sum(q_vel * self.Kd)
+                + np.sum(self._error_sum * self.Ki)
+            )
 
         self.u = np.clip(self.u, -self.total_clip, self.total_clip)
         return self.u
@@ -148,18 +156,18 @@ class CartPoleSim:
 
         """
         plt.plot(self.u_val_hist)
-        plt.title('u_vals')
+        plt.title("u_vals")
         plt.show()
         plt.figure()
 
         plt.plot(self.q_pos_hist)
-        plt.title('positions')
-        plt.legend(('cart x', 'theta'))
+        plt.title("positions")
+        plt.legend(("cart x", "theta"))
         plt.figure()
 
         plt.plot(self.q_vel_hist)
-        plt.title('velocities')
-        plt.legend(('cart x', 'theta'))
+        plt.title("velocities")
+        plt.legend(("cart x", "theta"))
         plt.figure()
 
     def __setattr__(self, key, value):
@@ -179,10 +187,9 @@ if __name__ == "__main__":
 
     cart.plot_history()
 
-    cart.default_state[1][1] = pi + .1
+    cart.default_state[1][1] = pi + 0.1
     cart.run_sim()
 
     cart.plot_history()
 
-
-    #cart.visualize()
+    # cart.visualize()

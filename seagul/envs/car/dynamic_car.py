@@ -9,6 +9,7 @@ import gym
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
+
 class DynCarEnv(gym.Env):
     """
       Environment for what I'm calling a "dynamic car"
@@ -23,12 +24,9 @@ class DynCarEnv(gym.Env):
 
     """
 
-    metadata = {
-        'render.modes': ['human'],
-        'video.frames_per_second': 15
-    }
+    metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
-    def __init__(self, dt = .01):
+    def __init__(self, dt=0.01):
         self.m = 1
         self.a_max = 10
         self.dt = dt
@@ -42,18 +40,18 @@ class DynCarEnv(gym.Env):
 
         self.T_MAX = 10
 
-        car_state_max = np.array([self.X_MAX, self.Y_MAX, pi,  self.DX_MAX, self.DY_MAX, self.DTHETA_MAX])
+        car_state_max = np.array(
+            [self.X_MAX, self.Y_MAX, pi, self.DX_MAX, self.DY_MAX, self.DTHETA_MAX]
+        )
         goal_state_max = np.array([self.X_MAX, self.Y_MAX, self.T_MAX])
 
         aug_state_max = np.concatenate((car_state_max, goal_state_max))
         self.observation_space = gym.spaces.Box(low=-aug_state_max, high=aug_state_max)
 
-
         self.action_space = gym.spaces.Box(-self.a_max, self.a_max, shape=(2,))
 
     def step(self, action):
         done = False
-
 
         # ns = rk4(self._derivs, torque, 0, self.dt, self.state)
         ns = euler(self._derivs, action, 0, self.dt, self.state)
@@ -70,8 +68,9 @@ class DynCarEnv(gym.Env):
 
         self.state[8] = self.state[8] - self.dt
 
-        reward = (self.state[6] - self.state[0])**2 + (self.state[7] - self.state[1])**2
-
+        reward = (self.state[6] - self.state[0]) ** 2 + (
+            self.state[7] - self.state[1]
+        ) ** 2
 
         if self.state[8] < 0:
             done = True
@@ -99,7 +98,7 @@ class DynCarEnv(gym.Env):
 
         return qdot
 
-    def render(self, mode='human'):
+    def render(self, mode="human"):
         raise NotImplementedError
 
     def seed(self, seed=None):
@@ -107,12 +106,15 @@ class DynCarEnv(gym.Env):
         return [seed]
 
     def reset(self):
-        self.state = np.array([0,0,0,0,0,0,0,0,10]) + self.np_random.uniform(-self.state_noise_max, self.state_noise_max, size=(9,))
+        self.state = np.array([0, 0, 0, 0, 0, 0, 0, 0, 10]) + self.np_random.uniform(
+            -self.state_noise_max, self.state_noise_max, size=(9,)
+        )
         return self.state
 
     def _get_ob(self):
-             return self.state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max, size=(9,))
-
+        return self.state + self.np_random.uniform(
+            -self.state_noise_max, self.state_noise_max, size=(9,)
+        )
 
 
 def wrap(x, m, M):
@@ -130,7 +132,6 @@ def wrap(x, m, M):
     while x < m:
         x = x + diff
     return x
-
 
 
 def rk4(derivs, a, t0, dt, s0):
@@ -164,13 +165,13 @@ def rk4(derivs, a, t0, dt, s0):
 
     """
 
-    k1 = dt * derivs(t0, s0, a);
-    k2 = dt * derivs(t0 + dt / 2, s0 + k1 / 2, a);
-    k3 = dt * derivs(t0 + dt / 2, s0 + k2 / 2, a);
-    k4 = dt * derivs(t0 + dt, s0 + k3, a);
+    k1 = dt * derivs(t0, s0, a)
+    k2 = dt * derivs(t0 + dt / 2, s0 + k1 / 2, a)
+    k3 = dt * derivs(t0 + dt / 2, s0 + k2 / 2, a)
+    k4 = dt * derivs(t0 + dt, s0 + k3, a)
 
-    return  s0 + 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
+    return s0 + 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
 
 
 def euler(derivs, a, t0, dt, s0):
-    return s0 + dt*derivs(t0+dt, s0, a)
+    return s0 + dt * derivs(t0 + dt, s0, a)
