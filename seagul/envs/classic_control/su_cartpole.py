@@ -26,7 +26,7 @@ class SUCartPoleEnv(gym.Env):
 
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
-    def __init__(self, num_steps=1500, dt=0.005):
+    def __init__(self, num_steps=1500, dt=0.001):
         self.L = 1.0  # length of the pole (m)
         self.mc = 4.0  # mass of the cart (kg)
         self.mp = 1.0  # mass of the ball at the end of the pole
@@ -52,9 +52,7 @@ class SUCartPoleEnv(gym.Env):
 
         self.TORQUE_MAX = 1000.0
         self.torque_noise_max = 0.0
-        self.action_space = gym.spaces.Box(
-            -self.TORQUE_MAX, self.TORQUE_MAX, shape=(1,)
-        )
+        self.action_space = gym.spaces.Box(-self.TORQUE_MAX, self.TORQUE_MAX, shape=(1,))
 
         self.viewer = None
 
@@ -75,9 +73,7 @@ class SUCartPoleEnv(gym.Env):
         return self.state
 
     def _get_ob(self):
-        return self.state + self.np_random.uniform(
-            -self.state_noise_max, self.state_noise_max, size=(4,)
-        )
+        return self.state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max, size=(4,))
 
     def step(self, action):
         done = False
@@ -85,23 +81,22 @@ class SUCartPoleEnv(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        # torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)*100
-        torque = action
+        torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)*100
+        #torque = action
         # Add noise to the force action
         if self.torque_noise_max > 0:
-            torque += self.np_random.uniform(
-                -self.torque_noise_max, self.torque_noise_max
-            )
+            torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
-        ns = rk4(self._derivs, torque, 0, self.dt, self.state)
-        # ns = euler(self._derivs, torque, 0, self.dt, self.state)
+        for _ in range(5):
+            ns = rk4(self._derivs, torque, 0, self.dt, self.state)
+            # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
-        self.state[0] = wrap(ns[0], -pi, pi)
-        # self.state[0] = ns[0]
-        self.state[1] = ns[1]
-        # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
-        self.state[2] = ns[2]
-        self.state[3] = ns[3]
+            self.state[0] = wrap(ns[0], -pi, pi)
+            # self.state[0] = ns[0]
+            self.state[1] = ns[1]
+            # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
+            self.state[2] = ns[2]
+            self.state[3] = ns[3]
 
         # self.state[2] = np.clip(ns[2], -self.DTHETA_MAX, self.DTHETA_MAX)
         # self.state[3] = np.clip(ns[3], -self.DX_MAX, self.DX_MAX)
@@ -150,12 +145,7 @@ class SUCartPoleEnv(gym.Env):
             self.carttrans = rendering.Transform()
             cart.add_attr(self.carttrans)
             self.viewer.add_geom(cart)
-            l, r, t, b = (
-                -polewidth / 2,
-                polewidth / 2,
-                polelen - polewidth / 2,
-                -polewidth / 2,
-            )
+            l, r, t, b = (-polewidth / 2, polewidth / 2, polelen - polewidth / 2, -polewidth / 2)
             pole = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
             pole.set_color(0.8, 0.6, 0.4)
             self.poletrans = rendering.Transform(translation=(0, axleoffset))
