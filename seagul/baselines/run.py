@@ -24,7 +24,7 @@ care of loading a trained model just by specifying the name you saved it with
 def run_and_save(arg_dict, run_name=None, description=None, base_path="/data/", backend='baselines'):
     if backend == 'baselines':
         _run_and_save_bs(arg_dict, run_name, description, base_path)
-    if backend == 'seagul'
+    if backend == 'seagul':
         _run_and_save_sg(arg_dict, run_name, description, base_path)
 
 def _run_and_save_sg(arg_dict, run_name=None, description=None, base_path="/data/"):
@@ -207,9 +207,9 @@ def load_model(save_path, backend='baselines'):
     """
 
 
-    if(backend == 'baselines'):
+    if backend == 'baselines':
         return _load_model_bs(save_path)
-    elif(backend == 'seagul'):
+    elif backend == 'seagul' :
         return _load_model_sg(save_path)
     else:
         raise ValueError('unrecognized backend: ', backend)
