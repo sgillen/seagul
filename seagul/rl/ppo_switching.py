@@ -1,17 +1,17 @@
 import gym
+
+# It looks like these aren't used anywhere, but these imports a necessary to register environments with gym
 import seagul.envs
+import pybullet_envs
+
 import numpy as np
 from tqdm import trange
 import copy
 
-import torch
-import pybullet_envs
 from torch.utils import data
 from torch.distributions import Normal, Categorical
 
 from numpy import pi, sin, cos
-
-variance = 0.02
 
 # ============================================================================================
 def ppo_switch(
@@ -20,6 +20,8 @@ def ppo_switch(
     policy,
     value_fn,
     gate_fn,
+    action_var=0.2,
+    gate_var=0.08,
     epoch_batch_size=2048,
     gamma=0.99,
     lam=0.99,
@@ -41,24 +43,52 @@ def ppo_switch(
 
     Implements a proximal policy optimization with clipping
 
-    :param env_name: name of the openAI gym environment to solve
-    :param num_epochs: number of epochs to run the PPO for
-    :param policy: policy function, must be a pytorch module
-    :param value_fn: value function, must be a pytorch module
-    :param epoch_batch_size: number of environment steps to take per batch, total steps will be num_epochs*epoch_batch_size
-    :param seed: seed for all the rngs
-    :param gamma: discount applied to future rewards, usually close to 1
-    :param lam: lambda for the Advantage estimmation, usually close to 1
-    :param eps: epsilon for the clipping, usually .1 or .2
-    :param policy_batch_size: batch size for policy updates
-    :param value_batch_size: batch size for value function updates
-    :param policy_lr: learning rate for policy p_optimizer
-    :param value_lr: learning rate of value function p_optimizer
-    :param p_epochs: how many epochs to use for each policy update
-    :param v_epochs: how many epochs to use for each value update
-    :param use_gpu:  want to use the GPU? set to true
-    :param reward_stop: reward value to stop if we achieve
-    :return:
+    Args:
+
+        env_name: name of the openAI gym environment to solve
+        num_epochs: number of epochs to run the PPO for
+        policy: policy function, must be a pytorch module
+        value_fn: value function, must be a pytorch module
+        gate_fn: gating function, another pytorch module, should output between 0 and 1
+        action_var: variance to use for the policy network
+        gate_var: variance to use for the gating network
+        epoch_batch_size: number of environment steps to take per batch, total steps will be num_epochs*epoch_batch_size
+        seed: seed for all the rngs
+        gamma: discount applied to future rewards, usually close to 1
+        lam: lambda for the Advantage estimmation, usually close to 1
+        eps: epsilon for the clipping, usually .1 or .2
+        policy_batch_size: batch size for policy updates
+        param value_batch_size: batch size for value function updates
+        policy_lr: learning rate for policy p_optimizer
+        value_lr: learning rate of value function p_optimizer
+        p_epochs: how many epochs to use for each policy update
+        v_epochs: how many epochs to use for each value update
+        use_gpu:  want to use the GPU? set to true
+        reward_stop: reward value to stop if we achieve
+
+    Returns:
+        policy: the trained policy network
+        value_fn: the trained value function
+        gate_fn: the trained gate fn
+        avg_reward_hist: list of average rewards per epoch
+        arg_dict: dictionary of parameters used, used for saving runs
+
+    Example:
+        import torch.nn as nn
+        from seagul.rl.ppo import ppo_switch
+        from seagul.nn import Categorical_MLP, MLP
+        import torch
+
+        policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+        value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+        gate_fn = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+
+        env2, t_policy, t_val, t_gate, rewards = ppo_switch(
+            "su_cartpole-v0", 1000, policy, value_fn, gate_fn, epoch_batch_size=500
+        )
+
+        print(rewards)
+
     """
 
     env = gym.make(env_name)
@@ -68,15 +98,20 @@ def ppo_switch(
 
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         raise NotImplementedError(
-            "Discrete action spaces are not implemnted yet, why are you using PPO for a discrete action space anyway?"
+            "Discrete action spaces are not implemented yet, why are you using PPO for a discrete action space anyway?"
         )
         # select_action = select_discrete_action
         # get_logp = get_discrete_logp
         # action_size = 1
     elif isinstance(env.action_space, gym.spaces.Box):
-        select_action = select_cont_action
-        get_logp = get_cont_logp
+        select_action = lambda p, s: select_cont_action(p, s, action_var)
+        get_action_logp = lambda p, s, a: get_cont_logp(p, s, a, action_var)
+
+        select_path = lambda p, s: select_cont_action(p, s, gate_var)
+        get_path_logp = lambda p, s, a: get_cont_logp(p, s, a, gate_var)
+
         action_size = env.action_space.shape[0]
+        obs_size = env.observation_space.shape[0]
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
@@ -101,8 +136,8 @@ def ppo_switch(
 
     avg_reward_hist = []
 
+    # ----------------------------------------------------------------------------------
     for epoch in trange(num_epochs):
-
         episode_reward_sum = []
         episode_reward_sum = []
         batch_steps = 0  # tracks steps taken in current batch
@@ -137,9 +172,9 @@ def ppo_switch(
             # Do a single policy rollout
             for t in range(env.num_steps):
 
-                state_list.append(state)
+                state_list.append(state.clone())
 
-                gate_out, _ = select_cont_action(gate_fn, state)
+                gate_out, _ = select_path(gate_fn, state)
                 path = hyst_vec(gate_out)
 
                 if not path:
@@ -228,8 +263,10 @@ def ppo_switch(
                             )
 
                             # predict and calculate loss for the batch
-                            logp = get_logp(policy, local_states, local_actions.squeeze()).reshape(-1, action_size)
-                            old_logp = get_logp(old_policy, local_states, local_actions.squeeze()).reshape(
+                            logp = get_action_logp(policy, local_states, local_actions.squeeze()).reshape(
+                                -1, action_size
+                            )
+                            old_logp = get_action_logp(old_policy, local_states, local_actions.squeeze()).reshape(
                                 -1, action_size
                             )
                             r = torch.exp(logp - old_logp)
@@ -283,10 +320,10 @@ def ppo_switch(
                                 local_adv.to(device),
                             )
 
-                            logp = get_discrete_logp(gate_fn, local_states, local_gate.squeeze())
+                            logp = get_path_logp(gate_fn, local_states, local_gate.squeeze())
                             logp = logp.reshape(-1, action_size)
 
-                            old_logp = get_discrete_logp(old_gate, local_states, local_gate.squeeze())
+                            old_logp = get_path_logp(old_gate, local_states, local_gate.squeeze())
                             old_logp = old_logp.reshape(-1, action_size)
 
                             r = torch.exp(logp - old_logp)
@@ -310,17 +347,14 @@ def ppo_switch(
                     avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
                     break
 
-    return (env, policy, value_fn, gate_fn, avg_reward_hist)
+    return (policy, value_fn, gate_fn, avg_reward_hist, {})
 
 
 # helper functions
 # ============================================================================================
 
 # takes a policy and the states and sample an action from it... (can we make this faster?)
-def select_cont_action(policy, state):
-    if any(torch.isnan(state).flatten()):
-        print("whoops")
-
+def select_cont_action(policy, state, variance):
     means = policy(torch.as_tensor(state)).squeeze()
     m = Normal(loc=means, scale=torch.ones_like(means) * variance)
     action = m.sample()
@@ -329,10 +363,7 @@ def select_cont_action(policy, state):
 
 
 # given a policy plus a state/action pair, what is the log liklihood of having taken that action?
-def get_cont_logp(policy, states, actions):
-    if any(torch.isnan(states).flatten()):
-        print("whoops")
-
+def get_cont_logp(policy, states, actions, variance):
     means = policy(torch.as_tensor(states)).squeeze()
     m = Normal(loc=means, scale=torch.ones_like(means) * variance)
     logprob = m.log_prob(actions)
@@ -341,9 +372,6 @@ def get_cont_logp(policy, states, actions):
 
 # takes a policy and the states and sample an action from it... (can we make this faster?)
 def select_discrete_action(policy, state):
-    if any(torch.isnan(state).flatten()):
-        print("whoops")
-
     probs = torch.tensor([policy(torch.as_tensor(state)), 1 - policy(torch.as_tensor(state))])
     m = Categorical(probs)
     action = m.sample()
@@ -373,29 +401,29 @@ def discount_cumsum(rewards, discount):
 
 def control(env, q):
     # Ausutay Ozmen
-    if -0.2 < q[0] < 0.2 and -2 < q[2] < 2:
-        return torch.tensor(10)
+    # if -0.2 < q[0] < 0.2 and -2 < q[2] < 2:
+    #     return torch.tensor(10)
 
-    if (q[0] < 145 * pi / 180) or (q[0] > 215 * pi / 180):
-        # swing up
-        # energy error: Ee
-        Ee = 0.5 * env.mp * env.L * env.L * q[2] ** 2 - env.mp * env.g * env.L * (1 + cos(q[0]))
-        # energy conrol gain:
-        k = 0.23
-
-        # input acceleration: A (of cart)
-        A = k * Ee * cos(q[0]) * q[2]
-        # convert A to u (using EOM)
-        delta = env.mp * sin(q[0]) ** 2 + env.mc
-        u = A * delta - env.mp * env.L * (q[2] ** 2) * sin(q[0]) - env.mp * env.g * sin(q[2]) * cos(q[2])
-    else:
-        # balancing
-        # LQR: K values from MATLAB
-        k1 = 140.560
-        k2 = -3.162
-        k3 = 41.772
-        k4 = -8.314
-        u = -100 * (k1 * (q[0] - pi) + k2 * q[1] + k3 * q[2] + k4 * q[3])
+    # else: #(q[0] < 145 * pi / 180) or (q[0] > 215 * pi / 180):
+    #     # swing up
+    #     # energy error: Ee
+    #     Ee = 0.5 * env.mp * env.L * env.L * q[2] ** 2 - env.mp * env.g * env.L * (1 + cos(q[0]))
+    #     # energy conrol gain:
+    #     k = 0.23
+    #
+    #     # input acceleration: A (of cart)
+    #     A = k * Ee * cos(q[0]) * q[2]
+    #     # convert A to u (using EOM)
+    #     delta = env.mp * sin(q[0]) ** 2 + env.mc
+    #     u = A * delta - env.mp * env.L * (q[2] ** 2) * sin(q[0]) - env.mp * env.g * sin(q[2]) * cos(q[2])
+    # else:
+    # balancing
+    # LQR: K values from MATLAB
+    k1 = 140.560
+    k2 = -3.162
+    k3 = 41.772
+    k4 = -8.314
+    u = -(k1 * (q[0] - pi) + k2 * q[1] + k3 * q[2] + k4 * q[3])
     return u
 
 
@@ -411,13 +439,13 @@ def hyst(x):
     """
     global hyst_state
     if hyst_state == 0:
-        if x > 0.8:
+        if x > 0.55:
             hyst_state = 1
             return 1
         else:
             return 0
     elif hyst_state == 1:
-        if x < 0.2:
+        if x < 0.45:
             hyst_state = 0
             return 0
         else:
@@ -431,7 +459,6 @@ batch_steps = 0  # tracks steps taken in current batch
 # ============================================================================================
 if __name__ == "__main__":
     import torch.nn as nn
-    from seagul.rl.ppo import ppo
     from seagul.nn import Categorical_MLP, MLP, DummyNet
     import torch
 
@@ -440,30 +467,12 @@ if __name__ == "__main__":
     torch.set_default_dtype(torch.double)
 
     policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-
     value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
     gate_fn = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
 
-    # Define our hyper parameters
-    num_epochs = 100
-    batch_size = 2048  # how many steps we want to use before we update our gradients
-    num_steps = 1000  # number of steps in an episode (unless we terminate early)
-    max_reward = num_steps
-    p_batch_size = 2048
-    v_epochs = 1
-    p_epochs = 10
-    p_lr = 1e-2
-    v_lr = 1e-2
-
-    gamma = 0.99
-    lam = 0.99
-    eps = 0.2
-
-    variance = 0.2  # feel like there should be a better way to do this...
-
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    env2, t_policy, t_val, t_gate, rewards = ppo_switch(
-        "su_cartpole-v0", 1000, policy, value_fn, gate_fn, epoch_batch_size=0
+    t_policy, t_val, t_gate, rewards, arg_dict = ppo_switch(
+        "su_cartpole_push-v0", 5000, policy, value_fn, gate_fn, epoch_batch_size=500
     )
 
     plt.plot(rewards)

@@ -1,3 +1,25 @@
+"""
+Utility functions for seagul, mostly fixed step integrators
+"""
+
+
+def wrap(x, m, M):
+    """
+    :param x: a scalar
+    :param m: minimum possible value in range
+    :param M: maximum possible value in range
+    Wraps ``x`` so m <= x <= M; but unlike ``bound()`` which
+    truncates, ``wrap()`` wraps x around the coordinate system defined by m,M.\n
+    For example, m = -180, M = 180 (degrees), x = 360 --> returns 0.
+    """
+    diff = M - m
+    while x > M:
+        x = x - diff
+    while x < m:
+        x = x + diff
+    return x
+
+
 def rk4(derivs, a, t0, dt, s0):
     """
     Single step of an RK4 solver, designed for control applications, so it passed an action to your
