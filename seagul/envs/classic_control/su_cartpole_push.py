@@ -1,15 +1,16 @@
 import numpy as np
 import gym
 from numpy import cos, sin, pi
+import random
 
 from gym.utils import seeding
+from seagul.integration import euler, rk4, wrap
 
-from seagul.integration import rk4, euler, wrap
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 
-class SUCartPoleEnv(gym.Env):
+class SUCartPolePushEnv(gym.Env):
     """
     Environment for for a classic_control cartpole pendulum.
 
@@ -51,14 +52,13 @@ class SUCartPoleEnv(gym.Env):
         low = -high
         self.observation_space = gym.spaces.Box(low=low, high=high)
 
-        self.TORQUE_MAX = 1000.0
+        self.TORQUE_MAX = 500.0
         self.torque_noise_max = 0.0
         self.action_space = gym.spaces.Box(-self.TORQUE_MAX, self.TORQUE_MAX, shape=(1,))
 
         self.viewer = None
 
         self.seed()
-
         self.reset()
 
     def seed(self, seed=None):
@@ -66,7 +66,7 @@ class SUCartPoleEnv(gym.Env):
         return [seed]
 
     def reset(self):
-        self.state = np.array([0, 0, 0, 0]) + self.np_random.uniform(
+        self.state = np.array([pi, 0, 0, 0]) + self.np_random.uniform(
             -self.state_noise_max, self.state_noise_max, size=(4,)
         )
         self.cur_step = 0
@@ -82,14 +82,26 @@ class SUCartPoleEnv(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX) * 100
-        # torque = action
+        # torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
+        torque = action
+
         # Add noise to the force action
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
+        # Randomy apply a pertubation
+
+        push = 0
+        if (self.state[0] > 145 * pi / 180) and (self.state[0] < 215 * pi / 180):
+            rand = random.random()
+            if rand > 0.99:
+                push = random.gauss(0, 0.2)
+
+        self.state[0] += push
+
+        # Do the integration update, we update the simulator at a higer rate than we update the control
         for _ in range(5):
-            ns = euler(self._derivs, torque, 0, self.dt, self.state)
+            ns = rk4(self._derivs, torque, 0, self.dt, self.state)
             # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
             self.state[0] = wrap(ns[0], -pi, pi)
