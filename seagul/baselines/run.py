@@ -28,7 +28,6 @@ def run_and_save(arg_dict, run_name=None, description=None, base_path="/data/", 
 
 
 def _run_and_save_sg(arg_dict, run_name=None, description=None, base_path="/data/"):
-    return NotImplementedError
     """
     Launches a segaul RL algorithm and saves the results
 
@@ -78,9 +77,9 @@ def _run_and_save_sg(arg_dict, run_name=None, description=None, base_path="/data
     env_name = arg_dict["env"]
 
     start_time = time.time()
-    # if(arg_dict['alg'] == "ppo2" or arg_dict['alg'] == "ppo"):
-    #
-    #     seagul.rl.ppo(env_name, num_epochs, policy, value_fn, **kwargs)
+    if arg_dict["alg"] == "ppo2" or arg_dict["alg"] == "ppo":
+        arg_dict
+        seagul.rl.ppo(env_name, num_epochs, policy, value_fn, **kwargs)
 
     runtime = time.time() - start_time
 
