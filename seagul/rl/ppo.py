@@ -1,7 +1,10 @@
 import gym
+import seagul.envs
 import numpy as np
 from tqdm import trange
 import copy
+import time
+import datetime
 
 import torch
 from torch.utils import data
@@ -53,6 +56,7 @@ def ppo(
     :return:
     """
 
+    start_time = time.time()
     env = gym.make(env_name)
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         raise NotImplementedError(
@@ -115,7 +119,7 @@ def ppo(
             traj_steps = 0
 
             # Do a single policy rollout
-            for t in range(env._max_episode_steps):
+            for t in range(env.num_steps):
 
                 state_list.append(state)
 
@@ -216,7 +220,31 @@ def ppo(
 
                 break
 
-    return (env, policy, value_fn, avg_reward_hist)
+    # Process parameters for saving stuff
+    end_time = time.time()
+    run_time = end_time - start_time
+    # wish there was a better way to do this but honestly feel like the automated way is more gross
+    arg_dict = {
+        "env_name": env_name,
+        "num_epochs": num_epochs,
+        "policy": policy.__repr__(),
+        "value_fn": value_fn.__repr__(),
+        "epoch_batch_size": epoch_batch_size,
+        "gamma": gamma,
+        "lam": lam,
+        "eps": eps,
+        "seed": seed,
+        "policy_batch_size": policy_batch_size,
+        "value_batch_size": value_batch_size,
+        "policy_lr": policy_lr,
+        "value_lr": value_lr,
+        "p_epochs": p_epochs,
+        "v_epochs": v_epochs,
+        "use_gpu": use_gpu,
+        "reward_stop": None,
+    }
+
+    return (env, policy, value_fn, avg_reward_hist, arg_dict)
 
 
 # helper functions
