@@ -67,6 +67,7 @@ def fit_model(
     batch_size=32,
     shuffle=True,
     loss_fn=torch.nn.MSELoss(),
+    use_tqdm=True,
 ):
     """
     Trains a pytorch module model to predict actions from states for num_epochs passes through the dataset.
@@ -103,12 +104,15 @@ def fit_model(
         actions = np.random.randn(100,1)
 
         loss_hist = fit_model(model,states, actions, 200)
-
-
     """
     # Check if GPU is available , else fall back to CPU
     # TODO this might belong in module body
     use_cuda = torch.cuda.is_available()
+    if use_tqdm:
+        range_fn = trange
+    else:
+        range_fn = range
+
     # device = torch.device("cuda:0" if use_cuda else "cpu")
     device = torch.device("cpu")
     state_tensor = torch.as_tensor(state_train)  # make sure that our input is a tensor
@@ -122,7 +126,7 @@ def fit_model(
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    for epoch in range(num_epochs):
+    for epoch in range_fn(num_epochs):
         epoch_loss = 0
 
         for local_states, local_actions in training_generator:
@@ -143,7 +147,7 @@ def fit_model(
         # after each epoch append the average loss
         loss_hist.append(epoch_loss.detach().numpy() / len(state_train))
 
-    return epoch_loss
+    return loss_hist
 
 
 def policy_render_loop(policy, env, select_action):
