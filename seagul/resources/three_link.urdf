@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+
+<robot xmlns="http://drake.mit.edu"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://drake.mit.edu ../../doc/drakeURDF.xsd" name="SimpleDoublePendulum">
+  <material name="black">
+    <color rgba="0 0 0 1" />
+  </material>
+  <material name="MITred">
+    <color rgba=".6 .2 .2 1" />
+  </material>
+
+  <link name="base">
+    <inertial>
+      <origin xyz="0 0 0" />
+      <mass value="0.01" />
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+  </link>
+  <link name="stance_leg">
+    <inertial> 
+      <origin xyz="0 0 -1" rpy="0 0 0" />
+      <mass value="1" />
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/> 
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <geometry>
+        <cylinder length="1" radius=".01" />
+      </geometry>
+      <color rgba="1 1 0 1" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <geometry>
+        <cylinder length="1" radius=".01" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="base_joint" type="continuous">
+    <parent link="base"/>
+    <child link="stance_leg" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+ 
+  <link name="swing_leg">
+    <inertial> 
+      <origin xyz="0 0 -1" rpy="0 0 0" />
+      <mass value="1" />
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/> 
+    </inertial>
+
+    <collision>
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <geometry>
+        <cylinder length="1" radius=".01" />
+      </geometry>
+    </collision>
+    
+    <visual>
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <geometry>
+         <cylinder length="1" radius=".01" />
+      </geometry>
+      <color rgba="1 1 0 1" />
+    </visual> 
+
+  </link>
+  <joint name="swing_joint" type="continuous">
+    <parent link="stance_leg"/>
+    <origin xyz="0 0 -1" />
+    <child link="swing_leg" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+  <transmission type="SimpleTransmission" name="swing_trans">
+    <actuator name="swing_joint" />
+    <joint name="swing_joint" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+  
+  
+  
+  <link name="torso_leg">
+    <inertial> 
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <mass value="1" />
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/> 
+    </inertial>
+    <collision>
+      <origin xyz="0 0 -.25" rpy="0 0 0" />
+      <geometry>
+        <cylinder length=".5" radius=".01" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 -.25" rpy="0 0 0" />
+      <geometry>
+         <cylinder length=".5" radius=".01" />
+      </geometry>
+      <color rgba="1 1 0 1" />
+    </visual>
+    
+  </link>
+  <joint name="torso_joint" type="continuous">
+    <parent link="swing_leg"/>
+    <child link="torso_leg" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+  <transmission type="SimpleTransmission" name="torso_trans">
+    <actuator name="torso_joint" />
+    <joint name="torso_joint" />
+    <mechanicalReduction>1</mechanicalReduction>
+  </transmission>
+
+  
+
+  
+</robot>
+
