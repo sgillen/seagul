@@ -1,20 +1,13 @@
 import numpy as np
 import torch
-from torch.utils import data
-import torch
 import torch.nn as nn
-
+from torch.utils import data
 
 from tqdm import trange
 
 """
 Utility functions for seagul, all vaguely related to nerual networks
 """
-
-
-# This is most likely not best practice...
-# torch.set_default_dtype(torch.double)
-# torch.set_default_dtype(torch.float32)
 
 
 # Marco Molnar

@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import trange
 import copy
 
+import torch
 from torch.utils import data
 from torch.distributions import Normal, Categorical
 

@@ -93,7 +93,7 @@ class SUCartPoleEnv(gym.Env):
             # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
             self.state[0] = wrap(ns[0], -pi, pi)
-            # self.state[0] = ns[0]
+            #self.state[0] = ns[0]
             self.state[1] = ns[1]
             # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
             self.state[2] = ns[2]
