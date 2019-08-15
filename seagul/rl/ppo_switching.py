@@ -21,7 +21,7 @@ def ppo_switch(
     policy,
     value_fn,
     gate_fn,
-    action_var=0.2,
+    action_var=4,
     gate_var=0.08,
     epoch_batch_size=2048,
     gamma=0.99,
@@ -348,7 +348,7 @@ def ppo_switch(
                     avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
                     break
 
-    return (policy, value_fn, gate_fn, avg_reward_hist, {})
+    return (policy, value_fn, gate_fn, avg_reward_hist, locals())
 
 
 # helper functions
@@ -473,7 +473,7 @@ if __name__ == "__main__":
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
     t_policy, t_val, t_gate, rewards, arg_dict = ppo_switch(
-        "su_cartpole_push-v0", 5000, policy, value_fn, gate_fn, epoch_batch_size=500
+        "su_cartpole_push-v0", 5, policy, value_fn, gate_fn, epoch_batch_size=500
     )
 
     plt.plot(rewards)
