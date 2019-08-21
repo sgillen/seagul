@@ -24,8 +24,8 @@
   <link name="lower_stance">
     <inertial> 
       <origin xyz="0 0 -1" rpy="0 0 0" />
-      <mass value="1" />
-      <inertia ixx="1/12" ixy="0" ixz="0" iyy="1/12" iyz="0" izz=".01"/> 
+      <mass value="10" />
+      <inertia ixx=".083" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
     <visual>
       <origin xyz="0 0 -.5" rpy="0 0 0" />
@@ -45,8 +45,8 @@
   <link name="upper_stance">
     <inertial> 
       <origin xyz="0 0 -1" rpy="0 0 0" />
-      <mass value="1" />
-      <inertia ixx="1/12" ixy="0" ixz="0" iyy="1/12" iyz="0" izz=".01"/> 
+      <mass value="10" />
+      <inertia ixx=".083" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
     <collision>
       <origin xyz="0 0 -.5" rpy="0 0 0" />
@@ -66,8 +66,8 @@
   <link name="torso">
     <inertial> 
       <origin xyz="0 0 -1.5" rpy="0 0 0" />
-      <mass value="1" />
-      <inertia ixx="1/12" ixy="0" ixz="0" iyy="1/12" iyz="0" izz=".01"/> 
+      <mass value="10" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
     <collision>
       <origin xyz="0 0 -.25" rpy="0 0 0" />
@@ -87,8 +87,8 @@
   <link name="lower_swing">
     <inertial> 
       <origin xyz="0 0 -1" rpy="0 0 0" />
-      <mass value="1" />
-      <inertia ixx="1/12" ixy="0" ixz="0" iyy="1/12" iyz="0" izz=".01"/> 
+      <mass value="10" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
     <visual>
       <origin xyz="0 0 -.5" rpy="0 0 0" />
@@ -108,8 +108,8 @@
   <link name="upper_swing">
     <inertial> 
       <origin xyz="0 0 -1" rpy="0 0 0" />
-      <mass value="1" />
-      <inertia ixx="1/12" ixy="0" ixz="0" iyy="1/12" iyz="0" izz=".01"/> 
+      <mass value="10" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
     <collision>
       <origin xyz="0 0 -.5" rpy="0 0 0" />
@@ -145,7 +145,6 @@
     <axis xyz="0 1 0" />
     <dynamics damping="0.1" />
   </joint>
-
   <transmission type="SimpleTransmission" name="stance_trans">
     <actuator name="stance_knee" />
     <joint name="stance_knee" />
