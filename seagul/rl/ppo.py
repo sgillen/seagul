@@ -1,5 +1,7 @@
 import gym
 import seagul.envs
+from seagul.rl.common import select_cont_action, select_discrete_action, get_discrete_logp, get_cont_logp, discount_cumsum
+
 import numpy as np
 from tqdm import trange
 import copy
@@ -18,6 +20,7 @@ def ppo(
     num_epochs,
     policy,
     value_fn,
+    action_var=.1,
     epoch_batch_size=2048,
     gamma=0.99,
     lam=0.99,
@@ -60,15 +63,16 @@ def ppo(
     env = gym.make(env_name)
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         raise NotImplementedError(
-            "Discrete action spaces are not implemnted yet, why are you using PPO for a discrete action space anyway?"
+            "Discrete action spaces are not implemented yet, why are you using PPO for a discrete action space anyway?"
         )
         # select_action = select_discrete_action
-        # get_logp = get_discrete_logp
+        # get_action_logp = get_discrete_logp
         # action_size = 1
     elif isinstance(env.action_space, gym.spaces.Box):
-        select_action = select_cont_action
-        get_logp = get_cont_logp
+        select_action = lambda p, s: select_cont_action(p, s, action_var)
+        get_action_logp = lambda p, s, a: get_cont_logp(p, s, a, action_var)
         action_size = env.action_space.shape[0]
+        obs_size = env.observation_space.shape[0]
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
@@ -182,8 +186,8 @@ def ppo(
                         )
 
                         # predict and calculate loss for the batch
-                        logp = get_logp(policy, local_states, local_actions.squeeze()).reshape(-1, action_size)
-                        old_logp = get_logp(old_policy, local_states, local_actions.squeeze()).reshape(-1, action_size)
+                        logp = get_action_logp(policy, local_states, local_actions.squeeze()).reshape(-1, action_size)
+                        old_logp = get_action_logp(old_policy, local_states, local_actions.squeeze()).reshape(-1, action_size)
                         r = torch.exp(logp - old_logp)
                         p_loss = (
                             -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
@@ -223,73 +227,9 @@ def ppo(
     # Process parameters for saving stuff
     end_time = time.time()
     run_time = end_time - start_time
-    # wish there was a better way to do this but honestly feel like the automated way is more gross
-    arg_dict = {
-        "env_name": env_name,
-        "num_epochs": num_epochs,
-        "policy": policy.__repr__(),
-        "value_fn": value_fn.__repr__(),
-        "epoch_batch_size": epoch_batch_size,
-        "gamma": gamma,
-        "lam": lam,
-        "eps": eps,
-        "seed": seed,
-        "policy_batch_size": policy_batch_size,
-        "value_batch_size": value_batch_size,
-        "policy_lr": policy_lr,
-        "value_lr": value_lr,
-        "p_epochs": p_epochs,
-        "v_epochs": v_epochs,
-        "use_gpu": use_gpu,
-        "reward_stop": None,
-    }
 
-    return (env, policy, value_fn, avg_reward_hist, arg_dict)
-
-
-# helper functions
-# ============================================================================================
-
-# takes a policy and the states and sample an action from it... (can we make this faster?)
-def select_cont_action(policy, state):
-    means = policy(torch.as_tensor(state)).squeeze()
-    m = Normal(loc=means, scale=torch.ones_like(means) * variance)
-    action = m.sample()
-    logprob = m.log_prob(action)
-    return action.detach(), logprob
-
-
-# given a policy plus a state/action pair, what is the log liklihood of having taken that action?
-def get_cont_logp(policy, states, actions):
-    means = policy(torch.as_tensor(states)).squeeze()
-    m = Normal(loc=means, scale=torch.ones_like(means) * variance)
-    logprob = m.log_prob(actions)
-    return logprob
-
-
-# takes a policy and the states and sample an action from it... (can we make this faster?)
-def select_discrete_action(policy, state):
-    m = Categorical(policy(torch.as_tensor(state)))
-    action = m.sample()
-    logprob = m.log_prob(action)
-    return action.detach(), logprob
-
-
-# given a policy plus a state/action pair, what is the log liklihood of having taken that action?
-def get_discrete_logp(policy, state, action):
-    m = Categorical(policy(torch.as_tensor(state)))
-    logprob = m.log_prob(action)
-    return logprob
-
-
-# can make this faster I think?
-def discount_cumsum(rewards, discount):
-    future_cumulative_reward = 0
-    cumulative_rewards = torch.empty_like(torch.as_tensor(rewards))
-    for i in range(len(rewards) - 1, -1, -1):
-        cumulative_rewards[i] = rewards[i] + discount * future_cumulative_reward
-        future_cumulative_reward = cumulative_rewards[i]
-    return cumulative_rewards
+    # Eventually I might return something beside all of locals but eh
+    return policy, value_fn, avg_reward_hist, locals()
 
 
 # ============================================================================================
@@ -304,8 +244,8 @@ if __name__ == "__main__":
     torch.set_default_dtype(torch.double)
 
     # policy = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    policy = MLP(input_size=11, output_size=3, layer_size=12, num_layers=2, activation=nn.ReLU)
-    value_fn = MLP(input_size=11, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
 
     # Define our hyper parameters
     num_epochs = 100
@@ -322,7 +262,5 @@ if __name__ == "__main__":
     lam = 0.99
     eps = 0.2
 
-    variance = 0.2  # feel like there should be a better way to do this...
-
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    env2, t_policy, t_val, rewards = ppo("Hopper-v2", 100, policy, value_fn)
+    env2, t_policy, t_val, rewards = ppo("su_cartpole-v0", 5, policy, value_fn)
