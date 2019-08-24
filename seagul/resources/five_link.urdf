@@ -39,6 +39,7 @@
       <geometry>
         <cylinder length="1" radius=".01" />
       </geometry>
+      <contact_coefficients mu="5" kp="5" kd=".5" />
     </collision>
   </link>
 
@@ -101,6 +102,7 @@
       <origin xyz="0 0 -.5" rpy="0 0 0" />
       <geometry>
         <cylinder length="1" radius=".01" />
+        <contact_coefficients mu="500000" kp="50000" kd="500000" />
       </geometry>
     </collision>
   </link>
