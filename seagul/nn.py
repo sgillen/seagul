@@ -298,7 +298,28 @@ class DummyNet(nn.Module):
         return self.layer(data) * torch.zeros(self.output_size)
 
 
+class LinearNet(nn.Module):
+    """
+    This is a "network" consisting of a single linear layer
+    """
+
+    def __init__(self, input_size, output_size, bias=False):
+        """
+        :param input_size: how many inputs
+        :param output_size: how many outputs
+        """
+        super(LinearNet, self).__init__()
+        self.output_size = output_size
+        self.layer = nn.Linear(input_size, output_size, bias=bias)  #
+
+    def forward(self, data):
+        return self.layer(data)
+
+
 # One day this might be a unit test
 if __name__ == "__main__":
     policy = MLP(input_size=4, output_size=1, num_layers=3, layer_size=12, activation=nn.ReLU)
     print(policy(torch.randn(1, 4)))
+
+    policy = LinearNet(input_size=4, output_size=1, bias=False)
+    print(print(policy(torch.randn(1, 4))))

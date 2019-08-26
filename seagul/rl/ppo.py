@@ -236,7 +236,7 @@ def ppo(
 if __name__ == "__main__":
     import torch.nn as nn
     from seagul.rl.ppo import ppo
-    from seagul.nn import Categorical_MLP, MLP
+    from seagul.nn import Categorical_MLP, MLP,LinearNet
     import torch
 
     import matplotlib.pyplot as plt
@@ -244,8 +244,11 @@ if __name__ == "__main__":
     torch.set_default_dtype(torch.double)
 
     # policy = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    #policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    #value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+
+    policy = LinearNet(4,1)
+    value_fn = LinearNet(4,1)
 
     # Define our hyper parameters
     num_epochs = 100
