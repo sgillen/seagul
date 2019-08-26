@@ -73,8 +73,15 @@ def ppo(
         get_action_logp = lambda p, s, a: get_cont_logp(p, s, a, action_var)
         action_size = env.action_space.shape[0]
         obs_size = env.observation_space.shape[0]
+
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
+
+
+    # init mean and var variables
+    state_mean = torch.zeros(obs_size)
+    state_var = torch.zeros(obs_size)
+    num_states = 0 # tracks how many states we've seen so far, so that we can update means properly
 
     # need a copy of the old policy for the ppo loss
     old_policy = copy.deepcopy(policy)
@@ -168,6 +175,17 @@ def ppo(
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
 
+
+                state_mean = torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states
+                state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states
+
+                policy.state_means = state_mean
+                policy.state_var = state_var
+
+                value_fn.state_means = state_mean
+                value_fn.state_var = state_var
+
+                num_states += state_tensor.shape[0]
                 # keep track of rewards for metrics later
                 avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
 
@@ -244,11 +262,11 @@ if __name__ == "__main__":
     torch.set_default_dtype(torch.double)
 
     # policy = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    #policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    #value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
 
-    policy = LinearNet(4,1)
-    value_fn = LinearNet(4,1)
+    #policy = LinearNet(4,1)
+    #value_fn = LinearNet(4,1)
 
     # Define our hyper parameters
     num_epochs = 100

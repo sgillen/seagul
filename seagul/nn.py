@@ -236,7 +236,12 @@ class MLP(nn.Module):
         self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers)])
         self.output_layer = nn.Linear(layer_size, output_size)
 
+        self.state_means = torch.zeros(input_size)
+        self.state_var = torch.ones(input_size)
+
     def forward(self, data):
+        data = (data - self.state_means)/self.state_var
+
         for layer in self.layers:
             data = self.activation(layer(data))
 
@@ -270,7 +275,13 @@ class Categorical_MLP(nn.Module):
         else:
             self.output_norm = nn.Softmax(dim=-1)
 
+        self.state_means = torch.zeros(input_size)
+        self.state_var = torch.ones(input_size)
+
+
     def forward(self, data):
+        data = (data - self.state_means)/self.state_var
+
         for layer in self.layers:
             data = self.activation(layer(data))
 
@@ -292,7 +303,8 @@ class DummyNet(nn.Module):
         """
         super(DummyNet, self).__init__()
         self.output_size = output_size
-        self.layer = nn.Linear(input_size, output_size, bias=False)  #
+        self.layer = nn.Linear(input_size, output_size, bias=False)
+
 
     def forward(self, data):
         return self.layer(data) * torch.zeros(self.output_size)
@@ -312,14 +324,21 @@ class LinearNet(nn.Module):
         self.output_size = output_size
         self.layer = nn.Linear(input_size, output_size, bias=bias)  #
 
+        self.state_means = torch.zeros(input_size)
+        self.state_var = torch.ones(input_size)
+
     def forward(self, data):
+        data = (data - self.state_means)/self.state_var
         return self.layer(data)
 
 
 # One day this might be a unit test
 if __name__ == "__main__":
     policy = MLP(input_size=4, output_size=1, num_layers=3, layer_size=12, activation=nn.ReLU)
+
+    policy.state_means = torch.ones(4)
+    policy.state_var = torch.ones(4)*4
     print(policy(torch.randn(1, 4)))
 
     policy = LinearNet(input_size=4, output_size=1, bias=False)
-    print(print(policy(torch.randn(1, 4))))
+    print(policy(torch.randn(1, 4)))
