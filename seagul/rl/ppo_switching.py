@@ -118,6 +118,11 @@ def ppo_switch(
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
+    # init mean and var variables
+    state_mean = torch.zeros(obs_size)
+    state_var = torch.zeros(obs_size)
+    num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
+
     # need a copy of the old policy for the ppo loss
     old_policy = copy.deepcopy(policy)
     old_gate = copy.deepcopy(gate_fn)
@@ -234,6 +239,17 @@ def ppo_switch(
             # once we have enough data, update our policy and value function
             # -------------------------------------------------------------------------------
             if batch_steps > epoch_batch_size:
+
+                state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
+                state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
+
+                policy.state_means = state_mean
+                policy.state_var = state_var
+
+                value_fn.state_means = state_mean
+                value_fn.state_var = state_var
+
+
                 p_state_list = []
                 p_action_list = []
                 p_adv_list = []
