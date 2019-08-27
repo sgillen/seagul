@@ -21,6 +21,7 @@ def ppo(
     policy,
     value_fn,
     action_var=.1,
+    env_timesteps = 2048,
     epoch_batch_size=2048,
     gamma=0.99,
     lam=0.99,
@@ -81,7 +82,7 @@ def ppo(
     # init mean and var variables
     state_mean = torch.zeros(obs_size)
     state_var = torch.zeros(obs_size)
-    num_states = 0 # tracks how many states we've seen so far, so that we can update means properly
+    num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
 
     # need a copy of the old policy for the ppo loss
     old_policy = copy.deepcopy(policy)
@@ -130,7 +131,7 @@ def ppo(
             traj_steps = 0
 
             # Do a single policy rollout
-            for t in range(env.num_steps):
+            for t in range(env_timesteps):
 
                 state_list.append(state)
 
@@ -174,7 +175,6 @@ def ppo(
 
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
-
 
                 state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
                 state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
@@ -262,8 +262,8 @@ if __name__ == "__main__":
     torch.set_default_dtype(torch.double)
 
     # policy = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    policy = MLP(input_size=17, output_size=6, layer_size=64, num_layers=3, activation=nn.ReLU)
+    value_fn = MLP(input_size=17, output_size=1, layer_size=64, num_layers=3, activation=nn.ReLU)
 
     #policy = LinearNet(4,1)
     #value_fn = LinearNet(4,1)
@@ -284,4 +284,6 @@ if __name__ == "__main__":
     eps = 0.2
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    env2, t_policy, t_val, rewards = ppo("su_cartpole-v0", 100, policy, value_fn)
+    t_policy, t_val, rewards, var_dict = ppo("Walker2d-v2", 100, policy, value_fn)
+    plt.plot(rewards)
+    plt.show()
