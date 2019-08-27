@@ -176,8 +176,8 @@ def ppo(
             if batch_steps > epoch_batch_size:
 
 
-                state_mean = torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states
-                state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states
+                state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
+                state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
 
                 policy.state_means = state_mean
                 policy.state_var = state_var
@@ -284,4 +284,4 @@ if __name__ == "__main__":
     eps = 0.2
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    env2, t_policy, t_val, rewards = ppo("su_cartpole-v0", 5, policy, value_fn)
+    env2, t_policy, t_val, rewards = ppo("su_cartpole-v0", 100, policy, value_fn)
