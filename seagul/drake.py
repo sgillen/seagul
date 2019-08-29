@@ -44,6 +44,21 @@ def y_float(state):
     return -y5_in
 
 
+def y_float_prism(state):
+    # type: (List[float])->list[float]
+    """ Return the y coordinate of the prism (floating base( walker as a float  
+        I.E. using math.cos 
+        TODO more documentation
+    """
+    y1_in = math.cos(state[2])
+    y2_in = y1_in + math.cos(state[2] + state[3])
+    y4_in = y2_in + math.cos(state[2] + state[3] + state[5])
+    y5_in = y4_in + math.cos(state[2] + state[3] + state[5] + state[6])
+
+    return -y5_in
+
+
+
 def x_float(state):
     # type: (List[float])->list[float]
     """ 
