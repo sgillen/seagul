@@ -29,9 +29,9 @@ class SUCartPolePushEnv(gym.Env):
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
     def __init__(self, num_steps=1500, dt=0.001):
-        self.L = 1.0  # length of the pole (m)
+        self.L = 5.0  # length of the pole (m)
         self.mc = 4.0  # mass of the cart (kg)
-        self.mp = 1.0  # mass of the ball at the end of the pole
+        self.mp = 5.0  # mass of the ball at the end of the pole
 
         self.g = 9.8
 

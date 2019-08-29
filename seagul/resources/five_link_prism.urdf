@@ -14,49 +14,89 @@
   <!-- ============================================================================== -->
 
   <link name="base">
-    <inertial>
-      <origin xyz="0 0 0" />
-      <mass value=".01" />
-      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+	<inertial>
+      <mass value="0"/>
+      <inertia ixx="0.2125" ixy="-0.005" ixz="0.0225" iyy="0.205" iyz="0.045" izz="0.0125"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </inertial>
+  </link>
+
+  <link name="y_prismatic">
+	<inertial>
+      <mass value="0.01"/>
+      <inertia ixx="0.2125" ixy="-0.005" ixz="0.0225" iyy="0.205" iyz="0.045" izz="0.0125"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
     </inertial>
   </link>
   
+  <joint name="y_to_world" type="prismatic">
+    <parent link="base"/>
+    <child link="y_prismatic"/>
+    <axis xyz="1 0 0"/>
+    <!-- <limit effort="0.0" lower="1" upper="-1" velocity="1000.0"/> -->
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+		
+  <link name="x_prismatic">
+	<inertial>
+      <mass value="0.01"/>
+      <inertia ixx="0.2125" ixy="-0.005" ixz="0.0225" iyy="0.205" iyz="0.045" izz="0.0125"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </inertial>
+  </link>
+	
+  <joint name="x_to_y" type="prismatic">
+    <parent link="y_prismatic"/>
+    <child link="x_prismatic"/>
+    <axis xyz="0 0 1"/>
+    <!-- <limit effort="0.0" lower="1" upper="-1" velocity="1000.0"/> -->
+    <origin rpy="0 0 0" xyz="0 0 -1.4"/>
+  </joint>
+  
+  <joint name="ls_to_x" type="continuous">
+    <parent link="x_prismatic"/>
+    <child link="lower_stance"/>
+    <axis xyz="0 1 0"/>
+    <origin rpy="0 0 0" xyz="0 0 1.4"/>
+  </joint>
+
+  
   <link name="lower_stance">
     <inertial> 
-      <origin xyz="0 0 -1" rpy="0 0 0" />
+      <origin xyz="0 1 -.5" rpy="0 0 0" />
       <mass value="10" />
       <inertia ixx=".083" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
     <visual>
-      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <origin xyz="0 1 -.5" rpy="0 0 0" />
       <geometry>
         <cylinder length="1" radius=".01" />
       </geometry>
       <color rgba="1 1 0 1" />
     </visual>
     <collision>
-      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <origin xyz="0 1 -.5" rpy="0 0 0" />
       <geometry>
         <cylinder length="1" radius=".01" />
       </geometry>
-      <!-- <contact_coefficients mu="5" kp="5" kd=".5" /> -->
+      <!-- <contact_coefficients mu="0" kp="5000" kd="5000"/> -->
     </collision>
   </link>
 
   <link name="upper_stance">
     <inertial> 
-      <origin xyz="0 0 -1" rpy="0 0 0" />
+      <origin xyz="0 -1 -.5" rpy="0 0 0" />
       <mass value="10" />
       <inertia ixx=".083" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
     <collision>
-      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <origin xyz="0 -1 -.5" rpy="0 0 0" />
       <geometry>
         <cylinder length="1" radius=".01" />
       </geometry>
     </collision>
     <visual>
-      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <origin xyz="0 -1 -.5" rpy="0 0 0" />
       <geometry>
         <cylinder length="1" radius=".01" />
       </geometry>
@@ -66,7 +106,7 @@
   
   <link name="torso">
     <inertial> 
-      <origin xyz="0 0 -1.5" rpy="0 0 0" />
+      <origin xyz="0 0 -.25" rpy="0 0 0" />
       <mass value="10" />
       <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
@@ -87,7 +127,7 @@
 
   <link name="lower_swing">
     <inertial> 
-      <origin xyz="0 0 -1" rpy="0 0 0" />
+      <origin xyz="0 1 -.5" rpy="0 0 0" />
       <mass value="10" />
       <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
@@ -102,14 +142,14 @@
       <origin xyz="0 0 -.5" rpy="0 0 0" />
       <geometry>
         <cylinder length="1" radius=".01" />
-        <!-- <contact_coefficients mu="500000" kp="50000" kd="500000" /> -->
+        <!-- <contact_coefficients mu="0" kp="50000" kd="500000" /> -->
       </geometry>
     </collision>
   </link>
 
   <link name="upper_swing">
     <inertial> 
-      <origin xyz="0 0 -1" rpy="0 0 0" />
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
       <mass value="10" />
       <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="0.083"/> 
     </inertial>
@@ -133,13 +173,13 @@
   <!-- ============================================================================== -->
 
   
-  <joint name="base_joint" type="continuous">
-    <parent link="base"/>
-    <child link="lower_stance" />
-    <axis xyz="0 1 0" />
-    <dynamics damping="0.1" />
-  </joint>
-
+  <!-- <joint name="base_joint" type="continuous"> -->
+  <!--   <parent link="base"/> -->
+  <!--   <child link="lower_stance" /> -->
+  <!--   <axis xyz="0 1 0" /> -->
+  <!--   <dynamics damping="0.1" /> -->
+  <!-- </joint> -->
+  
   <joint name="stance_knee" type="continuous">
     <parent link="lower_stance"/>
     <origin xyz="0 0 -1" />
