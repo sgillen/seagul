@@ -28,8 +28,8 @@ class SUCartPoleEnv(gym.Env):
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
     def __init__(self, num_steps=1500, dt=0.001):
-        self.L = 1.0  # length of the pole (m)
-        self.mc = 4.0  # mass of the cart (kg)
+        self.L = 2.0  # length of the pole (mg)
+        self.mc = 1.0  # mass of the cart (kg)
         self.mp = 1.0  # mass of the ball at the end of the pole
 
         self.g = 9.8
@@ -82,15 +82,15 @@ class SUCartPoleEnv(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX) * 100
+        torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
         # torque = action
         # Add noise to the force action
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         for _ in range(5):
-            ns = euler(self._derivs, torque, 0, self.dt, self.state)
-            # ns = euler(self._derivs, torque, 0, self.dt, self.state)
+            #ns = euler(self._derivs, torque, 0, self.dt, self.state)
+            ns = rk4(self._derivs, torque, 0, self.dt, self.state)
 
             self.state[0] = wrap(ns[0], -pi, pi)
             #self.state[0] = ns[0]
@@ -186,21 +186,17 @@ class SUCartPoleEnv(gym.Env):
 
         dqdt = np.zeros_like(q)
 
-        delta = self.mp * sin(q[0]) ** 2 + self.mc
+        delta = self.mp * (sin(q[0]) ** 2) + self.mc
 
         dqdt[0] = q[2]
         dqdt[1] = q[3]
 
         dqdt[2] = (
-            - self.mp * (q[2] ** 2) * sin(q[0]) * cos(q[0]) / delta
-            - (self.mp + self.mc) * self.g * sin(q[0]) / delta / self.L
-            - u * cos(q[0]) / delta / self.L
+            1/(self.L*delta)*(-u*cos(q[0]) - self.mp*self.L*q[2]**2*cos(q[0])*sin(q[0]) - (self.mc + self.mp)*self.g*sin(q[0]))
         )
 
         dqdt[3] = (
-            self.mp * self.L * (q[2] ** 2) * sin(q[0]) / delta
-            + self.mp * self.L * self.g * sin(q[0]) * cos(q[0]) / delta / self.L
-            + u / delta
+            1/delta*(u + self.mp*sin(q[0]*(self.L*q[2]**2 + self.g*cos(q[0]))))
         )
 
         return dqdt
