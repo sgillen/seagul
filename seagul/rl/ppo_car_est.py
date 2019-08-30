@@ -39,7 +39,7 @@ def ppo_est(
     Implements a proximal policy optimization with clipping
 
     :param env_name: name of the openAI gym environment to solve
-    :param num_epochs: number of epochs to run the PPO for
+    :param num_epochs: number of epochs to run_util the PPO for
     :param policy: policy function, must be a pytorch module
     :param value_fn: value function, must be a pytorch module
     :param epoch_batch_size: number of environment steps to take per batch, total steps will be num_epochs*epoch_batch_size

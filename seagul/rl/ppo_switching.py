@@ -49,7 +49,7 @@ def ppo_switch(
     Args:
 
         env_name: name of the openAI gym environment to solve
-        num_epochs: number of epochs to run the PPO for
+        num_epochs: number of epochs to run_util the PPO for
         policy: policy function, must be a pytorch module
         value_fn: value function, must be a pytorch module
         gate_fn: gating function, another pytorch module, should output between 0 and 1
