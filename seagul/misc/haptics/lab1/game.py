@@ -37,7 +37,7 @@ static_gain = 0.01
 # Start the game loop
 while True:
 
-    # run the marker detection
+    # run_util the marker detection
     re, img = cap.read()
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=aruco_parameters)

@@ -144,7 +144,7 @@ time = np.arange(0.0, 20, dt)
 # initial state
 init_state = np.array([theta, x, th_dot, xdot])
 
-# run the simulation for the feedforward network
+# run_util the simulation for the feedforward network
 
 # Fill in our u after the fact..
 y_fflb = integrate.odeint(fflb_bot.derivs_dig_lb, init_state, time)

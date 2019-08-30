@@ -43,7 +43,7 @@ def train(env_id, num_timesteps, seed=0):
 
 def save_results(filename, description=None):
     """
-    description: saves the results of a run of the second cell (the one that calls train) in this notebook
+    description: saves the results of a run_util of the second cell (the one that calls train) in this notebook
 
     """
 
@@ -51,7 +51,7 @@ def save_results(filename, description=None):
     os.makedirs(save_dir)
 
     if description is None:
-        description = input("please enter a description of the run")
+        description = input("please enter a description of the run_util")
 
     datetime_str = str(datetime.datetime.today())
     datetime_str = datetime_str.replace(" ", "_")
@@ -67,7 +67,7 @@ def save_results(filename, description=None):
     readme.write("seed: " + str(seed) + "\n\n")
     readme.close()
 
-    # TODO add code snippets that correspond to the run
+    # TODO add code snippets that correspond to the run_util
     # TODO somehow store the tensorboard logs here after the fact
 
     saver = tf.train.Saver()
@@ -78,8 +78,8 @@ def save_results(filename, description=None):
 
 if __name__ == "__main__":
 
-    name = "please enter a name for this run"
-    description = input("please enter a description of the run")
+    name = "please enter a name for this run_util"
+    description = input("please enter a description of the run_util")
 
     if name is None or description is None:
         raise Exception("you need to provide a name and description")

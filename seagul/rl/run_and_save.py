@@ -49,6 +49,7 @@ datetime_str = str(datetime.datetime.today())
 datetime_str = datetime_str.replace(" ", "_")
 runtime_str = str(datetime.timedelta(seconds=runtime))
 
+ # This is the wrong way right??
 torch.save(t_policy, open(save_dir + "policy", "wb"))
 torch.save(t_val, open(save_dir + "value_fn", "wb"))
 

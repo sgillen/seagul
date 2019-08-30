@@ -32,7 +32,7 @@ def ppo(
     policy_lr=1e-3,
     value_lr=1e-3,
     p_epochs=10,
-    v_epochs=1,
+    v_epochs=10,
     use_gpu=False,
     reward_stop=None,
 ):
@@ -41,7 +41,7 @@ def ppo(
     Implements proximal policy optimization with clipping
 
     :param env_name: name of the openAI gym environment to solve
-    :param num_epochs: number of epochs to run the PPO for
+    :param num_epochs: number of epochs to run_util the PPO for
     :param policy: policy function, must be a pytorch module
     :param value_fn: value function, must be a pytorch module
     :param epoch_batch_size: number of environment steps to take per batch, total steps will be num_epochs*epoch_batch_size
@@ -60,7 +60,6 @@ def ppo(
     :return:
     """
 
-    start_time = time.time()
     env = gym.make(env_name)
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         raise NotImplementedError(
@@ -242,11 +241,6 @@ def ppo(
 
                 break
 
-    # Process parameters for saving stuff
-    end_time = time.time()
-    run_time = end_time - start_time
-
-    # Eventually I might return something beside all of locals but eh
     return policy, value_fn, avg_reward_hist, locals()
 
 
@@ -261,9 +255,6 @@ if __name__ == "__main__":
 
     torch.set_default_dtype(torch.double)
 
-    # policy = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    policy = MLP(input_size=17, output_size=6, layer_size=64, num_layers=3, activation=nn.ReLU)
-    value_fn = MLP(input_size=17, output_size=1, layer_size=64, num_layers=3, activation=nn.ReLU)
 
     #policy = LinearNet(4,1)
     #value_fn = LinearNet(4,1)

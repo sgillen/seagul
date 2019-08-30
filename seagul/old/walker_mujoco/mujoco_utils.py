@@ -10,7 +10,7 @@ def find_contact_height(sim: mj.MjSim, iterations: int = 10) -> float:
 
         Args:
             sim: the instantiated sim MjSim object you want to find the correct height for
-            iterations: number of times to run the binary search
+            iterations: number of times to run_util the binary search
         Returns:
             just the height as a float, you'll need to set it yourself
 
@@ -34,7 +34,7 @@ def find_contact_height(sim: mj.MjSim, iterations: int = 10) -> float:
     return height_guess
 
 
-# run the module to run some basic tests, no these aren't best practices but I don't care
+# run_util the module to run_util some basic tests, no these aren't best practices but I don't care
 if __name__ == "__main__":
     model_xml = open("walker.xml").read()
     model = mj.load_model_from_xml(model_xml)

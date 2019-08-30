@@ -98,7 +98,7 @@ class CartPoleSim:
 
     def run_sim(self):
         """
-        Run the simulation exactly once, you have to call visualize() to see what the run did
+        Run the simulation exactly once, you have to call visualize() to see what the run_util did
         """
 
         # reset the sim

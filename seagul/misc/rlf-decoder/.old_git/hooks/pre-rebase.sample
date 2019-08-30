@@ -2,7 +2,7 @@
 #
 # Copyright (c) 2006, 2008 Junio C Hamano
 #
-# The "pre-rebase" hook is run just before "git rebase" starts doing
+# The "pre-rebase" hook is run_util just before "git rebase" starts doing
 # its job, and can prevent the command from running by exiting with
 # non-zero status.
 #

@@ -35,7 +35,7 @@ builder.ExportInput(robot.get_input_port(0))  # this allows the outside world to
 
 diagram = builder.Build()
 
-# Set up a simulator to run this diagram
+# Set up a simulator to run_util this diagram
 simulator = Simulator(diagram)
 # simulator.set_target_realtime_rate(1.0)
 simulator.set_publish_every_time_step(False)
