@@ -96,7 +96,7 @@ def ppo(
     np.random.seed(seed)
 
     # set defaults, and decide if we are using a GPU or not
-    torch.set_default_dtype(torch.double)
+    #torch.set_default_dtype(torch.double)
     use_cuda = torch.cuda.is_available() and use_gpu
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
@@ -139,7 +139,7 @@ def ppo(
                 state = torch.as_tensor(state_np)
 
                 reward_list.append(reward)
-                action_list.append(torch.as_tensor(action, dtype=torch.double))
+                action_list.append(torch.as_tensor(action))
 
                 batch_steps += 1
                 traj_steps += 1
@@ -255,9 +255,14 @@ if __name__ == "__main__":
 
     torch.set_default_dtype(torch.double)
 
+    input_size = 4
+    output_size = 1
+    layer_size = 64
+    num_layers = 3
+    activation = nn.ReLU
 
-    #policy = LinearNet(4,1)
-    #value_fn = LinearNet(4,1)
+    policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+    value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 
     # Define our hyper parameters
     num_epochs = 100

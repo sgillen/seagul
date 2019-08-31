@@ -1,5 +1,5 @@
 """
-sgillen: This is racecarGymEnv enviroment with our own modifications
+sgillen: This is racecarGymEnv enviroment with our own modifications. Mostly made by Guillaume
 """
 
 
