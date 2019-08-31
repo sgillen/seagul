@@ -14,10 +14,14 @@ care of loading a trained model just by specifying the name you saved it with
 import baselines.run
 
 from seagul.nn import MLP
-from seagul.rl import ppo
+from seagul.rl.ppo import ppo
 
+import torch
 import torch.nn as nn
-import time, datetime, json
+
+import dill
+import pickle
+import time, datetime, json, yaml
 import os
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -59,10 +63,10 @@ def run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/
     """
 
     if run_name is None:
-        run_name = input("please enter a name for this run_util: ")
+        run_name = input("please enter a name for this run: ")
 
     if description is None:
-        description = input("please enter a brief description of the run_util: ")
+        description = input("please enter a brief description of the run: ")
 
     save_base_path = os.getcwd() + base_path
     save_dir = save_base_path + run_name + "/"
@@ -97,18 +101,13 @@ def run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/
         )
 
 
-def run_clean_ppo():
-
+def run_clean_ppo(run_name = None, description = None, base_path = '/data/'):
     """
     Launches seaguls ppo2 and save the results without clutter
 
     If you don't pass run_name or description this function will call input, blocking execution
-
     """
 
-    run_name = None
-    description = None
-    base_path = ''
 
     if run_name is None:
         run_name = input("please enter a name for this run_util: ")
@@ -122,52 +121,55 @@ def run_clean_ppo():
 
     start_time = time.time()
 
-    # it is actually important that I initialize the function arguments as local variables, because I later save the locals() dict to disk
-
     ## init policy, valuefn
-    input_size = 17
-    output_size = 6
+    input_size = 4
+    output_size = 1
     layer_size = 64
     num_layers=3
     activation=nn.ReLU
 
+    torch.set_default_dtype(torch.double)
+
     arg_dict = {
-        'policy' : MLP(input_size, output_size, layer_size, num_layers, activation),
-        'value_fn' : MLP(input_size, 1, layer_size, num_layers, activation),
-        'num_epochs' : 50,
+        'env_name' : 'su_cartpole-v0',
+        'num_epochs' : 5,
         'action_var' : .1,
-        'env_timesteps' : 2048,
-        'epoch_batch_size' : 2048,
-        'gamma' : 0.99,
-        'lam' : 0.99,
-        'eps' : 0.2,
-        'seed' : 0,
-        'policy_batch_size' : 1024,
-        'value_batch_size' : 1024,
-        'policy_lr' : 1e-3,
-        'value_lr' : 1e-3,
-        'p_epochs' : 10,
-        'v_epochs' : 10,
-        'use_gpu' : False,
-        'reward_stop' : None,
     }
 
-    ppo(**arg_dict)
+    net_dict = {
+         'policy': MLP(input_size, output_size, num_layers, layer_size, activation),
+         'value_fn': MLP(input_size, 1, num_layers, layer_size, activation),
+    }
+
+    t_policy, t_val, rewards, var_dict = ppo(**arg_dict,  **net_dict)
     runtime = time.time() - start_time
 
     datetime_str = str(datetime.datetime.today())
     datetime_str = datetime_str.replace(" ", "_")
     runtime_str = str(datetime.timedelta(seconds=runtime))
 
-    with open(save_dir + "info.json", "w") as outfile:
-        json.dump(
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    with open(save_dir + "info.yaml", "w") as outfile:
+        yaml.dump(
             {
-                "args": locals(),
+                "args": arg_dict,
                 "metadata": {"date_time": datetime_str, "total runtime": runtime_str, "description": description},
             },
             outfile,
             indent=4,
         )
+
+
+    with open(save_dir + "workspace", "wb") as outfile:
+        for thing in var_dict:
+            try:
+                pickle.dump(thing, outfile)
+            except Exception as e:
+                print(e, thing)
+
+
 
 
 def load_model(save_path, backend="baselines"):
@@ -205,10 +207,11 @@ def load_model(save_path, backend="baselines"):
     run_name = save_path.split("/")[-1]
     # load_dir = save_base_path + run_name + 'info.json'
     # arg_dict['load_path']
-    with open(save_base_path + "/" + "info.json", "r") as outfile:
-        data = json.load(outfile)
 
     if backend == "baselines":
+        with open(save_base_path + "/" + "info.json", "r") as outfile:
+            data = json.load(outfile)
+
         arg_dict = data["args"]
         arg_dict["num_timesteps"] = "0"
         arg_dict["num_env"] = "1"
@@ -228,15 +231,16 @@ def load_model(save_path, backend="baselines"):
         return model, env
 
     elif backend == "seagul":
-        return
+        with open(save_base_path + "/" + "info.json", "r") as outfile:
+            data = yaml.load(outfile)
+
+        # TODO need to make model from disparate networks... shit...
+
+        with open(save_base_path + "/" + "info.json", "r") as outfile:
+            data = y
     else:
         raise ValueError("unrecognized backend: ", backend)
 
 
-
-def _load_model_bs(save_path):
-
-    """
-    Loads and plays back a trained model from baselines.
-    Meant to be called from load_model above, see documentation there
-    """
+if __name__ == "__main__":
+    run_clean_ppo('test2', 'test test')
