@@ -236,8 +236,8 @@ def load_model(save_path, backend="baselines"):
 
         # TODO need to make model from disparate networks... shit...
 
-        with open(save_base_path + "/" + "info.json", "r") as outfile:
-            data = y
+        #with open(save_base_path + "/" + "info.json", "r") as outfile:
+        #    data =
     else:
         raise ValueError("unrecognized backend: ", backend)
 
