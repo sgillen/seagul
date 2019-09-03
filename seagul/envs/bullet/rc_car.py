@@ -12,7 +12,7 @@ class RcCar:
 
     def reset(self):
         # car = self._p.loadURDF(os.path.join(self.urdfRootPath,"racecar/racecar_differential.urdf"), [0,0,.2],useFixedBase=False)
-        print(self.urdfRootPath + "/racecar_differential_me.urdf")
+        #print(self.urdfRootPath + "/racecar_differential_me.urdf")
 
         car = self._p.loadURDF(self.urdfRootPath + "/racecar_differential_me.urdf", [0, 0, 0.05], useFixedBase=False)
 

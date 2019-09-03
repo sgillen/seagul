@@ -1,4 +1,4 @@
-from seagul.rl.run_util.run import run_and_save_bs
+from seagul.rl.run import run_and_save_bs
 
 # algs = ['a2c', 'acer', 'acktr', 'ddpg', 'deepq', 'her', 'ppo2', 'trpo_mpi']
 #

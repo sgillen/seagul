@@ -1,4 +1,4 @@
-from seagul.rl.run_util.run import load_model
+from seagul.rl.run import load_model
 
 import torch
 
