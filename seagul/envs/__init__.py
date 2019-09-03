@@ -26,4 +26,4 @@ register(id="bullet_car-v0", entry_point="seagul.envs.bullet:RacecarGymEnv_v1")
 
 register(id="bullet_car_ast-v0", entry_point="seagul.envs.bullet:RacecarGymEnvAst_v1")
 
-register(id="walker2d_five_link-v0", entry_point="seagul.envs.bullet:Walker2DFiveLink")
+#register(id="walker2d_five_link-v0", entry_point="seagul.envs.bullet:Walker2DFiveLink")
