@@ -110,10 +110,10 @@ def run_clean_ppo(run_name = None, description = None, base_path = '/data/'):
 
 
     if run_name is None:
-        run_name = input("please enter a name for this run_util: ")
+        run_name = input("please enter a name for this run: ")
 
     if description is None:
-        description = input("please enter a brief description of the run_util: ")
+        description = input("please enter a brief description of the run: ")
 
     save_base_path = os.getcwd() + base_path
     save_dir = save_base_path + run_name + "/"
@@ -163,11 +163,7 @@ def run_clean_ppo(run_name = None, description = None, base_path = '/data/'):
 
 
     with open(save_dir + "workspace", "wb") as outfile:
-        for thing in var_dict:
-            try:
-                pickle.dump(thing, outfile)
-            except Exception as e:
-                print(e, thing)
+        torch.save(var_dict, outfile)
 
 
 
@@ -243,4 +239,4 @@ def load_model(save_path, backend="baselines"):
 
 
 if __name__ == "__main__":
-    run_clean_ppo('test2', 'test test')
+    run_clean_ppo('test3', 'test test')
