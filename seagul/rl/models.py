@@ -29,10 +29,11 @@ class switchedPpoModel:
     def __init__(self, policy, nominal_policy,  value_fn, gate_fn, action_var, gate_var, env):
         self.policy = policy
         self.nominal_policy = nominal_policy
-        self.value_fn = torch.value_fn
+        self.value_fn = value_fn
         self.action_var = action_var
         self.gate_fn = gate_fn
         self.gate_var = gate_var
+        self.env = env
 
     def step(self, state):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
@@ -40,10 +41,12 @@ class switchedPpoModel:
         value = self.value_fn(torch.as_tensor(state))
 
         if(path):
-            action, logp = self.nominal_policy(self.env, state) #TODO may want to add variance here???
-        else:
-            action, _ = self._select_action(self.policy, state, self.action_var)
+            action = self.nominal_policy(self.env, state)
             logp = 0
+        else:
+            action, logp = self._select_action(self.policy, state, self.action_var)
+
+
 
         return action, value, None , logp
 

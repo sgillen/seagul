@@ -22,6 +22,8 @@ def ppo_switch(
     env_name,
     num_epochs,
     model,
+    action_var_schedule=None,
+    gate_var_schedule=None,
     epoch_batch_size=2048,
     gamma=0.99,
     lam=0.99,
@@ -108,6 +110,21 @@ def ppo_switch(
         obs_size = env.observation_space.shape[0]
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
+
+
+    if action_var_schedule:
+        action_var_schedule = np.asarray(action_var_schedule)
+        sched_length = action_var_schedule.shape[0]
+        x_vals = np.linspace(0,num_epochs,sched_length)
+        action_var_lookup = lambda epoch: np.interp(epoch,x_vals,action_var_schedule )
+        model.action_var = action_var_lookup(0)
+
+    if gate_var_schedule:
+        gate_var_schedule = np.asarray(action_var_schedule)
+        sched_length = action_var_schedule.shape[0]
+        x_vals = np.linspace(0, num_epochs, sched_length)
+        gate_var_lookup = lambda epoch: np.interp(epoch, x_vals, gate_var_schedule)
+        model.gate_var = gate_var_lookup(0)
 
     # init mean and var variables
     state_mean = torch.zeros(obs_size)
@@ -210,7 +227,7 @@ def ppo_switch(
             ep_gate_tensor = torch.stack(gate_list).reshape(-1, 1)
 
             # calculate our advantage for this rollout
-            value_preds = value_fn(ep_state_tensor)
+            value_preds = model.value_fn(ep_state_tensor)
             deltas = torch.as_tensor(reward_list[:-1]) + gamma * value_preds[1:].squeeze() - value_preds[:-1].squeeze()
             ep_adv = discount_cumsum(deltas.detach(), gamma * lam).reshape(-1, 1)
 
@@ -235,8 +252,8 @@ def ppo_switch(
                 model.policy.state_means = state_mean
                 model.policy.state_var = state_var
 
-                value_fn.state_means = state_mean
-                value_fn.state_var = state_var
+                model.value_fn.state_means = state_mean
+                model.value_fn.state_var = state_var
 
                 p_state_list = []
                 p_action_list = []
@@ -303,7 +320,7 @@ def ppo_switch(
                             local_states, local_values = (local_states.to(device), local_values.to(device))
 
                             # predict and calculate loss for the batch
-                            value_preds = value_fn(local_states)
+                            value_preds = model.value_fn(local_states)
                             v_loss = torch.sum(torch.pow(value_preds - local_values, 2)) / value_preds.shape[0]
 
                             # do the normal pytorch update
@@ -348,6 +365,11 @@ def ppo_switch(
                             g_optimizer.step()
 
                     old_model = copy.deepcopy(model)
+                    if action_var_schedule:
+                        model.action_var = action_var_lookup(epoch)
+
+                    if gate_var_schedule:
+                        model.gate_var = gate_var_lookup(epoch)
 
                     # keep track of rewards for metrics later
                     avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
