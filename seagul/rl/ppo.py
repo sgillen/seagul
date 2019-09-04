@@ -21,7 +21,7 @@ def ppo(
     env_name,
     num_epochs,
     model,
-    action_var=.1,
+    action_var_schedule=None,
     env_timesteps = 2048,
     epoch_batch_size=2048,
     gamma=0.99,
@@ -76,6 +76,13 @@ def ppo(
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
+
+    if action_var_schedule is not None:
+        action_var_schedule = np.asarray(action_var_schedule)
+        sched_length = action_var_schedule.shape[0]
+        x_vals = np.linspace(0,num_epochs,sched_length)
+        action_var_lookup = lambda epoch: np.interp(epoch, x_vals, action_var_schedule )
+        model.action_var = action_var_lookup(0)
 
     # init mean and var variables
     state_mean = torch.zeros(obs_size)
@@ -173,7 +180,6 @@ def ppo(
 
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
-
                 state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
                 state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
 
@@ -238,6 +244,9 @@ def ppo(
 
                 old_model = copy.deepcopy(model)
 
+                if action_var_schedule is not None:
+                    model.action_var = action_var_lookup(epoch)
+
                 break
 
     return model,  avg_reward_hist, locals()
@@ -281,6 +290,6 @@ if __name__ == "__main__":
     eps = 0.2
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    t_model, rewards, var_dict = ppo("su_cartpole-v0", 100, model)
+    t_model, rewards, var_dict = ppo("su_cartpole-v0", 100, model, action_var_schedule=[3,2,1,0])
     plt.plot(rewards)
     plt.show()
