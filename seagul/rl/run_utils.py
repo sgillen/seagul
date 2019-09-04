@@ -18,6 +18,8 @@ import gym
 import dill
 import subprocess
 
+import torch
+
 import time, datetime, json, yaml
 import os
 

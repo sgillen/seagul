@@ -24,7 +24,7 @@ model = ppoModel(
 arg_dict = {
     'env_name' : 'su_acrobot-v0',
     'model' : model,
-    'num_epochs' : 100,
+    'num_epochs' : 2,
     'action_var_schedule' : [10,0]
 }
 
