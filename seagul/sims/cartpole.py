@@ -7,6 +7,34 @@ from numba import jit
 import time
 
 
+def LQRControl(env, q):
+    # Ausutay Ozmen
+    # if -0.2 < q[0] < 0.2 and -2 < q[2] < 2:
+    #     return torch.tensor(10)
+
+    # else: #(q[0] < 145 * pi / 180) or (q[0] > 215 * pi / 180):
+    #     # swing up
+    #     # energy error: Ee
+    #     Ee = 0.5 * env.mp * env.L * env.L * q[2] ** 2 - env.mp * env.g * env.L * (1 + cos(q[0]))
+    #     # energy conrol gain:
+    #     k = 0.23
+    #
+    #     # input acceleration: A (of cart)
+    #     A = k * Ee * cos(q[0]) * q[2]
+    #     # convert A to u (using EOM)
+    #     delta = env.mp * sin(q[0]) ** 2 + env.mc
+    #     u = A * delta - env.mp * env.L * (q[2] ** 2) * sin(q[0]) - env.mp * env.g * sin(q[2]) * cos(q[2])
+    # else:
+    # balancing
+    # LQR: K values from MATLAB
+    k1 = 140.560
+    k2 = -3.162
+    k3 = 41.772
+    k4 = -8.314
+    u = -(k1 * (q[0] - pi) + k2 * q[1] + k3 * q[2] + k4 * q[3])
+    return u
+
+
 class Cartpole:
     """
     Implements dynamics, animation, and control for for a simple cartpole pendulum.

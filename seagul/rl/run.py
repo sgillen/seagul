@@ -15,9 +15,12 @@ import baselines.run
 
 from seagul.nn import MLP
 from seagul.rl.ppo import ppo
+from seagul.rl.models import ppoModel, switchedPpoModel
 
 import torch
 import torch.nn as nn
+
+import gym
 
 import dill
 import pickle
@@ -130,18 +133,20 @@ def run_clean_ppo(run_name = None, description = None, base_path = '/data/'):
 
     torch.set_default_dtype(torch.double)
 
+    model = ppoModel(
+        policy = MLP(input_size, output_size, num_layers, layer_size, activation),
+        value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
+        action_var = 4
+    )
+
     arg_dict = {
         'env_name' : 'su_cartpole-v0',
-        'num_epochs' : 5,
+        'model' : model,
+        'num_epochs' : 500,
         'action_var' : .1,
     }
 
-    net_dict = {
-         'policy': MLP(input_size, output_size, num_layers, layer_size, activation),
-         'value_fn': MLP(input_size, 1, num_layers, layer_size, activation),
-    }
-
-    t_policy, t_val, rewards, var_dict = ppo(**arg_dict,  **net_dict)
+    t_model, rewards, var_dict = ppo(**arg_dict)
     runtime = time.time() - start_time
 
     datetime_str = str(datetime.datetime.today())
@@ -164,6 +169,86 @@ def run_clean_ppo(run_name = None, description = None, base_path = '/data/'):
 
     with open(save_dir + "workspace", "wb") as outfile:
         torch.save(var_dict, outfile)
+
+    with open(save_dir + "model", "wb") as outfile:
+        torch.save(t_model, outfile)
+
+
+def run_clean_switched_ppo(run_name = None, description = None, base_path = '/data/'):
+    """
+    Launches seaguls ppo2 and save the results without clutter
+
+    If you don't pass run_name or description this function will call input, blocking execution
+    """
+
+
+    if run_name is None:
+        run_name = input("please enter a name for this run: ")
+
+    if description is None:
+        description = input("please enter a brief description of the run: ")
+
+    save_base_path = os.getcwd() + base_path
+    save_dir = save_base_path + run_name + "/"
+    save_path = save_dir + "saved_model"
+
+    start_time = time.time()
+
+    ## init policy, valuefn
+    input_size = 4
+    output_size = 1
+    layer_size = 64
+    num_layers=3
+    activation=nn.ReLU
+
+    torch.set_default_dtype(torch.double)
+
+    from seagul.sims.cartpole import LQRControl
+    env_name = 'su_cartpole-v0'
+
+    model = switchedPpoModel(
+        policy = MLP(input_size, output_size, num_layers, layer_size, activation),
+        value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
+        gate_fn = MLP(input_size, 1, num_layers,layer_size, activation),
+        nominal_policy=LQRControl,
+        action_var = 4,
+        gate_var = .08,
+        env = gym.make(env_name)
+    )
+
+    arg_dict = {
+        'env_name' : env_name,
+        'model' : model,
+        'num_epochs' : 100,
+        'action_var' : .1,
+    }
+
+    t_model, rewards, var_dict = ppo(**arg_dict)
+    runtime = time.time() - start_time
+
+    datetime_str = str(datetime.datetime.today())
+    datetime_str = datetime_str.replace(" ", "_")
+    runtime_str = str(datetime.timedelta(seconds=runtime))
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    with open(save_dir + "info.yaml", "w") as outfile:
+        yaml.dump(
+            {
+                "args": arg_dict,
+                "metadata": {"date_time": datetime_str, "total runtime": runtime_str, "description": description},
+            },
+            outfile,
+            indent=4,
+        )
+
+
+    with open(save_dir + "workspace", "wb") as outfile:
+        torch.save(var_dict, outfile)
+
+    with open(save_dir + "model", "wb") as outfile:
+        torch.save(t_model, outfile)
 
 
 
@@ -227,16 +312,47 @@ def load_model(save_path, backend="baselines"):
         return model, env
 
     elif backend == "seagul":
-        with open(save_base_path + "/" + "info.json", "r") as outfile:
-            data = yaml.load(outfile)
+        with open(save_base_path + "/" + "info.yaml", "r") as infile:
+            data = yaml.load(infile, Loader=yaml.Loader)
+            #arg_dict = data['arg_dict']
 
-        # TODO need to make model from disparate networks... shit...
+        with open(save_base_path + "/" + "model", "rb") as infile:
+            model = torch.load(infile)
 
-        #with open(save_base_path + "/" + "info.json", "r") as outfile:
-        #    data =
+        env_name = data['args']['env_name']
+        env = gym.make(env_name)
+
+        return model, env
+
+
     else:
         raise ValueError("unrecognized backend: ", backend)
 
+def load_workspace(save_path):
+    if save_path[-1] == "/":
+        save_path = save_path[:-1]
+
+    if save_path.split("/")[1] == "home" or save_path.split("/")[1] == "User":
+        save_base_path = save_path
+    else:
+        save_base_path = os.getcwd() + save_path.split(".")[1]
+
+    with open(save_base_path + "/" + "workspace", "rb") as infile:
+        workspace = torch.load(infile)
+
+    with open(save_base_path + "/" + "info.yaml", "r") as infile:
+        data = yaml.load(infile, Loader=yaml.Loader)
+
+    with open(save_base_path + "/" + "model", "rb") as infile:
+        model = torch.load(infile)
+
+    env_name = data['args']['env_name']
+    env = gym.make(env_name)
+
+    return model, env, data, workspace
+
 
 if __name__ == "__main__":
-    run_clean_ppo('test3', 'test test')
+    run_clean_switched_ppo('test6', 'test test')
+    load_path = './data/test6'
+    load_model(load_path, backend='seagul')
