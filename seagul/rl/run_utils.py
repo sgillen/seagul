@@ -13,14 +13,6 @@ care of loading a trained model just by specifying the name you saved it with
 
 import baselines.run
 
-from seagul.nn import MLP
-from seagul.rl.ppo import ppo
-from seagul.rl.ppo_switching import ppo_switch
-from seagul.rl.models import ppoModel, switchedPpoModel
-
-import torch
-import torch.nn as nn
-
 import gym
 
 import dill
@@ -258,10 +250,10 @@ def load_workspace(save_path):
 
 
 if __name__ == "__main__":
-    from seagul.rl.run import run_sg
+    from seagul.rl.run_utils import run_sg
     from seagul.rl.models import ppoModel
     from seagul.nn import MLP
-    from seagul.rl.ppo import ppo
+    from seagul.rl.algos.ppo import ppo
 
     import torch
     import torch.nn as nn

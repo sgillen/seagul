@@ -1,22 +1,25 @@
 import gym
+
+from seagul.rl.models import ppoModel
+from seagul.rl.common import discount_cumsum
+
 import numpy as np
 from tqdm import trange
 import copy
 
 import torch
-import pybullet_envs
 from torch.utils import data
-from torch.distributions import Normal, Categorical
+
 
 variance = 0.1
 
 # ============================================================================================
-def ppo_est(
+def ppo(
     env_name,
     num_epochs,
-    policy,
-    value_fn,
-    agl_fn,
+    model,
+    action_var_schedule=None,
+    env_timesteps = 2048,
     epoch_batch_size=2048,
     gamma=0.99,
     lam=0.99,
@@ -24,19 +27,16 @@ def ppo_est(
     seed=0,
     policy_batch_size=1024,
     value_batch_size=1024,
-    agl_batch_size=1024,
     policy_lr=1e-3,
     value_lr=1e-3,
-    agl_lr=1e-3,
     p_epochs=10,
-    v_epochs=1,
+    v_epochs=10,
     use_gpu=False,
     reward_stop=None,
 ):
 
     """
-
-    Implements a proximal policy optimization with clipping
+    Implements proximal policy optimization with clipping
 
     :param env_name: name of the openAI gym environment to solve
     :param num_epochs: number of epochs to run_util the PPO for
@@ -59,31 +59,39 @@ def ppo_est(
     """
 
     env = gym.make(env_name)
-
-    # car_env = env.envs[0].env.env
-    env.num_steps = 250  # TODO
-
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         raise NotImplementedError(
-            "Discrete action spaces are not implemnted yet, why are you using PPO for a discrete action space anyway?"
+            "Discrete action spaces are not implemented yet, why are you using PPO for a discrete action space anyway?"
         )
         # select_action = select_discrete_action
-        # get_logp = get_discrete_logp
+        # get_action_logp = get_discrete_logp
         # action_size = 1
     elif isinstance(env.action_space, gym.spaces.Box):
-        select_action = select_cont_action
-        get_logp = get_cont_logp
         action_size = env.action_space.shape[0]
+        obs_size = env.observation_space.shape[0]
+
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
+
+    if action_var_schedule is not None:
+        action_var_schedule = np.asarray(action_var_schedule)
+        sched_length = action_var_schedule.shape[0]
+        x_vals = np.linspace(0,num_epochs,sched_length)
+        action_var_lookup = lambda epoch: np.interp(epoch, x_vals, action_var_schedule )
+        model.action_var = action_var_lookup(0)
+
+    # init mean and var variables
+    state_mean = torch.zeros(obs_size)
+    state_var = torch.zeros(obs_size)
+    num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
+
     # need a copy of the old policy for the ppo loss
-    old_policy = copy.deepcopy(policy)
+    old_model = copy.deepcopy(model)
 
     # intialize our optimizers
-    p_optimizer = torch.optim.Adam(policy.parameters(), lr=policy_lr)
-    v_optimizer = torch.optim.Adam(value_fn.parameters(), lr=value_lr)
-    a_optimizer = torch.optim.Adam(agl_fn.parameters(), lr=agl_lr)
+    p_optimizer = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
+    v_optimizer = torch.optim.Adam(model.value_fn.parameters(), lr=value_lr)
 
     # seed all our RNGs
     env.seed(seed)
@@ -91,7 +99,7 @@ def ppo_est(
     np.random.seed(seed)
 
     # set defaults, and decide if we are using a GPU or not
-    torch.set_default_dtype(torch.double)
+    #torch.set_default_dtype(torch.double)
     use_cuda = torch.cuda.is_available() and use_gpu
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
@@ -109,15 +117,13 @@ def ppo_est(
         disc_rewards_tensor = torch.empty(0)
         state_tensor = torch.empty(0)
         action_tensor = torch.empty(0)
-        agl_tensor = torch.empty(0, dtype=torch.long)
-        agl_state_tensor = torch.empty(0)
 
         # Check if we have maxed out the reward, so that we can stop early
         if traj_count > 2:
             if avg_reward_hist[-1] >= reward_stop and avg_reward_hist[-2] >= reward_stop:
                 break
 
-        # keep doing rollouts until we fill a single batch of examples
+        # keep doing rollouts until we fill  a single batch of examples
         while True:
             # reset the environment
             state = torch.as_tensor(env.reset())
@@ -127,28 +133,21 @@ def ppo_est(
             traj_steps = 0
 
             # Do a single policy rollout
-            for t in range(env._max_episode_steps):
+            for t in range(env_timesteps):
 
                 state_list.append(state)
 
-                action, logprob = select_action(policy, state)
+                action, logprob = model._select_action(state)
                 state_np, reward, done, _ = env.step(action.numpy())
                 state = torch.as_tensor(state_np)
 
                 reward_list.append(reward)
-                action_list.append(torch.as_tensor(action, dtype=torch.double))
+                action_list.append(torch.as_tensor(action))
 
                 batch_steps += 1
                 traj_steps += 1
 
                 if done:
-                    if traj_steps < env.num_steps:
-                        agl_tensor = torch.cat((agl_tensor, torch.tensor([0])))
-                        agl_state_tensor = torch.cat((agl_state_tensor, state_list[0].reshape(-1, 1)), 1)
-                    else:
-                        agl_tensor = torch.cat((agl_tensor, torch.tensor([1])))
-                        agl_state_tensor = torch.cat((agl_state_tensor, state_list[0].reshape(-1, 1)), 1)
-
                     traj_count += 1
                     break
 
@@ -163,7 +162,7 @@ def ppo_est(
             ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
 
             # calculate our advantage for this rollout
-            value_preds = value_fn(ep_state_tensor)
+            value_preds = model.value_fn(ep_state_tensor)
             deltas = torch.as_tensor(reward_list[:-1]) + gamma * value_preds[1:].squeeze() - value_preds[:-1].squeeze()
             ep_adv = discount_cumsum(deltas.detach(), gamma * lam).reshape(-1, 1)
 
@@ -178,9 +177,19 @@ def ppo_est(
 
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
+                state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
+                state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
 
+                model.policy.state_means = state_mean
+                model.policy.state_var = state_var
+
+                model.value_fn.state_means = state_mean
+                model.value_fn.state_var = state_var
+
+                num_states += state_tensor.shape[0]
                 # keep track of rewards for metrics later
                 avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
+
                 # construct a training data generator
                 training_data = data.TensorDataset(state_tensor, action_tensor, adv_tensor)
                 training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
@@ -196,8 +205,8 @@ def ppo_est(
                         )
 
                         # predict and calculate loss for the batch
-                        logp = get_logp(policy, local_states, local_actions.squeeze()).reshape(-1, action_size)
-                        old_logp = get_logp(old_policy, local_states, local_actions.squeeze()).reshape(-1, action_size)
+                        logp = model._get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
+                        old_logp = old_model._get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
                         r = torch.exp(logp - old_logp)
                         p_loss = (
                             -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
@@ -222,102 +231,45 @@ def ppo_est(
                         local_states, local_values = (local_states.to(device), local_values.to(device))
 
                         # predict and calculate loss for the batch
-                        value_preds = value_fn(local_states)
-                        v_loss = torch.sum(torch.pow(value_preds - local_values, 2))
+                        value_preds = model.value_fn(local_states)
+                        v_loss = torch.sum(torch.pow(value_preds - local_values, 2))/value_preds.shape[0]
 
                         # do the normal pytorch update
                         v_optimizer.zero_grad()
                         v_loss.backward()
                         v_optimizer.step()
 
-                old_policy = copy.deepcopy(policy)
+                old_model = copy.deepcopy(model)
 
-                # Now we do the update for our value function
-                # construct a training data generator
-                training_data = data.TensorDataset(agl_state_tensor.transpose(0, 1), agl_tensor)
-                training_generator = data.DataLoader(training_data, batch_size=agl_batch_size, shuffle=True)
-                agl_loss_fn = nn.BCELoss()
-                for epoch in range(v_epochs):
-                    for local_states, local_values in training_generator:
-                        # Transfer to GPU (if GPU is enabled, else this does nothing)
-                        local_states, local_agl = (local_states.to(device), local_values.to(device))
-
-                        # predict and calculate loss for the batch
-                        agl_preds = agl_fn(local_states)
-                        agl_loss = agl_loss_fn(agl_preds, torch.as_tensor(local_agl, dtype=torch.double))
-
-                        # do the normal pytorch update
-                        a_optimizer.zero_grad()
-                        agl_loss.backward()
-                        a_optimizer.step()
-
-                old_policy = copy.deepcopy(policy)
+                if action_var_schedule is not None:
+                    model.action_var = action_var_lookup(epoch)
 
                 break
 
-    return (env, policy, value_fn, avg_reward_hist)
-
-
-# helper functions
-# ============================================================================================
-
-# takes a policy and the states and sample an action from it... (can we make this faster?)
-def select_cont_action(policy, state):
-    means = policy(torch.as_tensor(state)).squeeze()
-    m = Normal(loc=means, scale=torch.ones_like(means) * variance)
-    action = m.sample()
-    logprob = m.log_prob(action)
-    return action.detach(), logprob
-
-
-# given a policy plus a state/action pair, what is the log liklihood of having taken that action?
-def get_cont_logp(policy, states, actions):
-    means = policy(torch.as_tensor(states)).squeeze()
-    m = Normal(loc=means, scale=torch.ones_like(means) * variance)
-    logprob = m.log_prob(actions)
-    return logprob
-
-
-# takes a policy and the states and sample an action from it... (can we make this faster?)
-def select_discrete_action(policy, state):
-    m = Categorical(policy(torch.as_tensor(state)))
-    action = m.sample()
-    logprob = m.log_prob(action)
-    return action.detach(), logprob
-
-
-# given a policy plus a state/action pair, what is the log liklihood of having taken that action?
-def get_discrete_logp(policy, state, action):
-    m = Categorical(policy(torch.as_tensor(state)))
-    logprob = m.log_prob(action)
-    return logprob
-
-
-# can make this faster I think?
-def discount_cumsum(rewards, discount):
-    future_cumulative_reward = 0
-    cumulative_rewards = torch.empty_like(torch.as_tensor(rewards))
-    for i in range(len(rewards) - 1, -1, -1):
-        cumulative_rewards[i] = rewards[i] + discount * future_cumulative_reward
-        future_cumulative_reward = cumulative_rewards[i]
-    return cumulative_rewards
+    return model,  avg_reward_hist, locals()
 
 
 # ============================================================================================
 if __name__ == "__main__":
     import torch.nn as nn
-    from seagul.rl.ppo import ppo
-    from seagul.nn import Categorical_MLP, MLP
+    from seagul.rl.algos.ppo import ppo
+    from seagul.nn import MLP
     import torch
 
     import matplotlib.pyplot as plt
 
     torch.set_default_dtype(torch.double)
 
-    # policy = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    policy = MLP(input_size=7, output_size=2, layer_size=12, num_layers=2, activation=nn.ReLU)
-    value_fn = MLP(input_size=7, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    agl_fn = Categorical_MLP(input_size=7, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    input_size = 4
+    output_size = 1
+    layer_size = 64
+    num_layers = 3
+    activation = nn.ReLU
+
+    policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+    value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+
+    model = ppoModel(policy, value_fn,action_var=4)
 
     # Define our hyper parameters
     num_epochs = 100
@@ -334,7 +286,7 @@ if __name__ == "__main__":
     lam = 0.99
     eps = 0.2
 
-    variance = 0.2  # feel like there should be a better way to do this...
-
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    env2, t_policy, t_val, rewards = ppo_est("bullet_car-v0", 100, policy, value_fn, agl_fn)
+    t_model, rewards, var_dict = ppo("su_cartpole-v0", 100, model, action_var_schedule=[3,2,1,0])
+    plt.plot(rewards)
+    plt.show()
