@@ -4,7 +4,8 @@ import gym
 import seagul.envs
 import pybullet_envs
 
-from seagul.rl.common import select_cont_action, select_discrete_action, get_discrete_logp, get_cont_logp, discount_cumsum
+from seagul.rl.common import discount_cumsum
+from seagul.rl.models import switchedPpoModel
 
 import numpy as np
 from tqdm import trange
@@ -20,11 +21,7 @@ from numpy import pi, sin, cos
 def ppo_switch(
     env_name,
     num_epochs,
-    policy,
-    value_fn,
-    gate_fn,
-    action_var=4,
-    gate_var=0.08,
+    model,
     epoch_batch_size=2048,
     gamma=0.99,
     lam=0.99,
@@ -107,12 +104,6 @@ def ppo_switch(
         # get_logp = get_discrete_logp
         # action_size = 1
     elif isinstance(env.action_space, gym.spaces.Box):
-        select_action = lambda p, s: select_cont_action(p, s, action_var)
-        get_action_logp = lambda p, s, a: get_cont_logp(p, s, a, action_var)
-
-        select_path = lambda p, s: select_cont_action(p, s, gate_var)
-        get_path_logp = lambda p, s, a: get_cont_logp(p, s, a, gate_var)
-
         action_size = env.action_space.shape[0]
         obs_size = env.observation_space.shape[0]
     else:
@@ -124,13 +115,11 @@ def ppo_switch(
     num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
 
     # need a copy of the old policy for the ppo loss
-    old_policy = copy.deepcopy(policy)
-    old_gate = copy.deepcopy(gate_fn)
-
+    old_model = copy.deepcopy(model)
     # intialize our optimizers
-    p_optimizer = torch.optim.Adam(policy.parameters(), lr=policy_lr)
-    v_optimizer = torch.optim.Adam(value_fn.parameters(), lr=value_lr)
-    g_optimizer = torch.optim.Adam(gate_fn.parameters(), lr=gate_lr)
+    p_optimizer = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
+    v_optimizer = torch.optim.Adam(model.value_fn.parameters(), lr=value_lr)
+    g_optimizer = torch.optim.Adam(model.gate_fn.parameters(), lr=gate_lr)
 
     # seed all our RNGs
     env.seed(seed)
@@ -182,13 +171,13 @@ def ppo_switch(
 
                 state_list.append(state.clone())
 
-                gate_out, _ = select_path(gate_fn, state)
+                gate_out, _ = model._select_path(state)
                 path = hyst_vec(gate_out)
 
                 if not path:
-                    action, logprob = select_action(policy, state)
+                    action, logprob = model._select_action(state)
                 else:
-                    action = control(env, state)
+                    action = model.nominal_policy(env, state)
 
                 state_np, reward, done, _ = env.step(action.numpy())
                 state = torch.as_tensor(state_np)
@@ -243,12 +232,11 @@ def ppo_switch(
                 state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
                 state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
 
-                policy.state_means = state_mean
-                policy.state_var = state_var
+                model.policy.state_means = state_mean
+                model.policy.state_var = state_var
 
                 value_fn.state_means = state_mean
                 value_fn.state_var = state_var
-
 
                 p_state_list = []
                 p_action_list = []
@@ -282,10 +270,10 @@ def ppo_switch(
                             )
 
                             # predict and calculate loss for the batch
-                            logp = get_action_logp(policy, local_states, local_actions.squeeze()).reshape(
+                            logp = model._get_action_logp(local_states, local_actions.squeeze()).reshape(
                                 -1, action_size
                             )
-                            old_logp = get_action_logp(old_policy, local_states, local_actions.squeeze()).reshape(
+                            old_logp = old_model._get_action_logp(local_states, local_actions.squeeze()).reshape(
                                 -1, action_size
                             )
                             r = torch.exp(logp - old_logp)
@@ -323,7 +311,7 @@ def ppo_switch(
                             v_loss.backward()
                             v_optimizer.step()
 
-                    old_policy = copy.deepcopy(policy)
+                    old_model = copy.deepcopy(model)
 
                     # update gating function
                     # ----------------------------------------------------------------------
@@ -339,10 +327,10 @@ def ppo_switch(
                                 local_adv.to(device),
                             )
 
-                            logp = get_path_logp(gate_fn, local_states, local_gate.squeeze())
+                            logp = model._get_path_logp(local_states, local_gate.squeeze())
                             logp = logp.reshape(-1, action_size)
 
-                            old_logp = get_path_logp(old_gate, local_states, local_gate.squeeze())
+                            old_logp = old_model._get_path_logp(local_states, local_gate.squeeze())
                             old_logp = old_logp.reshape(-1, action_size)
 
                             r = torch.exp(logp - old_logp)
@@ -359,43 +347,16 @@ def ppo_switch(
                             gate_loss.backward()
                             g_optimizer.step()
 
-                    old_policy = copy.deepcopy(policy)
-                    old_gate = copy.deepcopy(gate_fn)
+                    old_model = copy.deepcopy(model)
 
                     # keep track of rewards for metrics later
                     avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
                     break
 
-    return (policy, value_fn, gate_fn, avg_reward_hist, locals())
+    return (model, avg_reward_hist, locals())
 
 
 
-def control(env, q):
-    # Ausutay Ozmen
-    # if -0.2 < q[0] < 0.2 and -2 < q[2] < 2:
-    #     return torch.tensor(10)
-
-    # else: #(q[0] < 145 * pi / 180) or (q[0] > 215 * pi / 180):
-    #     # swing up
-    #     # energy error: Ee
-    #     Ee = 0.5 * env.mp * env.L * env.L * q[2] ** 2 - env.mp * env.g * env.L * (1 + cos(q[0]))
-    #     # energy conrol gain:
-    #     k = 0.23
-    #
-    #     # input acceleration: A (of cart)
-    #     A = k * Ee * cos(q[0]) * q[2]
-    #     # convert A to u (using EOM)
-    #     delta = env.mp * sin(q[0]) ** 2 + env.mc
-    #     u = A * delta - env.mp * env.L * (q[2] ** 2) * sin(q[0]) - env.mp * env.g * sin(q[2]) * cos(q[2])
-    # else:
-    # balancing
-    # LQR: K values from MATLAB
-    k1 = 140.560
-    k2 = -3.162
-    k3 = 41.772
-    k4 = -8.314
-    u = -(k1 * (q[0] - pi) + k2 * q[1] + k3 * q[2] + k4 * q[3])
-    return u
 
 
 hyst_state = 1
@@ -441,9 +402,14 @@ if __name__ == "__main__":
     value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
     gate_fn = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
 
+    env_name = "su_cartpole_push-v0"
+    env = gym.make(env_name)
+
+    model = switchedPpoModel(policy, control, value_fn,gate_fn, action_var=.1, gate_var=.08, env=env)
+
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    t_policy, t_val, t_gate, rewards, arg_dict = ppo_switch(
-        "su_cartpole_push-v0", 5, policy, value_fn, gate_fn, epoch_batch_size=500
+    t_model, rewards, arg_dict = ppo_switch(
+        env_name, 5, model,  epoch_batch_size=500
     )
 
     plt.plot(rewards)

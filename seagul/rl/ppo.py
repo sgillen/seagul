@@ -1,6 +1,8 @@
 import gym
 import seagul.envs
-from seagul.rl.common import select_cont_action, select_discrete_action, get_discrete_logp, get_cont_logp, discount_cumsum
+
+from seagul.rl.models import ppoModel
+from seagul.rl.common import discount_cumsum
 
 import numpy as np
 from tqdm import trange
@@ -18,8 +20,7 @@ variance = 0.1
 def ppo(
     env_name,
     num_epochs,
-    policy,
-    value_fn,
+    model,
     action_var=.1,
     env_timesteps = 2048,
     epoch_batch_size=2048,
@@ -69,8 +70,6 @@ def ppo(
         # get_action_logp = get_discrete_logp
         # action_size = 1
     elif isinstance(env.action_space, gym.spaces.Box):
-        select_action = lambda p, s: select_cont_action(p, s, action_var)
-        get_action_logp = lambda p, s, a: get_cont_logp(p, s, a, action_var)
         action_size = env.action_space.shape[0]
         obs_size = env.observation_space.shape[0]
 
@@ -84,11 +83,11 @@ def ppo(
     num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
 
     # need a copy of the old policy for the ppo loss
-    old_policy = copy.deepcopy(policy)
+    old_model = copy.deepcopy(model)
 
     # intialize our optimizers
-    p_optimizer = torch.optim.Adam(policy.parameters(), lr=policy_lr)
-    v_optimizer = torch.optim.Adam(value_fn.parameters(), lr=value_lr)
+    p_optimizer = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
+    v_optimizer = torch.optim.Adam(model.value_fn.parameters(), lr=value_lr)
 
     # seed all our RNGs
     env.seed(seed)
@@ -134,7 +133,7 @@ def ppo(
 
                 state_list.append(state)
 
-                action, logprob = select_action(policy, state)
+                action, logprob = model._select_action(state)
                 state_np, reward, done, _ = env.step(action.numpy())
                 state = torch.as_tensor(state_np)
 
@@ -159,7 +158,7 @@ def ppo(
             ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
 
             # calculate our advantage for this rollout
-            value_preds = value_fn(ep_state_tensor)
+            value_preds = model.value_fn(ep_state_tensor)
             deltas = torch.as_tensor(reward_list[:-1]) + gamma * value_preds[1:].squeeze() - value_preds[:-1].squeeze()
             ep_adv = discount_cumsum(deltas.detach(), gamma * lam).reshape(-1, 1)
 
@@ -178,11 +177,11 @@ def ppo(
                 state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
                 state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
 
-                policy.state_means = state_mean
-                policy.state_var = state_var
+                model.policy.state_means = state_mean
+                model.policy.state_var = state_var
 
-                value_fn.state_means = state_mean
-                value_fn.state_var = state_var
+                model.value_fn.state_means = state_mean
+                model.value_fn.state_var = state_var
 
                 num_states += state_tensor.shape[0]
                 # keep track of rewards for metrics later
@@ -203,8 +202,8 @@ def ppo(
                         )
 
                         # predict and calculate loss for the batch
-                        logp = get_action_logp(policy, local_states, local_actions.squeeze()).reshape(-1, action_size)
-                        old_logp = get_action_logp(old_policy, local_states, local_actions.squeeze()).reshape(-1, action_size)
+                        logp = model._get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
+                        old_logp = old_model._get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
                         r = torch.exp(logp - old_logp)
                         p_loss = (
                             -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
@@ -229,19 +228,19 @@ def ppo(
                         local_states, local_values = (local_states.to(device), local_values.to(device))
 
                         # predict and calculate loss for the batch
-                        value_preds = value_fn(local_states)
-                        v_loss = torch.sum(torch.pow(value_preds - local_values, 2))
+                        value_preds = model.value_fn(local_states)
+                        v_loss = torch.sum(torch.pow(value_preds - local_values, 2))/value_preds.shape[0]
 
                         # do the normal pytorch update
                         v_optimizer.zero_grad()
                         v_loss.backward()
                         v_optimizer.step()
 
-                old_policy = copy.deepcopy(policy)
+                old_model = copy.deepcopy(model)
 
                 break
 
-    return policy, value_fn, avg_reward_hist, locals()
+    return model,  avg_reward_hist, locals()
 
 
 # ============================================================================================
@@ -264,6 +263,8 @@ if __name__ == "__main__":
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 
+    model = ppoModel(policy, value_fn,action_var=4)
+
     # Define our hyper parameters
     num_epochs = 100
     batch_size = 2048  # how many steps we want to use before we update our gradients
@@ -280,6 +281,6 @@ if __name__ == "__main__":
     eps = 0.2
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    t_policy, t_val, rewards, var_dict = ppo("Walker2d-v2", 100, policy, value_fn)
+    t_model, rewards, var_dict = ppo("su_cartpole-v0", 100, model)
     plt.plot(rewards)
     plt.show()
