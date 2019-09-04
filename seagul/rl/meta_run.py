@@ -1,22 +1,31 @@
-from seagul.rl.run import run_and_save_bs
+from seagul.rl.run_utils import run_sg
+from seagul.rl.algos import ppo
+from seagul.rl.models import ppoModel
+from seagul.nn import MLP
 
-# algs = ['a2c', 'acer', 'acktr', 'ddpg', 'deepq', 'her', 'ppo2', 'trpo_mpi']
-#
+import torch
+import torch.nn as nn
+
+## init policy, valuefn
+input_size = 6
+output_size = 1
+layer_size = 64
+num_layers=3
+activation=nn.ReLU
+
+torch.set_default_dtype(torch.double)
+
+model = ppoModel(
+    policy = MLP(input_size, output_size, num_layers, layer_size, activation),
+    value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
+    action_var = 4
+)
+
 arg_dict = {
-    #'env': 'bullet_car_ast-v0',
-    #'env': 'Walker2d-v2',
-    #'env': 'Hopper-v2', # Continous
-    "env": "CartPole-v0",
-    "alg": "ppo2",
-    "network": "mlp",
-    "num_timesteps": "1e5",
-    "num_env": "1",
-    "num_layers": "3",
-    "num_hidden": "24",
+    'env_name' : 'su_acrobot-v0',
+    'model' : model,
+    'num_epochs' : 100,
+    'action_var_schedule' : [10,0]
 }
 
-# run_name ='fps_test_noball'
-
-run_name = "bullet debug"
-run_desc = "asdasd"
-run_and_save_bs(arg_dict, run_name=run_name, description=run_desc, base_path="/data/bullet_car_ast/")
+run_sg(arg_dict, ppo, run_name="debug")
