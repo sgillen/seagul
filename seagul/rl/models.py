@@ -26,7 +26,7 @@ class ppoModel:
 
 
 class switchedPpoModel:
-    def __init__(self, policy, nominal_policy,  value_fn, gate_fn, action_var, gate_var, env):
+    def __init__(self, policy, nominal_policy,  value_fn, gate_fn, env, action_var=None, gate_var=None):
         self.policy = policy
         self.nominal_policy = nominal_policy
         self.value_fn = value_fn
