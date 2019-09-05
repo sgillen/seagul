@@ -112,14 +112,14 @@ def ppo_switch(
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
 
-    if action_var_schedule:
+    if action_var_schedule is not None:
         action_var_schedule = np.asarray(action_var_schedule)
         sched_length = action_var_schedule.shape[0]
         x_vals = np.linspace(0,num_epochs,sched_length)
         action_var_lookup = lambda epoch: np.interp(epoch,x_vals,action_var_schedule )
         model.action_var = action_var_lookup(0)
 
-    if gate_var_schedule:
+    if gate_var_schedule is not None:
         gate_var_schedule = np.asarray(action_var_schedule)
         sched_length = action_var_schedule.shape[0]
         x_vals = np.linspace(0, num_epochs, sched_length)
@@ -365,10 +365,10 @@ def ppo_switch(
                             g_optimizer.step()
 
                     old_model = copy.deepcopy(model)
-                    if action_var_schedule:
+                    if action_var_schedule is not None:
                         model.action_var = action_var_lookup(epoch)
 
-                    if gate_var_schedule:
+                    if gate_var_schedule is not None:
                         model.gate_var = gate_var_lookup(epoch)
 
                     # keep track of rewards for metrics later
