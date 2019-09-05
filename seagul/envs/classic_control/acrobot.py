@@ -83,6 +83,7 @@ class AcrobotEnv(core.Env):
     domain_fig = None
     actions_num = 3
 
+
     def __init__(self):
         self.viewer = None
         high = np.array([1.0, 1.0, 1.0, 1.0, self.MAX_VEL_1, self.MAX_VEL_2])
@@ -92,12 +93,16 @@ class AcrobotEnv(core.Env):
         self.state = None
         self.seed()
 
+        self.num_steps = 1500
+        self.cur_step = 0
+
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
+        self.cur_step = 0
         return self._get_ob()
 
     def step(self, a):
@@ -126,8 +131,17 @@ class AcrobotEnv(core.Env):
         ns[2] = bound(ns[2], -self.MAX_VEL_1, self.MAX_VEL_1)
         ns[3] = bound(ns[3], -self.MAX_VEL_2, self.MAX_VEL_2)
         self.state = ns
-        terminal = self._terminal()
-        reward = cos(s[0])+ cos(s[1])
+
+        self.cur_step +=1
+
+        if self.cur_step >= self.num_steps:
+            terminal = True
+        else:
+            terminal = False
+
+
+        reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+
         return (self._get_ob(), reward, terminal, {})
 
     def _get_ob(self):
