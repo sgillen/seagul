@@ -112,16 +112,16 @@ def ppo_switch(
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
 
-    if action_var_schedule:
+    if action_var_schedule is not None:
         action_var_schedule = np.asarray(action_var_schedule)
         sched_length = action_var_schedule.shape[0]
         x_vals = np.linspace(0,num_epochs,sched_length)
         action_var_lookup = lambda epoch: np.interp(epoch,x_vals,action_var_schedule )
         model.action_var = action_var_lookup(0)
 
-    if gate_var_schedule:
-        gate_var_schedule = np.asarray(action_var_schedule)
-        sched_length = action_var_schedule.shape[0]
+    if gate_var_schedule is not None:
+        gate_var_schedule = np.asarray(gate_var_schedule)
+        sched_length = gate_var_schedule.shape[0]
         x_vals = np.linspace(0, num_epochs, sched_length)
         gate_var_lookup = lambda epoch: np.interp(epoch, x_vals, gate_var_schedule)
         model.gate_var = gate_var_lookup(0)
@@ -277,7 +277,7 @@ def ppo_switch(
                     training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
 
                     # iterate through the data, doing the updates for our policy
-                    for epoch in range(p_epochs):
+                    for p_epoch in range(p_epochs):
                         for (local_states, local_actions, local_adv) in training_generator:
                             # Transfer to GPU (if GPU is enabled, else this does nothing)
                             local_states, local_actions, local_adv = (
@@ -314,7 +314,7 @@ def ppo_switch(
                     training_data = data.TensorDataset(state_tensor, disc_rewards_tensor)
                     training_generator = data.DataLoader(training_data, batch_size=value_batch_size, shuffle=True)
 
-                    for epoch in range(v_epochs):
+                    for v_epoch in range(v_epochs):
                         for local_states, local_values in training_generator:
                             # Transfer to GPU (if GPU is enabled, else this does nothing)
                             local_states, local_values = (local_states.to(device), local_values.to(device))
@@ -335,7 +335,7 @@ def ppo_switch(
                     # construct a training data generator
                     training_data = data.TensorDataset(state_tensor, gate_tensor, adv_tensor)
                     training_generator = data.DataLoader(training_data, batch_size=gate_batch_size, shuffle=True)
-                    for epoch in range(p_epochs):
+                    for p_epoch in range(p_epochs):
                         for local_states, local_gate, local_adv in training_generator:
                             # Transfer to GPU (if GPU is enabled, else this does nothing)
                             local_states, local_gate, local_adv = (
@@ -365,10 +365,10 @@ def ppo_switch(
                             g_optimizer.step()
 
                     old_model = copy.deepcopy(model)
-                    if action_var_schedule:
+                    if action_var_schedule is not None:
                         model.action_var = action_var_lookup(epoch)
 
-                    if gate_var_schedule:
+                    if gate_var_schedule is not None:
                         model.gate_var = gate_var_lookup(epoch)
 
                     # keep track of rewards for metrics later
@@ -418,6 +418,7 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
 
+    from seagul.sims.cartpole import LQRControl
     torch.set_default_dtype(torch.double)
 
     policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
@@ -427,11 +428,11 @@ if __name__ == "__main__":
     env_name = "su_cartpole_push-v0"
     env = gym.make(env_name)
 
-    model = switchedPpoModel(policy, control, value_fn,gate_fn, action_var=.1, gate_var=.08, env=env)
+    model = switchedPpoModel(policy, LQRControl, value_fn, gate_fn, env=env)
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
     t_model, rewards, arg_dict = ppo_switch(
-        env_name, 5, model,  epoch_batch_size=500
+        env_name, 500, model,  epoch_batch_size=10, action_var_schedule=[10,0], gate_var_schedule=[1,0]
     )
 
     plt.plot(rewards)
