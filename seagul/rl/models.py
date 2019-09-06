@@ -1,6 +1,6 @@
 import torch
 from torch.distributions import Normal, Categorical
-
+import numpy as np
 
 class ppoModel:
     def __init__(self, policy, value_fn, action_var=None):
@@ -44,7 +44,7 @@ class switchedPpoModel:
             action = self.nominal_policy(self.env, state)
             logp = 0
         else:
-            action, logp = self._select_action(self.policy, state, self.action_var)
+            action, logp = self._select_action(state)
 
 
 
@@ -57,7 +57,8 @@ class switchedPpoModel:
         return get_cont_logp(self.policy, states, actions, self.action_var)
 
     def _select_path(self, state):
-        return select_cont_action(self.gate_fn, state, self.gate_var)
+        gate_out,_ = select_cont_action(self.gate_fn, state, self.gate_var)
+        return hyst_vec(gate_out)
 
     def _get_path_logp(self, states, actions):
         return get_cont_logp(self.gate_fn,  states, actions, self.gate_var)
@@ -99,3 +100,29 @@ def get_discrete_logp(policy, state, action):
     m = Categorical(probs)
     logprob = m.log_prob(action)
     return logprob
+
+
+hyst_state = 1
+def hyst(x):
+    """
+    Unvectorized hysteris function with sharp transitions
+
+    :param x double between 0 and 1:
+    :return activation function:
+    """
+    global hyst_state
+    if hyst_state == 0:
+        if x > 0.55:
+            hyst_state = 1
+            return 1
+        else:
+            return 0
+    elif hyst_state == 1:
+        if x < 0.45:
+            hyst_state = 0
+            return 0
+        else:
+            return 1
+
+
+hyst_vec = np.vectorize(hyst)
