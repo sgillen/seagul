@@ -3,7 +3,7 @@ from torch.distributions import Normal, Categorical
 
 
 class ppoModel:
-    def __init__(self, policy, value_fn, action_var):
+    def __init__(self, policy, value_fn, action_var=None):
         self.policy = policy
         self.value_fn = value_fn
         self.action_var = action_var
