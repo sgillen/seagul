@@ -10,7 +10,7 @@ import torch.nn as nn
 import gym
 
 ## init policy, valuefn
-input_size = 6
+input_size = 4
 output_size = 1
 layer_size = 64
 num_layers=3
@@ -18,26 +18,28 @@ activation=nn.ReLU
 
 torch.set_default_dtype(torch.double)
 
+env_name = 'su_cartpole-v0'
+env = gym.make(env_name)
+
+
 model = switchedPpoModel(
     policy = MLP(input_size, output_size, num_layers, layer_size, activation),
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
     gate_fn =  MLP(input_size, 1, num_layers, layer_size, activation),
-    nominal_policy=LQRControl
+    nominal_policy=LQRControl,
+    env=env
 )
 
-env_name = 'su_cartpole-v0',
-env = gym.make(env_name)
 
 arg_dict = {
     'env_name' : env_name,
-    'env':env,
     'model' : model,
     'num_epochs' : 500,
     'action_var_schedule' : [10,0],
     'gate_var_schedule'   : [1,0],
 }
 
-run_sg(arg_dict, ppo, base_path="/data/acrobot/")
+run_sg(arg_dict, ppo_switch, base_path="/data/acrobot/")
 
 # model = ppoModel(
 #     policy = MLP(input_size, output_size, num_layers, layer_size, activation),
