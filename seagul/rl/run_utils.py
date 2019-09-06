@@ -14,6 +14,7 @@ care of loading a trained model just by specifying the name you saved it with
 import baselines.run
 
 import gym
+import seagul.envs
 
 import dill
 import subprocess
@@ -100,7 +101,7 @@ def run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/
         )
 
 
-def run_sg(arg_dict, algo, run_name = None, description = None, base_path = '/data/'):
+def run_sg(arg_dict, algo, run_name = None, run_desc = None, base_path ='/data/'):
     """
     Launches seaguls ppo2 and save the results without clutter
 
@@ -111,8 +112,8 @@ def run_sg(arg_dict, algo, run_name = None, description = None, base_path = '/da
     if run_name is None:
         run_name = input("please enter a name for this run: ")
 
-    if description is None:
-        description = input("please enter a brief description of the run: ")
+    if run_desc is None:
+        run_desc = input("please enter a brief description of the run: ")
 
     git_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
@@ -138,7 +139,7 @@ def run_sg(arg_dict, algo, run_name = None, description = None, base_path = '/da
         yaml.dump(
             {
                 "args": str_dict,
-                "metadata": {"date_time": datetime_str, "total runtime": runtime_str, "description": description, "git_sha": git_sha},
+                "metadata": {"date_time": datetime_str, "total runtime": runtime_str, "description": run_desc, "git_sha": git_sha},
             },
             outfile,
             indent=4,
