@@ -195,7 +195,7 @@ def ppo(
                 training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
 
                 # iterate through the data, doing the updates for our policy
-                for epoch in range(p_epochs):
+                for p_epoch in range(p_epochs):
                     for local_states, local_actions, local_adv in training_generator:
                         # Transfer to GPU (if GPU is enabled, else this does nothing)
                         local_states, local_actions, local_adv = (
@@ -225,7 +225,7 @@ def ppo(
                 training_data = data.TensorDataset(state_tensor, disc_rewards_tensor)
                 training_generator = data.DataLoader(training_data, batch_size=value_batch_size, shuffle=True)
 
-                for epoch in range(v_epochs):
+                for v_epoch in range(v_epochs):
                     for local_states, local_values in training_generator:
                         # Transfer to GPU (if GPU is enabled, else this does nothing)
                         local_states, local_values = (local_states.to(device), local_values.to(device))
