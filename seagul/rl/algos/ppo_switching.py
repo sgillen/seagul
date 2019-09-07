@@ -190,10 +190,10 @@ def ppo_switch(
 
                 path, gate_out = model._select_path(state)
 
-                if not path:
-                    action, logprob = model._select_action(state)
-                else:
+                if path:
                     action = model.nominal_policy(env, state)
+                else:
+                    action, logprob = model._select_action(state)
 
                 state_np, reward, done, _ = env.step(action.numpy())
                 state = torch.as_tensor(state_np)

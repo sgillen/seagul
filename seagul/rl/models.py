@@ -34,6 +34,8 @@ class switchedPpoModel:
         self.gate_fn = gate_fn
         self.gate_var = gate_var
         self.env = env
+        self.hyst_state = 1
+        self.hyst_vec = np.vectorize(self.hyst)
 
     def step(self, state):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
@@ -58,10 +60,33 @@ class switchedPpoModel:
 
     def _select_path(self, state):
         gate_out,_ = select_cont_action(self.gate_fn, state, self.gate_var)
-        return hyst_vec(gate_out), gate_out
+        return self.hyst_vec(gate_out), gate_out
 
     def _get_path_logp(self, states, actions):
         return get_cont_logp(self.gate_fn,  states, actions, self.gate_var)
+
+    
+
+    def hyst(self, x):
+        """
+        Unvectorized hysteris function with sharp transitions
+        
+        :param x double between 0 and 1:
+        :return activation function:
+        """
+        if self.hyst_state == 0:
+            if x > 0.55:
+                self.hyst_state = 1
+                return 1
+            else:
+                return 0
+        elif self.hyst_state == 1:
+            if x < 0.45:
+                self.hyst_state = 0
+                return 0
+            else:
+                return 1
+
 
 
 
@@ -101,28 +126,3 @@ def get_discrete_logp(policy, state, action):
     logprob = m.log_prob(action)
     return logprob
 
-
-hyst_state = 1
-def hyst(x):
-    """
-    Unvectorized hysteris function with sharp transitions
-
-    :param x double between 0 and 1:
-    :return activation function:
-    """
-    global hyst_state
-    if hyst_state == 0:
-        if x > 0.55:
-            hyst_state = 1
-            return 1
-        else:
-            return 0
-    elif hyst_state == 1:
-        if x < 0.45:
-            hyst_state = 0
-            return 0
-        else:
-            return 1
-
-
-hyst_vec = np.vectorize(hyst)

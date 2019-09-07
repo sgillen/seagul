@@ -135,8 +135,8 @@ def run_sg(arg_dict, algo, run_name = None, run_desc = None, base_path ='/data/'
         os.makedirs(save_dir)
 
     str_dict = {key: str(value) for key, value in arg_dict.items()}
-    with open(save_dir + "info.yaml", "w") as outfile:
-        yaml.dump(
+    with open(save_dir + "info.json", "w") as outfile:
+        json.dump(
             {
                 "args": str_dict,
                 "metadata": {"date_time": datetime_str, "total runtime": runtime_str, "description": run_desc, "git_sha": git_sha},
@@ -212,8 +212,8 @@ def load_model(save_path, backend="baselines"):
         return model, env
 
     elif backend == "seagul":
-        with open(save_base_path + "/" + "info.yaml", "r") as infile:
-            data = yaml.load(infile, Loader=yaml.Loader)
+        with open(save_base_path + "/" + "info.json", "r") as infile:
+            data = json.load(infile)                           #, Loader=yaml.Loader)
             #arg_dict = data['arg_dict']
 
         with open(save_base_path + "/" + "model", "rb") as infile:
@@ -240,8 +240,8 @@ def load_workspace(save_path):
     with open(save_base_path + "/" + "workspace", "rb") as infile:
         workspace = torch.load(infile, pickle_module=dill)
 
-    with open(save_base_path + "/" + "info.yaml", "r") as infile:
-        data = yaml.load(infile, Loader=yaml.Loader)
+    with open(save_base_path + "/" + "info.json", "r") as infile:
+        data = json.load(infile)                   #, Loader=yaml.Loader)
 
     with open(save_base_path + "/" + "model", "rb") as infile:
         model = torch.load(infile)
