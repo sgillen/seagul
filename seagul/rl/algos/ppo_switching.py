@@ -188,8 +188,7 @@ def ppo_switch(
 
                 state_list.append(state.clone())
 
-                gate_out, _ = model._select_path(state)
-                path = hyst_vec(gate_out)
+                path, gate_out = model._select_path(state)
 
                 if not path:
                     action, logprob = model._select_action(state)
@@ -376,37 +375,6 @@ def ppo_switch(
                     break
 
     return (model, avg_reward_hist, locals())
-
-
-
-
-
-hyst_state = 1
-
-
-def hyst(x):
-    """
-    Unvectorized hysteris function with sharp transitions
-
-    :param x double between 0 and 1:
-    :return activation function:
-    """
-    global hyst_state
-    if hyst_state == 0:
-        if x > 0.55:
-            hyst_state = 1
-            return 1
-        else:
-            return 0
-    elif hyst_state == 1:
-        if x < 0.45:
-            hyst_state = 0
-            return 0
-        else:
-            return 1
-
-
-hyst_vec = np.vectorize(hyst)
 
 batch_steps = 0  # tracks steps taken in current batch
 
