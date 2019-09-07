@@ -46,7 +46,7 @@ class switchedPpoModel:
 
     def step(self, state):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
-        path = self.select_path(state)
+        path, gate_path = self.select_path(state)
         value = self.value_fn(torch.as_tensor(state))
 
         if(path):
