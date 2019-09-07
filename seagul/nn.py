@@ -248,7 +248,7 @@ class MLP(nn.Module):
         return self.output_layer(data)
 
 
-class CategoricalMLP(nn.Module):
+class Categorical_MLP(nn.Module):
     """
     Policy designed to be used with seaguls rl module.
     Simple MLP that will output class label probs
