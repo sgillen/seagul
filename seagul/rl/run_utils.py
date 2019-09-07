@@ -254,7 +254,7 @@ def load_workspace(save_path):
 
 if __name__ == "__main__":
     from seagul.rl.run_utils import run_sg
-    from seagul.rl.models import ppoModel
+    from seagul.rl.models import PpoModel
     from seagul.nn import MLP
     from seagul.rl.algos.ppo import ppo
 
@@ -270,7 +270,7 @@ if __name__ == "__main__":
 
     torch.set_default_dtype(torch.double)
 
-    model = ppoModel(
+    model = PpoModel(
         policy=MLP(input_size, output_size, num_layers, layer_size, activation),
         value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
         action_var=4

@@ -248,7 +248,7 @@ class MLP(nn.Module):
         return self.output_layer(data)
 
 
-class Categorical_MLP(nn.Module):
+class CategoricalMLP(nn.Module):
     """
     Policy designed to be used with seaguls rl module.
     Simple MLP that will output class label probs
@@ -262,7 +262,7 @@ class Categorical_MLP(nn.Module):
         :param layer_size: how big each hidden layer should be
         :param activation: which activation function to use
         """
-        super(Categorical_MLP, self).__init__()
+        super(CategoricalMLP, self).__init__()
 
         self.activation = activation()
 
