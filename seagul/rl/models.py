@@ -58,7 +58,7 @@ class switchedPpoModel:
 
     def _select_path(self, state):
         gate_out,_ = select_cont_action(self.gate_fn, state, self.gate_var)
-        return hyst_vec(gate_out)
+        return hyst_vec(gate_out), gate_out
 
     def _get_path_logp(self, states, actions):
         return get_cont_logp(self.gate_fn,  states, actions, self.gate_var)
