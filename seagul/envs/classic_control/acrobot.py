@@ -63,12 +63,12 @@ class AcrobotEnv(core.Env):
     dt = .2
 
     LINK_LENGTH_1 = 1.  # [m]
-    LINK_LENGTH_2 = 1.  # [m]
+    LINK_LENGTH_2 = 2.  # [m]
     LINK_MASS_1 = 1.  #: [kg] mass of link 1
     LINK_MASS_2 = 1.  #: [kg] mass of link 2
     LINK_COM_POS_1 = 0.5  #: [m] position of the center of mass of link 1
-    LINK_COM_POS_2 = 0.5  #: [m] position of the center of mass of link 2
-    LINK_MOI = 1.  #: moments of inertia for both links
+    LINK_COM_POS_2 = 1  #: [m] position of the center of mass of link 2
+    LINK_MOI = .083  #: moments of inertia for both links
 
     MAX_VEL_1 = 4 * np.pi
     MAX_VEL_2 = 9 * np.pi
@@ -89,7 +89,7 @@ class AcrobotEnv(core.Env):
         high = np.array([1.0, 1.0, 1.0, 1.0, self.MAX_VEL_1, self.MAX_VEL_2])
         low = -high
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
-        self.action_space = spaces.Box(low=np.array([-1]), high=np.array([1]), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([-10]), high=np.array([10]), dtype=np.float32)
         self.state = None
         self.seed()
 
@@ -126,7 +126,7 @@ class AcrobotEnv(core.Env):
         # self.s_continuous = ns_continuous[-1] # We only care about the state
         # at the ''final timestep'', self.dt
 
-        ns[0] = wrap(ns[0], -pi, pi)
+        ns[0] = wrap(ns[0], 0, 2*pi)
         ns[1] = wrap(ns[1], -pi, pi)
         ns[2] = bound(ns[2], -self.MAX_VEL_1, self.MAX_VEL_1)
         ns[3] = bound(ns[3], -self.MAX_VEL_2, self.MAX_VEL_2)
