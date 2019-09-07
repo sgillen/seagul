@@ -6,7 +6,7 @@ from torch.utils import data
 from tqdm import trange
 
 """
-Utility functions for seagul, all vaguely related to nerual networks
+Utility functions for seagul, all vaguely related to neural networks
 """
 
 
@@ -248,7 +248,7 @@ class MLP(nn.Module):
         return self.output_layer(data)
 
 
-class Categorical_MLP(nn.Module):
+class CategoricalMLP(nn.Module):
     """
     Policy designed to be used with seaguls rl module.
     Simple MLP that will output class label probs
