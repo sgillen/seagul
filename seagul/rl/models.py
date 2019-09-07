@@ -2,31 +2,37 @@ import torch
 from torch.distributions import Normal, Categorical
 import numpy as np
 
-class ppoModel:
-    def __init__(self, policy, value_fn, action_var=None):
+class PpoModel:
+    def __init__(self, policy, value_fn, action_var=None, discrete=False):
         self.policy = policy
         self.value_fn = value_fn
         self.action_var = action_var
 
+        if discrete:
+            self._select_action = select_discrete_action
+            self._get_logp      = get_discrete_logp
+        else:
+            self._select_action = select_cont_action
+            self._get_logp      = get_cont_logp
+
     def step(self, state):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
-        action, _ = self._select_action(state)
+        action, _ = self.select_action(state)
         value = self.value_fn(torch.as_tensor(state))
-        logp = self._get_logp(state, action)
+        logp = self.get_logp(state, action)
 
         return action, value, None , logp
 
+    def select_action(self, state):
+        return self._select_action(self.policy, state, self.action_var)
 
-    def _select_action(self, state):
-        return select_cont_action(self.policy, state, self.action_var)
-
-    def _get_logp(self, states, actions):
-        return get_cont_logp(self.policy, states, actions, self.action_var)
+    def get_logp(self, states, actions):
+        return self._get_logp(self.policy, states, actions, self.action_var)
 
 
 
 class switchedPpoModel:
-    def __init__(self, policy, nominal_policy,  value_fn, gate_fn, env, action_var=None, gate_var=None):
+    def __init__(self, policy, nominal_policy,  value_fn, gate_fn, env, action_var=None, gate_var=None, discrete=False):
         self.policy = policy
         self.nominal_policy = nominal_policy
         self.value_fn = value_fn
@@ -37,32 +43,33 @@ class switchedPpoModel:
         self.hyst_state = 1
         self.hyst_vec = np.vectorize(self.hyst)
 
+
     def step(self, state):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
-        path = self._select_path(state)
+        path = self.select_path(state)
         value = self.value_fn(torch.as_tensor(state))
 
         if(path):
             action = self.nominal_policy(self.env, state)
             logp = 0
         else:
-            action, logp = self._select_action(state)
+            action, logp = self.select_action(state)
 
 
 
         return action, value, None , logp
 
-    def _select_action(self, state):
+    def select_action(self, state):
         return select_cont_action(self.policy, state, self.action_var)
 
-    def _get_action_logp(self, states, actions):
+    def get_action_logp(self, states, actions):
         return get_cont_logp(self.policy, states, actions, self.action_var)
 
-    def _select_path(self, state):
+    def select_path(self, state):
         gate_out,_ = select_cont_action(self.gate_fn, state, self.gate_var)
         return self.hyst_vec(gate_out), gate_out
 
-    def _get_path_logp(self, states, actions):
+    def get_path_logp(self, states, actions):
         return get_cont_logp(self.gate_fn,  states, actions, self.gate_var)
 
     
@@ -111,7 +118,7 @@ def get_cont_logp(policy, states, actions, variance):
 
 
 # takes a policy and the states and sample an action from it... (can we make this faster?)
-def select_discrete_action(policy, state):
+def select_discrete_action(policy, state, variance=None):
     probs = torch.tensor([policy(torch.as_tensor(state)), 1 - policy(torch.as_tensor(state))])
     m = Categorical(probs)
     action = m.sample()
@@ -120,7 +127,7 @@ def select_discrete_action(policy, state):
 
 
 # given a policy plus a state/action pair, what is the log liklihood of having taken that action?
-def get_discrete_logp(policy, state, action):
+def get_discrete_logp(policy, state, action, variance=None):
     probs = torch.cat((policy(torch.as_tensor(state)), 1 - policy(torch.as_tensor(state))), dim=1)
     m = Categorical(probs)
     logprob = m.log_prob(action)

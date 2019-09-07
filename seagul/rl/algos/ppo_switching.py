@@ -78,12 +78,12 @@ def ppo_switch(
     Example:
         import torch.nn as nn
         from seagul.rl.ppo import ppo_switch
-        from seagul.nn import Categorical_MLP, MLP
+        from seagul.nn import CategoricalMLP, MLP
         import torch
 
         policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
         value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-        gate_fn = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+        gate_fn = CategoricalMLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
 
         env2, t_policy, t_val, t_gate, rewards = ppo_switch(
             "su_cartpole-v0", 1000, policy, value_fn, gate_fn, epoch_batch_size=500
@@ -188,12 +188,12 @@ def ppo_switch(
 
                 state_list.append(state.clone())
 
-                path, gate_out = model._select_path(state)
+                path, gate_out = model.select_path(state)
 
                 if path:
                     action = model.nominal_policy(env, state)
                 else:
-                    action, logprob = model._select_action(state)
+                    action, logprob = model.select_action(state)
 
                 state_np, reward, done, _ = env.step(action.numpy())
                 state = torch.as_tensor(state_np)
@@ -286,10 +286,10 @@ def ppo_switch(
                             )
 
                             # predict and calculate loss for the batch
-                            logp = model._get_action_logp(local_states, local_actions.squeeze()).reshape(
+                            logp = model.get_action_logp(local_states, local_actions.squeeze()).reshape(
                                 -1, action_size
                             )
-                            old_logp = old_model._get_action_logp(local_states, local_actions.squeeze()).reshape(
+                            old_logp = old_model.get_action_logp(local_states, local_actions.squeeze()).reshape(
                                 -1, action_size
                             )
                             r = torch.exp(logp - old_logp)
@@ -343,10 +343,10 @@ def ppo_switch(
                                 local_adv.to(device),
                             )
 
-                            logp = model._get_path_logp(local_states, local_gate.squeeze())
+                            logp = model.get_path_logp(local_states, local_gate.squeeze())
                             logp = logp.reshape(-1, action_size)
 
-                            old_logp = old_model._get_path_logp(local_states, local_gate.squeeze())
+                            old_logp = old_model.get_path_logp(local_states, local_gate.squeeze())
                             old_logp = old_logp.reshape(-1, action_size)
 
                             r = torch.exp(logp - old_logp)
@@ -381,7 +381,7 @@ batch_steps = 0  # tracks steps taken in current batch
 # ============================================================================================
 if __name__ == "__main__":
     import torch.nn as nn
-    from seagul.nn import Categorical_MLP, MLP, DummyNet
+    from seagul.nn import CategoricalMLP, MLP, DummyNet
     import torch
 
     import matplotlib.pyplot as plt
@@ -391,7 +391,7 @@ if __name__ == "__main__":
 
     policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
     value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    gate_fn = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    gate_fn = CategoricalMLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
 
     env_name = "su_cartpole_push-v0"
     env = gym.make(env_name)

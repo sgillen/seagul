@@ -304,15 +304,15 @@ def discount_cumsum(rewards, discount):
 # ============================================================================================
 if __name__ == "__main__":
     import torch.nn as nn
-    from seagul.nn import Categorical_MLP, MLP
+    from seagul.nn import CategoricalMLP, MLP
     import torch
 
     torch.set_default_dtype(torch.double)
 
-    # policy = Categorical_MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    # policy = CategoricalMLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
     policy = MLP(input_size=7, output_size=2, layer_size=12, num_layers=2, activation=nn.ReLU)
     value_fn = MLP(input_size=7, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    agl_fn = Categorical_MLP(input_size=7, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    agl_fn = CategoricalMLP(input_size=7, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
 
     # Define our hyper parameters
     num_epochs = 100

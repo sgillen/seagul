@@ -1,6 +1,6 @@
 import gym
 
-from seagul.rl.models import ppoModel
+from seagul.rl.models import PpoModel
 from seagul.rl.common import discount_cumsum
 
 import numpy as np
@@ -60,19 +60,15 @@ def ppo(
 
     env = gym.make(env_name)
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
-        raise NotImplementedError(
-            "Discrete action spaces are not implemented yet, why are you using PPO for a discrete action space anyway?"
-        )
-        # select_action = select_discrete_action
-        # get_action_logp = get_discrete_logp
-        # action_size = 1
+        action_size = 1
+        action_dtype = torch.long
     elif isinstance(env.action_space, gym.spaces.Box):
         action_size = env.action_space.shape[0]
-        obs_size = env.observation_space.shape[0]
-
+        action_dtype = torch.double
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
+    obs_size = env.observation_space.shape[0]
 
     if action_var_schedule is not None:
         action_var_schedule = np.asarray(action_var_schedule)
@@ -116,7 +112,7 @@ def ppo(
         adv_tensor = torch.empty(0)
         disc_rewards_tensor = torch.empty(0)
         state_tensor = torch.empty(0)
-        action_tensor = torch.empty(0)
+        action_tensor = torch.empty(0,dtype=action_dtype)
 
         # Check if we have maxed out the reward, so that we can stop early
         if traj_count > 2:
@@ -137,7 +133,7 @@ def ppo(
 
                 state_list.append(state)
 
-                action, logprob = model._select_action(state)
+                action, logprob = model.select_action(state)
                 state_np, reward, done, _ = env.step(action.numpy())
                 state = torch.as_tensor(state_np)
 
@@ -205,8 +201,8 @@ def ppo(
                         )
 
                         # predict and calculate loss for the batch
-                        logp = model._get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
-                        old_logp = old_model._get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
+                        logp = model.get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
+                        old_logp = old_model.get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
                         r = torch.exp(logp - old_logp)
                         p_loss = (
                             -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
@@ -253,7 +249,7 @@ def ppo(
 if __name__ == "__main__":
     import torch.nn as nn
     from seagul.rl.algos.ppo import ppo
-    from seagul.nn import MLP
+    from seagul.nn import MLP, CategoricalMLP
     import torch
 
     import matplotlib.pyplot as plt
@@ -266,10 +262,11 @@ if __name__ == "__main__":
     num_layers = 3
     activation = nn.ReLU
 
-    policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+    policy = CategoricalMLP(input_size, output_size, num_layers, layer_size, activation)
+
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 
-    model = ppoModel(policy, value_fn,action_var=4)
+    model = PpoModel(policy, value_fn, action_var=4, discrete=False)
 
     # Define our hyper parameters
     num_epochs = 100
@@ -287,6 +284,6 @@ if __name__ == "__main__":
     eps = 0.2
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    t_model, rewards, var_dict = ppo("su_cartpole-v0", 100, model, action_var_schedule=[3,2,1,0])
+    t_model, rewards, var_dict = ppo("su_cartpole_discrete-v0", 100, model, action_var_schedule=[3,2,1,0])
     plt.plot(rewards)
     plt.show()
