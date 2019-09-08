@@ -27,7 +27,7 @@ class SUCartPoleDiscEnv(gym.Env):
 
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
-    def __init__(self, num_steps=1500, dt=0.01):
+    def __init__(self, num_steps=1500, dt=0.2):
         self.L = 1.0  # length of the pole (m)
         self.mc = 4.0  # mass of the cart (kg)
         self.mp = 1.0  # mass of the ball at the end of the pole
@@ -103,7 +103,7 @@ class SUCartPoleDiscEnv(gym.Env):
         # self.state[3] = np.clip(ns[3], -self.DX_MAX, self.DX_MAX)
 
         # Should reward be something we pass in ? I do like to mess with them a lot...
-        reward = -np.cos(self.state[0]) + 2
+        reward = -5*np.cos(self.state[0])  -.001*(self.state[1]**2) + 50
 
         self.cur_step += 1
         if self.cur_step > self.num_steps:

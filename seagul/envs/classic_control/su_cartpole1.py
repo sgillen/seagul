@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 
-class SUCartPoleEnv(gym.Env):
+class SUCartPoleEnv1(gym.Env):
     """
     Environment for for a classic_control cartpole pendulum.
 
@@ -47,7 +47,7 @@ class SUCartPoleEnv(gym.Env):
         self.DX_MAX = 500.0
 
         self.state_noise_max = 0
-        self.init_state_noise_max = .5
+        self.init_state_noise_max = 0
         high = np.array([pi, self.X_MAX, self.DTHETA_MAX, self.DX_MAX])
         low = -high
         self.observation_space = gym.spaces.Box(low=low, high=high)
@@ -67,7 +67,7 @@ class SUCartPoleEnv(gym.Env):
         return [seed]
 
     def reset(self):
-        self.state = np.array([0, 0, 0, 0]) + self.np_random.uniform(
+        self.state = np.array([pi, 0, 0, 0]) + self.np_random.uniform(
             -self.init_state_noise_max, self.init_state_noise_max, size=(4,)
         )
         self.cur_step = 0
@@ -83,7 +83,7 @@ class SUCartPoleEnv(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
+        torque = np.clip(action*1, -self.TORQUE_MAX, self.TORQUE_MAX)
         # torque = action
         # Add noise to the force action
         if self.torque_noise_max > 0:
@@ -93,7 +93,7 @@ class SUCartPoleEnv(gym.Env):
             ns = euler(self._derivs, torque, 0, self.dt, self.state)
             # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
-            self.state[0] = wrap(ns[0], -pi, pi)
+            self.state[0] = wrap(ns[0], 0, 2*pi)
             #self.state[0] = ns[0]
             self.state[1] = ns[1]
             # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
@@ -113,7 +113,7 @@ class SUCartPoleEnv(gym.Env):
             done = True
         elif np.abs(self.state[1]) > self.X_MAX:
             #done = True
-            reward -= 5
+            reward -= 1
 
         return self.state, reward, done, {}
 

@@ -9,6 +9,10 @@ register(id="mj_su_cartpole_et-v0", entry_point="seagul.envs.mujoco:MJSUCartPole
 register(id="mj_su_cartpole_discrete-v0", entry_point="seagul.envs.mujoco:MJSUCartPoleDiscreteEnv")
 
 register(id="su_cartpole-v0", entry_point="seagul.envs.classic_control:SUCartPoleEnv")
+register(id="su_cartpole-v1", entry_point="seagul.envs.classic_control:SUCartPoleEnv1")
+register(id="su_cartpole-v2", entry_point="seagul.envs.classic_control:SUCartPoleEnv2")
+register(id="su_cartpole-v3", entry_point="seagul.envs.classic_control:SUCartPoleEnv3")
+
 
 register(id="su_cartpole_push-v0", entry_point="seagul.envs.classic_control:SUCartPolePushEnv")
 
@@ -27,5 +31,7 @@ register(id="bullet_car-v0", entry_point="seagul.envs.bullet:RacecarGymEnv_v1")
 register(id="bullet_car_ast-v0", entry_point="seagul.envs.bullet:RacecarGymEnvAst_v1")
 
 register(id="su_acrobot-v0" , entry_point="seagul.envs.classic_control:AcrobotEnv")
+
+register(id="su_cartpole_gym-v0" , entry_point="seagul.envs.classic_control:CartPoleEnv")
 
 #register(id="walker2d_five_link-v0", entry_point="seagul.envs.bullet:Walker2DFiveLink")
