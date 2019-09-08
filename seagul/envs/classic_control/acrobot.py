@@ -107,7 +107,7 @@ class AcrobotEnv(core.Env):
 
     def step(self, a):
         s = self.state
-        torque = a
+        torque = np.clip(a, -1, 1) 
 
         # Add noise to the force action
         if self.torque_noise_max > 0:
@@ -140,7 +140,8 @@ class AcrobotEnv(core.Env):
             terminal = False
 
 
-        reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+        
+        reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1])) - .01*torque.item()**2 - .01*ns[2]**2 - .05*ns[3]**2
 
         return (self._get_ob(), reward, terminal, {})
 
