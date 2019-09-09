@@ -32,19 +32,20 @@ for env in range(4):
     )
 
     arg_dict = {
-        'env_name' : 'su_cartpole-v0',
+        'env_name' : 'su_cartpole-v' + str(env),
         'model' : model,
         'action_var_schedule' : [1,0],
-        'seed' : env,
+        'seed' : 0,
         'num_epochs' : 500
     }
 
 
-    run_name = "env4_" + str(env)
+    run_name = "env3_" + str(env)
     p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'what is life?', "/data/cartpole4/"))
     p.start()
     proc_list.append(p)
 
+    
 for p in proc_list:
     print("joining")
     p.join()
