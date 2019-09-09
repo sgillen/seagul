@@ -26,7 +26,7 @@ import os
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-def run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/", backend="baselines"):
+def run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/"):
 
     """
     Launches an openAI baselines algorithm and records the results
