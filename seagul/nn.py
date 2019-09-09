@@ -290,7 +290,36 @@ class CategoricalMLP(nn.Module):
 
 class DummyNet(nn.Module):
     """
-    This is a dummy network used for debugging, it will always output zero
+    This is a dummy network used for debugging, it can be used as a drop in replacement for 
+    any network but you can set the net_fn member to whatever function you want and this net 
+    will always return. The default function always returns zeros
+
+    example:
+        import torch.nn as nn
+        from seagul.nn import CategoricalMLP, MLP, DummyNet
+        import torch
+
+        from seagul.sims.cartpole import LQRControl
+        torch.set_default_dtype(torch.double)
+
+        policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+        value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+
+    #    gate_fn = CategoricalMLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+        gate_fn = DummyNet(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+        gate_fn.net_fn = lambda x : 1
+                    
+                       
+    
+        env_name = "su_cartpole_push-v0"
+        env = gym.make(env_name)
+
+        model = switchedPpoModel(policy, LQRControl, value_fn, gate_fn, env=env)
+
+        t_model, rewards, arg_dict = ppo_switch(
+            env_name, 500, model,  epoch_batch_size=10, action_var_schedule=[10,0], gate_var_schedule=[1,0]
+        ) 
+    
     """
 
     def __init__(self, input_size, output_size, num_layers, layer_size, activation):
@@ -305,9 +334,16 @@ class DummyNet(nn.Module):
         self.output_size = output_size
         self.layer = nn.Linear(input_size, output_size, bias=False)
 
+    def net_fn(self, data):
+        return torch.zeros(self.output_size)
+
 
     def forward(self, data):
-        return self.layer(data) * torch.zeros(self.output_size)
+        dummy = self.layer(data)*torch.zeros(self.output_size) # so that torch sees a gradient
+        return dummy + self.net_fn(data)
+
+
+
 
 
 class LinearNet(nn.Module):
