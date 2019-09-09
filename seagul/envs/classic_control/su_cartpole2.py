@@ -47,7 +47,7 @@ class SUCartPoleEnv2(gym.Env):
         self.DX_MAX = 500.0
 
         self.state_noise_max = 0
-        self.init_state_noise_max = .5
+        self.init_state_noise_max = .1
         high = np.array([pi, self.X_MAX, self.DTHETA_MAX, self.DX_MAX])
         low = -high
         self.observation_space = gym.spaces.Box(low=low, high=high)
@@ -93,7 +93,7 @@ class SUCartPoleEnv2(gym.Env):
             ns = euler(self._derivs, torque, 0, self.dt, self.state)
             # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
-            self.state[0] = wrap(ns[0], -pi, pi)
+            self.state[0] = wrap(ns[0], 0, pi)
             #self.state[0] = ns[0]
             self.state[1] = ns[1]
             # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
@@ -104,10 +104,9 @@ class SUCartPoleEnv2(gym.Env):
         # self.state[3] = np.clip(ns[3], -self.DX_MAX, self.DX_MAX)
 
         # Should reward be something we pass in ? I do like to mess with them a lot...
-
-
-        reward = -np.cos(self.state[0]) + 1
-
+    
+        reward = -5*np.cos(self.state[0])
+        
         self.cur_step += 1
         if self.cur_step > self.num_steps:
             done = True

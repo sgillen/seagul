@@ -47,7 +47,7 @@ class SUCartPoleEnv1(gym.Env):
         self.DX_MAX = 500.0
 
         self.state_noise_max = 0
-        self.init_state_noise_max = 0
+        self.init_state_noise_max = .1
         high = np.array([pi, self.X_MAX, self.DTHETA_MAX, self.DX_MAX])
         low = -high
         self.observation_space = gym.spaces.Box(low=low, high=high)
@@ -67,7 +67,7 @@ class SUCartPoleEnv1(gym.Env):
         return [seed]
 
     def reset(self):
-        self.state = np.array([pi, 0, 0, 0]) + self.np_random.uniform(
+        self.state = np.array([0, 0, 0, 0]) + self.np_random.uniform(
             -self.init_state_noise_max, self.init_state_noise_max, size=(4,)
         )
         self.cur_step = 0
@@ -106,7 +106,8 @@ class SUCartPoleEnv1(gym.Env):
         # Should reward be something we pass in ? I do like to mess with them a lot...
 
 
-        reward = -np.cos(self.state[0]) + 1
+        reward = (self.state[0] - pi)**2 
+
 
         self.cur_step += 1
         if self.cur_step > self.num_steps:
