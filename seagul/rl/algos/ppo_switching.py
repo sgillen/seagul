@@ -379,6 +379,7 @@ def ppo_switch(
 batch_steps = 0  # tracks steps taken in current batch
 
 # ============================================================================================
+
 if __name__ == "__main__":
     import torch.nn as nn
     from seagul.nn import CategoricalMLP, MLP, DummyNet
@@ -391,13 +392,21 @@ if __name__ == "__main__":
 
     policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
     value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-
-#    gate_fn = CategoricalMLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    #gate_fn = CategoricalMLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
     gate_fn = DummyNet(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    gate_fn.net_fn = lambda x : 1
-                    
-                       
-    
+
+    def gate(state):
+        if len(state.shape) == 1:
+            return (((140 * pi / 180 < state[0] < pi) and state[1] <= 0) or (
+                    (pi < state[0] < 220 * pi / 180) and state[1] >= 0))
+        else:
+            ret  = ((((140 * pi / 180 < state[:,0]) & (state[:,0] < pi)) & (state[:,1] <= 0))
+                   | ((pi < state[:,0]) & (state[:,0] < 220 * pi / 180) & (state[:,1] >= 0)))
+            return torch.as_tensor(ret,dtype=torch.double).reshape(-1,1)
+
+
+    gate_fn.net_fn = gate
+
     env_name = "su_cartpole_push-v0"
     env = gym.make(env_name)
 
@@ -405,7 +414,7 @@ if __name__ == "__main__":
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
     t_model, rewards, arg_dict = ppo_switch(
-        env_name, 500, model,  epoch_batch_size=10, action_var_schedule=[10,0], gate_var_schedule=[1,0]
+        env_name, 500, model, action_var_schedule=[10,0], gate_var_schedule=[1,0]
     )
 
     plt.plot(rewards)
