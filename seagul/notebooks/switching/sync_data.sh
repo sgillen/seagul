@@ -1,1 +1,1 @@
-rsync -avzh sgdt:~/work/seagul/seagul/rl/data .
+rsync -avzh sgdt:~/work/seagul/seagul/notebooks/switching/data .
