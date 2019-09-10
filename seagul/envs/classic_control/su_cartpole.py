@@ -8,12 +8,12 @@ from seagul.integration import rk4, euler, wrap
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-from dm_control import mujoco
-from dm_control.rl import control
-from dm_control.suite import base
-from dm_control.suite import common
-from dm_control.utils import containers
-from dm_control.utils import rewards
+# from dm_control import mujoco
+# from dm_control.rl import control
+# from dm_control.suite import base
+# from dm_control.suite import common
+# from dm_control.utils import containers
+# from dm_control.utils import rewards
 
 
 class SUCartPoleEnv(gym.Env):
@@ -90,8 +90,8 @@ class SUCartPoleEnv(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        #torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
-        torque = action*10
+        torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
+        #torque = action
         # Add noise to the force action
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
@@ -113,22 +113,23 @@ class SUCartPoleEnv(gym.Env):
         # Should reward be something we pass in ? I do like to mess with them a lot...
 
 
-#        reward = -5*np.cos(self.state[0]) - .001*self.state[2]**2 - .001*self.state[3]**2 - .001*torque.item()**2
+        reward = -5*np.cos(self.state[0]) - .001*self.state[2]**2 - .001*self.state[3]**2 - .001*torque.item()**2
 
         
-        upright = (np.cos(self.state[0]) + 1) / 2
-        centered = rewards.tolerance(self.state[1], margin=2)
-        centered = (1 + centered) / 2
-        small_control = rewards.tolerance(torque.item(), margin=1,
-                                          value_at_margin=0,
-                                          sigmoid='quadratic')
-        small_control = (4 + small_control) / 5
-        small_velocity = rewards.tolerance(self.state[2], margin=5)
-        small_velocity = (1 + small_velocity) / 2
-        reward = upright.mean() * small_control * small_velocity * centered
-    
+        #upright = (np.cos(self.state[0]) + 1) / 2
+        #centered = rewards.tolerance(self.state[1], margin=2)
+        #centered = (1 + centered) / 2
+        #small_control = rewards.tolerance(torque.item(), margin=1,
+                                         # value_at_margin=0,
+                                         # sigmoid='quadratic')
+        #small_control = (4 + small_control) / 5
+        #small_velocity = rewards.tolerance(self.state[2], margin=5)
+       # small_velocity = (1 + small_velocity) / 2
+       # reward = upright.mean() * small_control * small_velocity * centered
+
+
         self.cur_step += 1
-        
+
         if self.cur_step > self.num_steps:
             done = True
         elif np.abs(self.state[1]) > self.X_MAX:
