@@ -27,10 +27,10 @@ class SUCartPoleEnv3(gym.Env):
 
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
-    def __init__(self, num_steps=1500, dt=0.01):
+    def __init__(self, num_steps=1500, dt=0.001):
         self.L = 1.0  # length of the pole (m)
-        self.mc = 4.0  # mass of the cart (kg)
-        self.mp = 1.0  # mass of the ball at the end of the pole
+        self.mc = 1.0  # mass of the cart (kg)
+        self.mp = .1  # mass of the ball at the end of the pole
 
         self.g = 9.8
 
@@ -83,18 +83,18 @@ class SUCartPoleEnv3(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        #torque = np.clip(action*100, -self.TORQUE_MAX, self.TORQUE_MAX)
-        torque = action*1
-        # torque = action
+        #torque = np.clip(action*1, -self.TORQUE_MAX, self.TORQUE_MAX)
+        
+        torque = action
         # Add noise to the force action
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         for _ in range(5):
-            ns = euler(self._derivs, torque, 0, self.dt, self.state)
+            ns = rk4(self._derivs, torque, 0, self.dt, self.state)
             # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
-            self.state[0] = wrap(ns[0], 0, pi)
+            self.state[0] = wrap(ns[0], 0, 2*pi)
             #self.state[0] = ns[0]
             self.state[1] = ns[1]
             # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
@@ -105,15 +105,16 @@ class SUCartPoleEnv3(gym.Env):
         # self.state[3] = np.clip(ns[3], -self.DX_MAX, self.DX_MAX)
 
         # Should reward be something we pass in ? I do like to mess with them a lot...
-        
-        reward = (self.state[0] - pi)**2  - .01*self.state[2]**2 - .01*self.state[3]**2
+
+
+        reward = (self.state[0] - pi)**2 
 
         self.cur_step += 1
         if self.cur_step > self.num_steps:
             done = True
         elif np.abs(self.state[1]) > self.X_MAX:
             #done = True
-            reward -= 100
+            reward -= 1
 
         return self.state, reward, done, {}
 

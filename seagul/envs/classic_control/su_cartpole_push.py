@@ -28,7 +28,7 @@ class SUCartPolePushEnv(gym.Env):
 
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
-    def __init__(self, num_steps=1500, dt=0.001):
+    def __init__(self, num_steps=4500, dt=0.001):
         self.L = 5.0  # length of the pole (m)
         self.mc = 4.0  # mass of the cart (kg)
         self.mp = 5.0  # mass of the ball at the end of the pole
@@ -52,7 +52,7 @@ class SUCartPolePushEnv(gym.Env):
         low = -high
         self.observation_space = gym.spaces.Box(low=low, high=high)
 
-        self.TORQUE_MAX = 500.0
+        self.TORQUE_MAX = 50.0
         self.torque_noise_max = 0.0
         self.action_space = gym.spaces.Box(-self.TORQUE_MAX, self.TORQUE_MAX, shape=(1,))
 
@@ -83,7 +83,7 @@ class SUCartPolePushEnv(gym.Env):
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
         # torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
-        torque = action
+        torque = np.clip(action*1, -self.TORQUE_MAX, self.TORQUE_MAX)
 
         # Add noise to the force action
         if self.torque_noise_max > 0:
@@ -104,7 +104,7 @@ class SUCartPolePushEnv(gym.Env):
             ns = rk4(self._derivs, torque, 0, self.dt, self.state)
             # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
-            self.state[0] = wrap(ns[0], -pi, pi)
+            self.state[0] = wrap(ns[0], -2*pi, 2*pi)
             # self.state[0] = ns[0]
             self.state[1] = ns[1]
             # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
@@ -121,8 +121,8 @@ class SUCartPolePushEnv(gym.Env):
         if self.cur_step > self.num_steps:
             done = True
         elif np.abs(self.state[1]) > self.X_MAX:
-            done = True
-
+            reward -= 5
+                        
         return self.state, reward, done, {}
 
     # def reset_model(self):

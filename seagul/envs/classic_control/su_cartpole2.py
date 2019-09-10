@@ -8,6 +8,13 @@ from seagul.integration import rk4, euler, wrap
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+from dm_control import mujoco
+from dm_control.rl import control
+from dm_control.suite import base
+from dm_control.suite import common
+from dm_control.utils import containers
+from dm_control.utils import rewards
+
 
 class SUCartPoleEnv2(gym.Env):
     """
@@ -27,10 +34,10 @@ class SUCartPoleEnv2(gym.Env):
 
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
-    def __init__(self, num_steps=1500, dt=0.01):
+    def __init__(self, num_steps=1500, dt=0.001):
         self.L = 1.0  # length of the pole (m)
-        self.mc = 4.0  # mass of the cart (kg)
-        self.mp = 1.0  # mass of the ball at the end of the pole
+        self.mc = 1.0  # mass of the cart (kg)
+        self.mp = .1  # mass of the ball at the end of the pole
 
         self.g = 9.8
 
@@ -40,7 +47,7 @@ class SUCartPoleEnv2(gym.Env):
         self.state = None
 
         # THETA_MAX is implict (-pi, pi)
-        self.X_MAX = 150.0
+        self.X_MAX = 50.0
 
         # might impose an upper limit on these but it would only end the episode
         self.DTHETA_MAX = 100.0 * pi
@@ -83,17 +90,17 @@ class SUCartPoleEnv2(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        torque = np.clip(action*1, -self.TORQUE_MAX, self.TORQUE_MAX)
-        # torque = action
+        #torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
+        torque = action
         # Add noise to the force action
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         for _ in range(5):
-            ns = euler(self._derivs, torque, 0, self.dt, self.state)
+            ns = rk4(self._derivs, torque, 0, self.dt, self.state)
             # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
-            self.state[0] = wrap(ns[0], 0, pi)
+            self.state[0] = wrap(ns[0], -2*pi, 2*pi)
             #self.state[0] = ns[0]
             self.state[1] = ns[1]
             # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
@@ -104,15 +111,29 @@ class SUCartPoleEnv2(gym.Env):
         # self.state[3] = np.clip(ns[3], -self.DX_MAX, self.DX_MAX)
 
         # Should reward be something we pass in ? I do like to mess with them a lot...
-    
-        reward = -5*np.cos(self.state[0])
+
+
+#        reward = -5*np.cos(self.state[0]) - .001*self.state[2]**2 - .001*self.state[3]**2 - .001*torque.item()**2
+
         
+        upright = (np.cos(self.state[0]) + 1) / 2
+        centered = rewards.tolerance(self.state[1], margin=2)
+        centered = (1 + centered) / 2
+        small_control = rewards.tolerance(torque.item(), margin=1,
+                                          value_at_margin=0,
+                                          sigmoid='quadratic')
+        small_control = (4 + small_control) / 5
+        small_velocity = rewards.tolerance(self.state[2], margin=5)
+        small_velocity = (1 + small_velocity) / 2
+        reward = upright.mean() * small_control * small_velocity * centered
+    
         self.cur_step += 1
+        
         if self.cur_step > self.num_steps:
             done = True
         elif np.abs(self.state[1]) > self.X_MAX:
             #done = True
-            reward -= 1
+            reward -= 5
 
         return self.state, reward, done, {}
 
