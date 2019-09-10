@@ -27,10 +27,10 @@ class SUCartPoleEnv1(gym.Env):
 
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
-    def __init__(self, num_steps=1500, dt=0.01):
+    def __init__(self, num_steps=1500, dt=0.001):
         self.L = 1.0  # length of the pole (m)
-        self.mc = 4.0  # mass of the cart (kg)
-        self.mp = 1.0  # mass of the ball at the end of the pole
+        self.mc = 1.0  # mass of the cart (kg)
+        self.mp = .1  # mass of the ball at the end of the pole
 
         self.g = 9.8
 
@@ -83,14 +83,15 @@ class SUCartPoleEnv1(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        torque = np.clip(action*1, -self.TORQUE_MAX, self.TORQUE_MAX)
-        # torque = action
+        #torque = np.clip(action*1, -self.TORQUE_MAX, self.TORQUE_MAX)
+        
+        torque = action
         # Add noise to the force action
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         for _ in range(5):
-            ns = euler(self._derivs, torque, 0, self.dt, self.state)
+            ns = rk4(self._derivs, torque, 0, self.dt, self.state)
             # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
             self.state[0] = wrap(ns[0], 0, 2*pi)
@@ -107,7 +108,6 @@ class SUCartPoleEnv1(gym.Env):
 
 
         reward = (self.state[0] - pi)**2 
-
 
         self.cur_step += 1
         if self.cur_step > self.num_steps:
