@@ -22,21 +22,21 @@ activation=nn.ReLU
 torch.set_default_dtype(torch.double)
 proc_list = []
 
-for env in range(4):
+for seed in range(4):
 
     arg_dict = {
-        'env': 'su_cartpole-v' + str(env),
+        'env': 'su_cartpole-v0',
         'alg': 'ppo2',
         'network': 'mlp',
         'num_timesteps': '1e6',
         'num_env': '1',
         'num_layers': '3',
         'num_hidden': '12',
-        'seed' : str(env)
+        'seed' : str(seed)
     }
 
 
-    run_name = "env" + str(env)    
+    run_name = "seed" + str(seed)    
     p = Process(target=run_and_save_bs, args=(arg_dict, run_name, 'what is life?', "/data/cartpole_baseline4/"))
     p.start()
     proc_list.append(p)

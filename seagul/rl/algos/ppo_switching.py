@@ -96,7 +96,7 @@ def ppo_switch(
     env = gym.make(env_name)
 
     # car_env = env.envs[0].env.env
-    env.num_steps = 1500  # TODO
+    #env.num_steps = 1500  # TODO
 
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         raise NotImplementedError(

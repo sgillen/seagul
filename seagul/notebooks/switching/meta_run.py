@@ -22,7 +22,7 @@ activation=nn.Tanh
 torch.set_default_dtype(torch.double)
 proc_list = []
 
-for env in range(4):
+for seed in range(4):
         
 
     model = PpoModel(
@@ -32,16 +32,16 @@ for env in range(4):
     )
 
     arg_dict = {
-        'env_name' : 'su_cartpole-v' + str(env),
+        'env_name' : 'su_cartpole-v0',
         'model' : model,
         'action_var_schedule' : [1,0],
-        'seed' : 0,
+        'seed' : seed,
         'num_epochs' : 500
     }
 
 
-    run_name = "env3_" + str(env)
-    p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'what is life?', "/data/cartpole4/"))
+    run_name = "env3_" + str(seed)
+    p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'what is life?', "/data/cartpole5/"))
     p.start()
     proc_list.append(p)
 
