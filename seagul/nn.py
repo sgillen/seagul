@@ -339,8 +339,8 @@ class DummyNet(nn.Module):
 
 
     def forward(self, data):
-         dummy = self.layer(data)*torch.zeros(self.output_size) # so that torch sees a gradient
-         return dummy + self.net_fn(data)
+        dummy = self.layer(data)*torch.zeros(self.output_size) # so that torch sees a gradient
+        return dummy + self.net_fn(data)
 
 
 
