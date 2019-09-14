@@ -5,6 +5,8 @@ from numpy import sin, cos, pi
 from gym import core, spaces
 from gym.utils import seeding
 
+from seagul.integration import euler
+
 __copyright__ = "Copyright 2013, RLPy http://acl.mit.edu/RLPy"
 __credits__ = ["Alborz Geramifard", "Robert H. Klein", "Christoph Dann",
                "William Dabney", "Jonathan P. How"]
@@ -60,7 +62,7 @@ class AcrobotEnv(core.Env):
         'video.frames_per_second' : 15
     }
 
-    dt = .2
+    dt = .001
 
     LINK_LENGTH_1 = 1.  # [m]
     LINK_LENGTH_2 = 2.  # [m]
@@ -106,31 +108,40 @@ class AcrobotEnv(core.Env):
         return self._get_ob()
 
     def step(self, a):
-        s = self.state
-        torque = np.clip(a, -1, 1) 
 
+        #torque = np.clip(a, -20, 20) 
+        torque = a
         # Add noise to the force action
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         # Now, augment the state with our force action so it can be passed to
         # _dsdt
-        s_augmented = np.append(s, torque)
+        
 
-        ns = rk4(self._dsdt, s_augmented, [0, self.dt])
+        
+        #ns = euler(self._dsdt, s_augmented, [0, self.dt])
+
         # only care about final timestep of integration returned by integrator
-        ns = ns[-1]
-        ns = ns[:4]  # omit action
-        # ODEINT IS TOO SLOW!
-        # ns_continuous = integrate.odeint(self._dsdt, self.s_continuous, [0, self.dt])
-        # self.s_continuous = ns_continuous[-1] # We only care about the state
-        # at the ''final timestep'', self.dt
+        for i in range(5):
+            s = self.state
+            s_augmented = np.append(s, torque)
+            
+            ns = rk4(self._dsdt, s_augmented, [0, self.dt])
+            ns = ns[-1]
+        
+            ns = ns[:4]  # omit action
+            # ODEINT IS TOO SLOW!
+            # ns_continuous = integrate.odeint(self._dsdt, self.s_continuous, [0, self.dt])
+            # self.s_continuous = ns_continuous[-1] # We only care about the state
+            # at the ''final timestep'', self.dt
+            
+            ns[0] = wrap(ns[0], 0, 2*pi)
+            ns[1] = wrap(ns[1], -pi, pi)
+            ns[2] = bound(ns[2], -self.MAX_VEL_1, self.MAX_VEL_1)
+            ns[3] = bound(ns[3], -self.MAX_VEL_2, self.MAX_VEL_2)
 
-        ns[0] = wrap(ns[0], 0, 2*pi)
-        ns[1] = wrap(ns[1], -pi, pi)
-        ns[2] = bound(ns[2], -self.MAX_VEL_1, self.MAX_VEL_1)
-        ns[3] = bound(ns[3], -self.MAX_VEL_2, self.MAX_VEL_2)
-        self.state = ns
+            self.state = ns
 
         self.cur_step +=1
 
@@ -138,10 +149,8 @@ class AcrobotEnv(core.Env):
             terminal = True
         else:
             terminal = False
-
-
         
-        reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1])) - .01*torque.item()**2 - .01*ns[2]**2 - .05*ns[3]**2
+        reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))# - .01*torque.item()**2 - np.abs(.1*ns[2]) - np.abs(.05*ns[3])
 
         return (self._get_ob(), reward, terminal, {})
 
@@ -255,6 +264,16 @@ def bound(x, m, M=None):
         m = m[0]
     # bound x between min (m) and Max (M)
     return min(max(x, m), M)
+
+
+def euler(derivs, s0, t):
+    """
+    Single step of an euler integtation, exactly the same parameters and usage as rk4 above
+    """
+#    import pdb; pdb.set_trace()
+
+    return s0 + t[1] * np.array(derivs(s0, t[0] + t[1]))
+
 
 
 def rk4(derivs, y0, t, *args, **kwargs):

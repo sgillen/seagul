@@ -2,7 +2,19 @@ import torch
 from torch.distributions import Normal, Categorical
 import numpy as np
 
+"""
+'Models' used by the seaguls reinforcement learning algos. 
+
+A model combines an agents policy, value function, and anything else needed to learn and take actions in a space
+
+They all must implement step(state) which takes as input state and returns action, value, None, logp
+"""
+
+
 class PpoModel:
+    """
+    Model for use with seagul's ppo algorithm
+    """
     def __init__(self, policy, value_fn, action_var=None, discrete=False):
         self.policy = policy
         self.value_fn = value_fn
@@ -31,6 +43,58 @@ class PpoModel:
 
 
 
+class PpoModelActHold:
+    """
+    also for use with PPO, this will "hold" each action made by the agent for hold_count time steps
+    useful to downsample how often your agent takes an action without needing to do the same for your
+    dynamics
+    """
+    def __init__(self, policy, value_fn, hold_count = 5, action_var=.1, discrete=False):
+        self.policy = policy
+        self.value_fn = value_fn
+        self.action_var = action_var
+        self.hold_count = hold_count
+        self.cur_hold_count = 0
+
+        if discrete:
+            self._select_action = select_discrete_action
+            self._get_logp      = get_discrete_logp
+        else:
+            self._select_action = select_cont_action
+            self._get_logp      = get_cont_logp
+
+    def step(self, state):
+        # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
+
+        action, _ = self.select_action(state)
+        value = self.value_fn(torch.as_tensor(state))
+        logp = self.get_logp(state, action)
+                
+        return action, value, None , logp
+
+    def select_action(self, state):
+        if(self.cur_hold_count == 0):
+            action, logp = self._select_action(self.policy, state, self.action_var)
+            self.cur_action = action
+            self.cur_logp  = logp
+            self.cur_hold_count += 1
+        else:
+            action = self.cur_action
+            logp = self.cur_logp
+            self.cur_hold_count +=1
+
+        if(self.cur_hold_count > self.hold_count):
+            self.cur_hold_count = 0
+
+        return action, logp
+            
+        
+
+    def get_logp(self, states, actions):
+        return self._get_logp(self.policy, states, actions, self.action_var)
+
+    
+
 class switchedPpoModel:
     def __init__(self, policy, nominal_policy,  value_fn, gate_fn, env, action_var=None, gate_var=None, discrete=False):
         self.policy = policy
@@ -57,7 +121,7 @@ class switchedPpoModel:
 
 
 
-        return action, value, None , logp
+        return action, value, None , float(logp)
 
     def select_action(self, state):
         return select_cont_action(self.policy, state, self.action_var)

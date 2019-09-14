@@ -32,7 +32,6 @@ class MJSUCartPoleEnv(mujoco_env.MujocoEnv):
         # else:
         #    reward = 0
 
-        # TODO figure out how to keep state history around (maybe do this in the agent??)
         self.cur_step += 1
         if self.cur_step > self.num_steps:
             done = True

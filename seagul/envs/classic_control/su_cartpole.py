@@ -97,8 +97,8 @@ class SUCartPoleEnv(gym.Env):
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         for _ in range(5):
-            ns = rk4(self._derivs, torque, 0, self.dt, self.state)
-            # ns = euler(self._derivs, torque, 0, self.dt, self.state)
+            #ns = rk4(self._derivs, torque, 0, self.dt, self.state)
+            ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
             self.state[0] = wrap(ns[0], -2*pi, 2*pi)
             #self.state[0] = ns[0]
@@ -115,7 +115,7 @@ class SUCartPoleEnv(gym.Env):
 
         reward = -5*np.cos(self.state[0]) - .001*self.state[2]**2 - .001*self.state[3]**2 - .001*torque.item()**2
 
-        
+        if (np.pi - .1 < self.state[0] < np.pi + .1) and (-.1 < np.
         # upright = (np.cos(self.state[0]) + 1) / 2
         # centered = rewards.tolerance(self.state[1], margin=2)
         # centered = (1 + centered) / 2

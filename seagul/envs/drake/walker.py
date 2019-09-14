@@ -23,6 +23,19 @@ from seagul.drake import x_expr,y_expr,x_float,y_float,x_taylor,y_taylor
 from seagul.resources import getResourcePath 
 from numpy import pi
 
+## ===========================
+
+from gym import core, spaces
+from gym.utils import seeding
 
 
-def DrakeWalkerEnv
+def DrakeWalkerEnv(core.env):
+
+    def __init__():
+        pass
+
+    def reset():
+        
+    
+
+        
