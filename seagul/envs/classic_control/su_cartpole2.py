@@ -34,7 +34,7 @@ class SUCartPoleEnv2(gym.Env):
 
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
-    def __init__(self, num_steps=1500, dt=0.001):
+    def __init__(self, num_steps=400, dt=0.001):
         self.L = 1.0  # length of the pole (m)
         self.mc = 1.0  # mass of the cart (kg)
         self.mp = .1  # mass of the ball at the end of the pole
@@ -47,7 +47,7 @@ class SUCartPoleEnv2(gym.Env):
         self.state = None
 
         # THETA_MAX is implict (-pi, pi)
-        self.X_MAX = 50.0
+        self.X_MAX = 20.0
 
         # might impose an upper limit on these but it would only end the episode
         self.DTHETA_MAX = 100.0 * pi
@@ -97,8 +97,8 @@ class SUCartPoleEnv2(gym.Env):
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         for _ in range(5):
-            ns = rk4(self._derivs, torque, 0, self.dt, self.state)
-            # ns = euler(self._derivs, torque, 0, self.dt, self.state)
+            #ns = rk4(self._derivs, torque, 0, self.dt, self.state)
+            ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
             self.state[0] = wrap(ns[0], -2*pi, 2*pi)
             #self.state[0] = ns[0]
@@ -113,7 +113,7 @@ class SUCartPoleEnv2(gym.Env):
         # Should reward be something we pass in ? I do like to mess with them a lot...
 
 
-        reward = -5*np.cos(self.state[0]) - .001*self.state[2]**2 - .001*self.state[3]**2 - .001*torque.item()**2
+        reward = -2*np.cos(self.state[0]) - .01*self.state[2]**2 
 
         #
         # upright = (np.cos(self.state[0]) + 1) / 2

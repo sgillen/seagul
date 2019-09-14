@@ -238,9 +238,10 @@ class MLP(nn.Module):
 
         self.state_means = torch.zeros(input_size)
         self.state_var = torch.ones(input_size)
+        
 
     def forward(self, data):
-        data = (data - self.state_means)/self.state_var
+        data = (data - self.state_means)/torch.sqrt(self.state_var)
 
         for layer in self.layers:
             data = self.activation(layer(data))
@@ -280,7 +281,7 @@ class CategoricalMLP(nn.Module):
 
 
     def forward(self, data):
-        data = (data - self.state_means)/self.state_var
+        data = (data - self.state_means)/torch.sqrt(self.state_var)
 
         for layer in self.layers:
             data = self.activation(layer(data))
@@ -339,8 +340,8 @@ class DummyNet(nn.Module):
 
 
     def forward(self, data):
-         dummy = self.layer(data)*torch.zeros(self.output_size) # so that torch sees a gradient
-         return dummy + self.net_fn(data)
+        dummy = self.layer(data)*torch.zeros(self.output_size) # so that torch sees a gradient
+        return dummy + self.net_fn(data)
 
 
 
@@ -364,7 +365,7 @@ class LinearNet(nn.Module):
         self.state_var = torch.ones(input_size)
 
     def forward(self, data):
-        data = (data - self.state_means)/self.state_var
+        data = (data - self.state_means)/torch.sqrt(self.state_var)
         return self.layer(data)
 
 

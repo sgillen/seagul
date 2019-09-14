@@ -9,7 +9,7 @@ from seagul.rl.models import switchedPpoModel
 
 import numpy as np
 from tqdm import trange
-import copy
+import pickle
 
 
 import torch
@@ -36,7 +36,7 @@ def ppo_switch(
     value_lr=1e-3,
     gate_lr=1e-3,
     p_epochs=10,
-    v_epochs=1,
+    v_epochs=10,
     use_gpu=False,
     reward_stop=None,
 ):
@@ -96,7 +96,7 @@ def ppo_switch(
     env = gym.make(env_name)
 
     # car_env = env.envs[0].env.env
-    env.num_steps = 1500  # TODO
+    #env.num_steps = 1500  # TODO
 
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         raise NotImplementedError(
@@ -130,14 +130,23 @@ def ppo_switch(
     state_mean = torch.zeros(obs_size)
     state_var = torch.zeros(obs_size)
     num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
+    disc_rewards_mean = torch.zeros(1)
+    disc_rewards_std = torch.ones(1)
+    
 
+    
     # need a copy of the old policy for the ppo loss
-    old_model = copy.deepcopy(model)
+    old_model = pickle.loads(pickle.dumps(model))
+    
     # intialize our optimizers
     p_optimizer = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
     v_optimizer = torch.optim.Adam(model.value_fn.parameters(), lr=value_lr)
     g_optimizer = torch.optim.Adam(model.gate_fn.parameters(), lr=gate_lr)
 
+    p_loss_hist = []
+    v_loss_hist = []
+    g_loss_hist = []
+    
     # seed all our RNGs
     env.seed(seed)
     torch.manual_seed(seed)
@@ -194,8 +203,9 @@ def ppo_switch(
                     action = model.nominal_policy(env, state)
                 else:
                     action, logprob = model.select_action(state)
+                    action = action.numpy()
 
-                state_np, reward, done, _ = env.step(action.numpy())
+                state_np, reward, done, _ = env.step(action)
                 state = torch.as_tensor(state_np)
 
                 gate_list.append(gate_out)
@@ -211,13 +221,15 @@ def ppo_switch(
                     break
 
             # if we failed at the first time step start again
-            if traj_steps <= 1:
+            if traj_steps <= 2:
                 traj_steps = 0
                 break
 
             # Calculate advantages for this episode
             # -------------------------------------------------------------------------------
 
+            ep_length = len(reward_list)
+            
             # make a tensor storing the current episodes state, actions, and rewards
             ep_state_tensor = torch.stack(state_list).reshape(-1, env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
@@ -233,7 +245,23 @@ def ppo_switch(
             # append to the tensors storing information for the whole batch
             state_tensor = torch.cat((state_tensor, ep_state_tensor[:-1]))
             action_tensor = torch.cat((action_tensor, ep_action_tensor[:-1]))
+
             disc_rewards_tensor = torch.cat((disc_rewards_tensor, ep_disc_rewards[:-1]))
+            disc_rewards_mean = (disc_rewards_tensor.mean()*ep_length + disc_rewards_mean*num_states)/(ep_length + num_states)
+            disc_rewards_std  = (disc_rewards_tensor.std()*ep_length + disc_rewards_std*num_states)/(ep_length + num_states)
+            disc_rewards_tensor = (disc_rewards_tensor - disc_rewards_mean)/(disc_rewards_std + 1e-5)
+
+            state_mean = (state_tensor.mean()*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
+            state_var =  (state_tensor.std()*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
+                          
+            #model.policy.state_means = state_mean
+            #model.policy.state_var = state_var
+
+            #model.value_fn.state_means = state_mean
+            #model.value_fn.state_var = state_var
+        
+            num_states += ep_length
+
             adv_tensor = torch.cat((adv_tensor, ep_adv))
             path_tensor = torch.cat((path_tensor, ep_path_tensor[:-1]))
             gate_tensor = torch.cat((gate_tensor, ep_gate_tensor[:-1]))
@@ -327,7 +355,8 @@ def ppo_switch(
                             v_loss.backward()
                             v_optimizer.step()
 
-                    old_model = copy.deepcopy(model)
+                    old_model = pickle.loads(pickle.dumps(model))
+
 
                     # update gating function
                     # ----------------------------------------------------------------------
@@ -351,19 +380,23 @@ def ppo_switch(
 
                             r = torch.exp(logp - old_logp)
 
-                            # gate_loss = -torch.sum(logp*local_adv)
+                            # g_loss = -torch.sum(logp*local_adv)
 
-                            gate_loss = (
+                            g_loss = (
                                 -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
                                 / traj_count
                             )
 
                             # do the normal pytorch update
                             g_optimizer.zero_grad()
-                            gate_loss.backward()
+                            g_loss.backward()
                             g_optimizer.step()
 
-                    old_model = copy.deepcopy(model)
+                    p_loss_hist.append(p_loss)
+                    v_loss_hist.append(v_loss)
+                    g_loss_hist.append(g_loss)
+
+                    old_model = pickle.loads(pickle.dumps(model))
                     if action_var_schedule is not None:
                         model.action_var = action_var_lookup(epoch)
 

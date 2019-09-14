@@ -1,3 +1,4 @@
+
 import gym
 
 from seagul.rl.models import PpoModel
@@ -5,13 +6,13 @@ from seagul.rl.common import discount_cumsum
 
 import numpy as np
 from tqdm import trange
-import copy
+import pickle
+
 
 import torch
 from torch.utils import data
 
 
-variance = 0.1
 
 # ============================================================================================
 def ppo(
@@ -27,8 +28,8 @@ def ppo(
     seed=0,
     policy_batch_size=1024,
     value_batch_size=1024,
-    policy_lr=1e-3,
-    value_lr=1e-3,
+    policy_lr=1e-4,
+    value_lr=1e-5,
     p_epochs=10,
     v_epochs=10,
     use_gpu=False,
@@ -79,12 +80,14 @@ def ppo(
 
     # init mean and var variables
     state_mean = torch.zeros(obs_size)
-    state_var = torch.zeros(obs_size)
+    state_var = torch.ones(obs_size)
+    disc_rewards_mean = torch.zeros(1)
+    disc_rewards_std = torch.ones(1)
+    
     num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
-
+    
     # need a copy of the old policy for the ppo loss
-    old_model = copy.deepcopy(model)
-
+    old_model = pickle.loads(pickle.dumps(model))
     # intialize our optimizers
     p_optimizer = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
     v_optimizer = torch.optim.Adam(model.value_fn.parameters(), lr=value_lr)
@@ -100,6 +103,8 @@ def ppo(
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
     avg_reward_hist = []
+    v_loss_hist = []
+    p_loss_hist = []
 
     for epoch in trange(num_epochs):
 
@@ -148,7 +153,7 @@ def ppo(
                     break
 
             # if we failed at the first time step start again
-            if traj_steps <= 1:
+            if traj_steps <= 2:
                 traj_steps = 0
                 break
 
@@ -156,6 +161,7 @@ def ppo(
             ep_state_tensor = torch.stack(state_list).reshape(-1, env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
             ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
+            ep_length = ep_state_tensor.shape[0]
 
             # calculate our advantage for this rollout
             value_preds = model.value_fn(ep_state_tensor)
@@ -165,27 +171,32 @@ def ppo(
             # append to the tensors storing information for the whole batch
             state_tensor = torch.cat((state_tensor, ep_state_tensor[:-1]))
             action_tensor = torch.cat((action_tensor, ep_action_tensor[:-1]))
-            disc_rewards_tensor = torch.cat((disc_rewards_tensor, ep_disc_rewards[:-1]))
-            adv_tensor = torch.cat((adv_tensor, ep_adv))
 
+            adv_tensor = torch.cat((adv_tensor, ep_adv))
+            
+            disc_rewards_tensor = torch.cat((disc_rewards_tensor, ep_disc_rewards[:-1]))
+            disc_rewards_mean = (disc_rewards_tensor.mean()*ep_length + disc_rewards_mean*num_states)/(ep_length + num_states)
+            disc_rewards_std  = (disc_rewards_tensor.std()*ep_length + disc_rewards_std*num_states)/(ep_length + num_states)
+            disc_rewards_tensor = (disc_rewards_tensor - disc_rewards_mean)/(disc_rewards_std + 1e-5)
+
+
+            state_mean = (state_tensor.mean()*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
+            state_var =  (state_tensor.std()*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
+                          
+            #model.policy.state_means = state_mean
+            #model.policy.state_var = state_var
+
+            #model.value_fn.state_means = state_mean
+            #model.value_fn.state_var = state_var
+        
+            num_states += ep_length
+            
             # keep track of rewards for metrics later
             episode_reward_sum.append(sum(reward_list))
 
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
-                state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
-                state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
-
-                model.policy.state_means = state_mean
-                model.policy.state_var = state_var
-
-                model.value_fn.state_means = state_mean
-                model.value_fn.state_var = state_var
-
-                num_states += state_tensor.shape[0]
-                # keep track of rewards for metrics later
-                avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
-
+               
                 # construct a training data generator
                 training_data = data.TensorDataset(state_tensor, action_tensor, adv_tensor)
                 training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
@@ -228,15 +239,21 @@ def ppo(
 
                         # predict and calculate loss for the batch
                         value_preds = model.value_fn(local_states)
-                        v_loss = torch.sum(torch.pow(value_preds - local_values, 2))/value_preds.shape[0]
+                        v_loss = torch.sum(torch.pow(value_preds - local_values, 2))/(value_preds.shape[0])
 
                         # do the normal pytorch update
                         v_optimizer.zero_grad()
                         v_loss.backward()
                         v_optimizer.step()
 
-                old_model = copy.deepcopy(model)
 
+
+                # keep track of rewards for metrics later
+                avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
+                v_loss_hist.append(v_loss)
+                p_loss_hist.append(p_loss)
+                        
+                old_model = pickle.loads(pickle.dumps(model))
                 if action_var_schedule is not None:
                     model.action_var = action_var_lookup(epoch)
 
@@ -256,13 +273,13 @@ if __name__ == "__main__":
 
     torch.set_default_dtype(torch.double)
 
-    input_size = 4
+    input_size = 6
     output_size = 1
     layer_size = 64
     num_layers = 3
     activation = nn.ReLU
 
-    policy = CategoricalMLP(input_size, output_size, num_layers, layer_size, activation)
+    policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 
@@ -284,6 +301,6 @@ if __name__ == "__main__":
     eps = 0.2
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    t_model, rewards, var_dict = ppo("su_cartpole_discrete-v0", 100, model, action_var_schedule=[3,2,1,0])
+    t_model, rewards, var_dict = ppo("su_acrobot-v0", 100, model, action_var_schedule=[3,2,1,0])
     plt.plot(rewards)
     plt.show()

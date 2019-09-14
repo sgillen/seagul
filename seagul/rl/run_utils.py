@@ -11,7 +11,13 @@ care of loading a trained model just by specifying the name you saved it with
 
 """
 
-import baselines.run
+import warnings
+
+try:
+    import baselines.run
+except:
+    warnings.warn("baselines install not found, only seagul loads will work", ImportWarning)
+    
 
 import gym
 import seagul.envs
