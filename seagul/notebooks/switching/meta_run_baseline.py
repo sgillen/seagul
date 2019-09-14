@@ -6,6 +6,7 @@ from seagul.sims.cartpole import LQRControl
 from multiprocessing import Process
 import seagul.envs
 
+import time
 
 import torch
 import torch.nn as nn
@@ -22,23 +23,23 @@ activation=nn.ReLU
 torch.set_default_dtype(torch.double)
 proc_list = []
 
-for env in range(4):
+for seed in range(1):
 
+    seed = int((time.time() % 1)*1e8)
+    
     arg_dict = {
-        'env': 'su_cartpole-v' + str(env),
+        'env': 'InvertedPendulum-v2',
         'alg': 'ppo2',
         'network': 'mlp',
         'num_timesteps': '1e6',
-        'num_env': '1',
-        'num_layers': '3',
+        'num_env': '8',
+        'num_layers': '2',
         'num_hidden': '12',
-        'seed' : str(env)
+        'seed' :  str(seed)
     }
 
 
-    run_name = "env" + str(env)    
-    p = Process(target=run_and_save_bs, args=(arg_dict, run_name, 'what is life?', "/data/cartpole_baseline4/"))
+    run_name = "acrobot" + str(seed)    
+    p = Process(target=run_and_save_bs, args=(arg_dict, run_name, '', "/data/mj_baseline7/"))
     p.start()
-    proc_list.append(p)
-
-
+    p.join()
