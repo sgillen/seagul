@@ -2,6 +2,8 @@
 Utility functions for seagul, mostly fixed step integrators
 """
 
+import numpy as np
+
 
 def wrap(x, m, M):
     """
@@ -12,11 +14,17 @@ def wrap(x, m, M):
     truncates, ``wrap()`` wraps x around the coordinate system defined by m,M.\n
     For example, m = -180, M = 180 (degrees), x = 360 --> returns 0.
     """
+
+
+#    return x
+    #x = (x + np.pi) % (2 * np.pi) - np.pi
+
+
     diff = M - m
     while x > M:
-        x = x - diff
+       x = x - diff
     while x < m:
-        x = x + diff
+       x = x + diff
     return x
 
 

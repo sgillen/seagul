@@ -31,6 +31,8 @@ register(id="bullet_car-v0", entry_point="seagul.envs.bullet:RacecarGymEnv_v1")
 register(id="bullet_car_ast-v0", entry_point="seagul.envs.bullet:RacecarGymEnvAst_v1")
 
 register(id="su_acrobot-v0" , entry_point="seagul.envs.classic_control:AcrobotEnv")
+register(id="su_acrobot-v1" , entry_point="seagul.envs.classic_control:AcrobotEnv2")
+
 
 register(id="su_cartpole_gym-v0" , entry_point="seagul.envs.classic_control:CartPoleEnv")
 
