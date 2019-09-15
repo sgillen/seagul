@@ -28,7 +28,7 @@ for seed in range(6,10):
     #seed = int((time.time() % 1)*1e8)
     
     arg_dict = {
-        'env': 'su_acrobot-v1',
+        'env': 'su_acrobot-v0',
         'alg': 'ppo2',
         'network': 'mlp',
         'num_timesteps': '1e7',
