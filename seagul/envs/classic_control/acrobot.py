@@ -109,7 +109,7 @@ class AcrobotEnv(core.Env):
 
     def step(self, a):
 
-        #torque = np.clip(a, -20, 20) 
+#        torque = np.clip(a, -200, 200) 
         torque = a
         # Add noise to the force action
         if self.torque_noise_max > 0:

@@ -102,8 +102,8 @@ for seed in range(6,10):
     }
 
 
-    run_name = "r3_longer_seed_" + str(seed)
-    p = Process(target=run_sg, args=(arg_dict, ppo_switch, run_name, 'new warm start net', "/data/acrobot_switch4/"))
+    run_name = "cr1_seed_" + str(seed)
+    p = Process(target=run_sg, args=(arg_dict, ppo_switch, run_name, 'clipped action space', "/data/acrobot_switch4/"))
     p.start()
     proc_list.append(p)
 

@@ -23,7 +23,7 @@ activation=nn.Tanh
 torch.set_default_dtype(torch.double)
 proc_list = []
 
-for seed in range(4):
+for seed in range(6,10):
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 
@@ -34,28 +34,27 @@ for seed in range(4):
     #     hold_count = 200
     # )
 
-    model = PpoModelActHold(
+    model = PpoModel(
         policy=policy,
         value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
         discrete=False,
-        hold_count = 200
     )
 
     arg_dict = {
         'env_name' : 'su_acrobot-v0',
         'model' : model,
-        'action_var_schedule' : [1,.001],
+        'action_var_schedule' : [1,1],
         'seed' : seed, #int((time.time() % 1)*1e8),
-        'num_epochs' : 200,
-        'gamma' : .99,
+        'num_epochs' : 1000,
+        'gamma' : 1,
         'p_epochs' : 10,
         'v_epochs' : 10
         
     }
-    run_name = "acrobot_116_" + str(seed)
+    run_name = "sg_base_nh" + str(seed)
     #run_sg(arg_dict, ppo, run_name, 'aaghhh', "/data/acrobot8/")
 
-    p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'acrobot with gamma 1, more metrics. lower value loss', "/data/inv_pend/"))
+    p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'running my own PPO as a baseline', "/data/acrobot/"))
     p.start()
     proc_list.append(p)
 
