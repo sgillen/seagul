@@ -48,7 +48,7 @@ for seed in range(6,10):
         'num_epochs' : 1000,
         'gamma' : 1,
         'p_epochs' : 10,
-        'v_epochs' : 10
+        'v_epochs' : 10h
         
     }
     run_name = "sg_base_nh" + str(seed)
