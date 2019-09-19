@@ -62,7 +62,7 @@ class AcrobotEnv2(core.Env):
         'video.frames_per_second' : 15
     }
 
-    dt = .001
+    dt = .2
 
     LINK_LENGTH_1 = 1.  # [m]
     LINK_LENGTH_2 = 2.  # [m]
@@ -123,7 +123,7 @@ class AcrobotEnv2(core.Env):
         #ns = euler(self._dsdt, s_augmented, [0, self.dt])
 
         # only care about final timestep of integration returned by integrator
-        for i in range(200):
+        for i in range(1):
             s = self.state
             s_augmented = np.append(s, torque)
             
@@ -143,7 +143,7 @@ class AcrobotEnv2(core.Env):
 
             self.state = ns
 
-        self.cur_step +=1
+        self.cur_step +=(200/5)
 
         if self.cur_step >= self.num_steps:
             terminal = True

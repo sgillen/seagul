@@ -18,7 +18,6 @@ try:
 except:
     warnings.warn("baselines install not found, only seagul loads will work", ImportWarning)
     
-
 import gym
 import seagul.envs
 
@@ -153,10 +152,11 @@ def run_sg(arg_dict, algo, run_name = None, run_desc = None, base_path ='/data/'
 
 
     with open(save_dir + "workspace", "wb") as outfile:
+        del var_dict['env']
         torch.save(var_dict, outfile, pickle_module=dill)
 
     with open(save_dir + "model", "wb") as outfile:
-        torch.save(t_model, outfile)
+        torch.save(t_model, outfile, pickle_module=dill)
 
 
 def load_model(save_path, backend="baselines"):
