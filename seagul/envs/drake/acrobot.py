@@ -61,7 +61,7 @@ class DrakeAcroEnv(core.Env):
 
         acrobot = builder.AddSystem(RigidBodyPlant(tree))
 
-        saturation = builder.AddSystem(Saturation(min_value=[-20],max_value=[20]))
+        saturation = builder.AddSystem(Saturation(min_value=[-200],max_value=[200]))
         builder.Connect(saturation.get_output_port(0), acrobot.get_input_port(0))
         
         wrapangles = WrapToSystem(4)

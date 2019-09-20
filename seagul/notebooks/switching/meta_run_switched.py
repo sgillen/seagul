@@ -9,7 +9,7 @@ from seagul.rl.run_utils import run_sg, run_and_save_bs
 from seagul.rl.algos import ppo, ppo_switch
 from seagul.rl.models import PpoModel, switchedPpoModel, SwitchedPpoModelActHold
 from seagul.nn import MLP, CategoricalMLP, DummyNet
-from seagul.sims.cartpole import LQRControl
+
 
 
 import torch
@@ -72,31 +72,31 @@ for seed in range(6,10):
         k = np.array([[278.44223126, 112.29125985, 119.72457377,  56.82824017]])
         gs = np.array([pi,0,0,0])
         #return 0
-        return (-k.dot(gs - np.asarray(q))).squeeze()
+        return (-k.dot(gs - np.asarray(q))).squeeze()*10
 
 
     
-    # model = SwitchedPpoModelActHold(
-    #     #policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-    #     policy = torch.load("warm_policy_dr"),
-    #     value_fn = torch.load("warm_value_dr"),
-    #     #MLP(input_size, 1, num_layers, layer_size, activation),
-    #     gate_fn  = torch.load("gate_fn_dr"),
-    #     nominal_policy=control,
-    #     hold_count = 200,
-    # )
-
-    
-    model = switchedPpoModel(
+    model = SwitchedPpoModelActHold(
+        #policy = MLP(input_size, output_size, num_layers, layer_size, activation),
         policy = torch.load("warm_policy_dr"),
         value_fn = torch.load("warm_value_dr"),
+        #MLP(input_size, 1, num_layers, layer_size, activation),
         gate_fn  = torch.load("gate_fn_dr"),
-        # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-        # value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
-        # gate_fn = CategoricalMLP(input_size, 1, num_layers, layer_size, activation), 
         nominal_policy=control,
-        env=None
+        hold_count = 200,
     )
+
+    
+    # model = switchedPpoModel(
+    #     policy = torch.load("warm_policy_dr"),
+    #     value_fn = torch.load("warm_value_dr"),
+    #     gate_fn  = torch.load("gate_fn_dr"),
+    #     # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
+    #     # value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
+    #     # gate_fn = CategoricalMLP(input_size, 1, num_layers, layer_size, activation), 
+    #     nominal_policy=control,
+    #     env=None
+    # )
         
     arg_dict = {
         'env_name' : env_name,
@@ -110,9 +110,9 @@ for seed in range(6,10):
     }
 
 
-    run_name = "500_30_" + str(seed)
+    run_name = "500_200" + str(seed)
 
-    p = Process(target=run_sg,    args = (arg_dict, ppo_switch, run_name, 'saturate at 30N*M', "/data/drake_acro_switch2/"))
+    p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'saturate at 200N*M', "/data/drake_acro_switch2/"))
     p.start()
     proc_list.append(p)
 
