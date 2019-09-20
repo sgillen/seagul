@@ -141,7 +141,6 @@ def ppo(
                     print("hellllooo")
                     import ipdb; ipdb.set_trace()
 
-                print(state)
                 state_list.append(state)
                                   
                 
@@ -161,9 +160,9 @@ def ppo(
                 batch_steps += 1
                 traj_steps += 1
 
-                for i,s in enumerate(state_list):
-                    if torch.isnan(s).any():
-                        import ipdb; ipdb.set_trace()
+                # for i,s in enumerate(state_list):
+                #     if torch.isnan(s).any():
+                #         print(s), print(i)
                         
                 if done:
                     traj_count += 1

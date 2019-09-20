@@ -8,12 +8,12 @@ from seagul.integration import rk4, euler, wrap
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-from dm_control import mujoco
-from dm_control.rl import control
-from dm_control.suite import base
-from dm_control.suite import common
-from dm_control.utils import containers
-from dm_control.utils import rewards
+# from dm_control import mujoco
+# from dm_control.rl import control
+# from dm_control.suite import base
+# from dm_control.suite import common
+# from dm_control.utils import containers
+# from dm_control.utils import rewards
 
 
 class SUCartPoleEnv(gym.Env):
@@ -115,7 +115,7 @@ class SUCartPoleEnv(gym.Env):
 
         reward = -5*np.cos(self.state[0]) - .001*self.state[2]**2 - .001*self.state[3]**2 - .001*torque.item()**2
 
-        if (np.pi - .1 < self.state[0] < np.pi + .1) and (-.1 < np.
+#        if (np.pi - .1 < self.state[0] < np.pi + .1) and (-.1 < np.
         # upright = (np.cos(self.state[0]) + 1) / 2
         # centered = rewards.tolerance(self.state[1], margin=2)
         # centered = (1 + centered) / 2

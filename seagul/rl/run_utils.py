@@ -29,6 +29,8 @@ import torch
 import time, datetime, json, yaml
 import os
 
+from seagul.rl.models import PpoModel, switchedPpoModel, SwitchedPpoModelActHold
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 def run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/"):
@@ -244,13 +246,15 @@ def load_workspace(save_path):
         save_base_path = os.getcwd() + save_path.split(".")[1]
 
     with open(save_base_path + "/" + "workspace", "rb") as infile:
+        print(__name__)
         workspace = torch.load(infile, pickle_module=dill)
 
     with open(save_base_path + "/" + "info.json", "r") as infile:
         data = json.load(infile)                   #, Loader=yaml.Loader)
 
     with open(save_base_path + "/" + "model", "rb") as infile:
-        model = torch.load(infile)
+        print(__name__)
+        model = torch.load(infile, pickle_module=dill)
 
     env_name = data['args']['env_name']
     env = gym.make(env_name)
