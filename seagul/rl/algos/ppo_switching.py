@@ -200,7 +200,7 @@ def ppo_switch(
                 path, gate_out = model.select_path(state)
 
                 if path:
-                    action = model.nominal_policy(env, state)
+                    action = model.nominal_policy(state)
                 else:
                     action, logprob = model.select_action(state)
                     action = action.numpy()
@@ -231,6 +231,8 @@ def ppo_switch(
             ep_length = len(reward_list)
             
             # make a tensor storing the current episodes state, actions, and rewards
+
+#            import ipdb; ipdb.set_trace()
             ep_state_tensor = torch.stack(state_list).reshape(-1, env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
             ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)

@@ -36,7 +36,7 @@ class StepController(VectorSystem):
 
 def UprightState():
     state = AcrobotState()
-    state.set_theta1(math.pi)
+    state.set_theta1(0.)
     state.set_theta2(0.)
     state.set_theta1dot(0.)
     state.set_theta2dot(0.)
@@ -53,7 +53,6 @@ class DrakeAcroEnv(core.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([-10]), high=np.array([10]), dtype=np.float32)
         self.seed()
-
         
         builder = DiagramBuilder()
         
@@ -62,7 +61,7 @@ class DrakeAcroEnv(core.Env):
 
         acrobot = builder.AddSystem(RigidBodyPlant(tree))
 
-        saturation = builder.AddSystem(Saturation(min_value=[-10],max_value=[10]))
+        saturation = builder.AddSystem(Saturation(min_value=[-20],max_value=[20]))
         builder.Connect(saturation.get_output_port(0), acrobot.get_input_port(0))
         
         wrapangles = WrapToSystem(4)
@@ -87,13 +86,13 @@ class DrakeAcroEnv(core.Env):
         simulator = Simulator(diagram)
         #simulator.set_target_realtime_rate(1.0)
         simulator.set_publish_every_time_step(True)
-        simulator.get_integrator().set_fixed_step_mode(True)
+        #simulator.get_integrator().set_fixed_step_mode(True)
         
         context = simulator.get_mutable_context()
 
 
         
-        self.dt = 0.005
+        self.dt = 0.001
         self.t = 0
         self.simulator = simulator
         self.context = context
@@ -128,7 +127,7 @@ class DrakeAcroEnv(core.Env):
         global g_action
         g_action = a
 
-        self.t += self.dt
+        self.t += self.dt*5
         self.simulator.AdvanceTo(self.t)
         ns = self.state_logger.data()[:,-1]
         reward =  -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
