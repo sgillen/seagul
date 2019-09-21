@@ -140,25 +140,34 @@ class switchedPpoModel:
 
     
 
-    def hyst(self, x):
-        """
-        Unvectorized hysteris function with sharp transitions
+
         
-        :param x double between 0 and 1:
-        :return activation function:
-        """
-        if self.hyst_state == 0:
-            if x > 0.55:
-                self.hyst_state = 1
-                return 1
-            else:
-                return 0
-        elif self.hyst_state == 1:
-            if x < 0.45:
-                self.hyst_state = 0
-                return 0
-            else:
-                return 1
+    def hyst(self, x):
+        if x > .5:
+            return 1
+        else:
+            return 0
+
+        
+    # def hyst(self, x):
+    #     """
+    #     Unvectorized hysteris function with sharp transitions
+        
+    #     :param x double between 0 and 1:
+    #     :return activation function:
+    #     """
+    #     if self.hyst_state == 0:
+    #         if x > 0.55:
+    #             self.hyst_state = 1
+    #             return 1
+    #         else:
+    #             return 0
+    #     elif self.hyst_state == 1:
+    #         if x < 0.45:
+    #             self.hyst_state = 0
+    #             return 0
+    #         else:
+    #             return 1
 
 
 
@@ -244,26 +253,34 @@ class SwitchedPpoModelActHold:
     def get_path_logp(self, states, actions):
         return get_cont_logp(self.gate_fn,  states, actions, self.gate_var)
 
-    
+
+
     def hyst(self, x):
-        """
-        Unvectorized hysteris function with sharp transitions
+        if x > .5:
+            return 1
+        else:
+            return 0
+
         
-        :param x double between 0 and 1:
-        :return activation function:
-        """
-        if self.hyst_state == 0:
-            if x > 0.55:
-                self.hyst_state = 1
-                return 1
-            else:
-                return 0
-        elif self.hyst_state == 1:
-            if x < 0.45:
-                self.hyst_state = 0
-                return 0
-            else:
-                return 1
+    # def hyst(self, x):
+    #     """
+    #     Unvectorized hysteris function with sharp transitions
+        
+    #     :param x double between 0 and 1:
+    #     :return activation function:
+    #     """
+    #     if self.hyst_state == 0:
+    #         if x > 0.55:
+    #             self.hyst_state = 1
+    #             return 1
+    #         else:
+    #             return 0
+    #     elif self.hyst_state == 1:
+    #         if x < 0.45:
+    #             self.hyst_state = 0
+    #             return 0
+    #         else:
+    #             return 1
 
 
         

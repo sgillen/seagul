@@ -137,9 +137,9 @@ def ppo(
             for t in range(env_timesteps):
 
 
-                if(torch.isnan(state).any()):
-                    print("hellllooo")
-                    import ipdb; ipdb.set_trace()
+  #              if(torch.isnan(state).any()):
+ #                   print("hellllooo")
+#                    import ipdb; ipdb.set_trace()
 
                 state_list.append(state)
                                   
@@ -148,8 +148,9 @@ def ppo(
                 state_np, reward, done, _ = env.step(action.numpy())
 
                 if(np.isnan(state_np).any()):
-                    print("hellllooo")
-                    import ipdb; ipdb.set_trace()
+                    state_np = np.zeros((4,))
+#                    print("hellllooo")
+ #                   import ipdb; ipdb.set_trace()
                
                    
                 state = torch.as_tensor(state_np)
@@ -185,8 +186,8 @@ def ppo(
             deltas = torch.as_tensor(reward_list[:-1]) + gamma * value_preds[1:].squeeze() - value_preds[:-1].squeeze()
             ep_adv = discount_cumsum(deltas.detach(), gamma * lam).reshape(-1, 1)
 
-            if np.isnan(ep_adv).any():
-                import ipdb; ipdb.set_trace()
+            #if np.isnan(ep_adv).any():
+                #import ipdb; ipdb.set_trace()
 
             # append to the tensors storing information for the whole batch
             state_tensor = torch.cat((state_tensor, ep_state_tensor[:-1]))
@@ -246,8 +247,8 @@ def ppo(
 
                 p_loss.backward()
                                         
-                if(torch.isnan(p_loss)):
-                   import ipdb; ipdb.set_trace()
+                # if(torch.isnan(p_loss)):
+                #    import ipdb; ipdb.set_trace()
 
 
                 # Now we do the update for our value function
@@ -270,8 +271,8 @@ def ppo(
                         v_optimizer.step()
 
                         
-                if(torch.isnan(v_loss)):
-                   import ipdb; ipdb.set_trace()
+                # if(torch.isnan(v_loss)):
+                #    import ipdb; ipdb.set_trace()
 
 
                 # keep track of rewards for metrics later

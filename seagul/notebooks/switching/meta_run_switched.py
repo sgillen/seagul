@@ -69,10 +69,11 @@ for seed in range(6,10):
     #     return -k.dot(goal)
 
     def control(q):
-        k = np.array([[278.44223126, 112.29125985, 119.72457377,  56.82824017]])
+        k = np.array([[1316.85000612,  555.41763935,  570.32667002,  272.57631536]])
+        #k = np.array([[278.44223126, 112.29125985, 119.72457377,  56.82824017]])
         gs = np.array([pi,0,0,0])
         #return 0
-        return (-k.dot(gs - np.asarray(q))).squeeze()*10
+        return (-k.dot(gs - np.asarray(q))).squeeze()
 
 
     
@@ -102,17 +103,17 @@ for seed in range(6,10):
         'env_name' : env_name,
         'model' : model,
         'num_epochs' : 500,
-        'epoch_batch_size': 2048,
+        'epoch_batch_size': 500,
         'action_var_schedule' : [1,1],
-        'gate_var_schedule'   : [.3,.3],
+        'gate_var_schedule'   : [.4,.2],
         'gamma' : 1,
-        'seed': seed
+        'seed': seed,
     }
 
 
-    run_name = "500_200" + str(seed)
+    run_name = "500_dt2" + str(seed)
 
-    p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'saturate at 200N*M', "/data/drake_acro_switch2/"))
+    p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'No saturate, lower sim accuracy, 4 second episode length, dt = .01 ', "/data/drake_acro_switch3/"))
     p.start()
     proc_list.append(p)
 

@@ -26,7 +26,7 @@ from seagul.rl.run_utils import run_sg, run_and_save_bs
 from seagul.rl.algos import ppo, ppo_switch
 from seagul.rl.models import PpoModel, switchedPpoModel, PpoModelActHold
 from seagul.nn import MLP, CategoricalMLP
-from seagul.sims.cartpole import LQRControl
+
 
 
 torch.set_default_dtype(torch.double)
@@ -54,7 +54,7 @@ for seed in range(6,10):
     arg_dict = {
         'env_name' : env_name,
         'model' : model,
-        'action_var_schedule' : [1,1],
+        'action_var_schedule' : [10,1],
         'seed' : seed, #int((time.time() % 1)*1e8),
         'num_epochs' : 500,
         'gamma' : 1,
@@ -65,15 +65,15 @@ for seed in range(6,10):
     run_name = "seed" + str(seed)
 
 
-    run_sg(arg_dict, ppo, run_name, 'baselines for drake', "/data/drake_acro2/")
+    #    run_sg(arg_dict, ppo, run_name, 'baselines for drake', "/data/drake_acro2/")
     #    import ipdb; ipdb.set_trace()
     #    run_sg(arg_dict, ppo, run_name, 'running my own POO as a baseline', "/data/drake_acro1/")
     
-#     p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'just a debug run', "/data/drake_acro1/"))
-#     p.start()
-#     proc_list.append(p)
+    p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'retrying swingup with more power (700N*m)', "/data/drake_acro3/"))
+    p.start()
+    proc_list.append(p)
 
     
-# for p in proc_list:
-#     print("joining")
-#     p.join()
+for p in proc_list:
+    print("joining")
+    p.join()
