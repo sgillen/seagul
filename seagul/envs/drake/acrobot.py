@@ -51,7 +51,7 @@ class DrakeAcroEnv(core.Env):
         high = np.array([2*pi, pi, 10, 30])
         low = np.array([0, -pi, -10, -30])
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
-        self.action_space = spaces.Box(low=np.array([-70000]), high=np.array([70000]), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([-700]), high=np.array([700]), dtype=np.float32)
         self.seed()
         
         builder = DiagramBuilder()
@@ -61,7 +61,7 @@ class DrakeAcroEnv(core.Env):
 
         acrobot = builder.AddSystem(RigidBodyPlant(tree))
 
-        saturation = builder.AddSystem(Saturation(min_value=[-10000],max_value=[10000]))
+        saturation = builder.AddSystem(Saturation(min_value=[-700],max_value=[700]))
         builder.Connect(saturation.get_output_port(0), acrobot.get_input_port(0))
         
         wrapangles = WrapToSystem(4)
@@ -84,22 +84,24 @@ class DrakeAcroEnv(core.Env):
         
         diagram = builder.Build()
 
+        self.dt = 0.001
         # Don't forget to change reset
         simulator = Simulator(diagram)
         #simulator.set_target_realtime_rate(1.0)
         simulator.set_publish_every_time_step(True)
         #simulator.get_integrator().set_fixed_step_mode(True)
-        simulator.get_integrator().set_target_accuracy(.001)
+        #simulator.get_integrator().set_maximum_step_size(self.dt/5)
+        #simulator.get_integrator().set_target_accuracy(.001)
         context = simulator.get_mutable_context()
 
 
         
-        self.dt = 0.01
+
         self.t = 0
         self.simulator = simulator
         self.context = context
         self.max_t = 4
-        self.num_steps = int(self.max_t / self.dt)
+        self.num_steps = int(self.max_t / 5*self.dt)
         self.state_logger = state_logger
         self.act_logger = act_logger
         self.diagram = diagram
@@ -114,12 +116,12 @@ class DrakeAcroEnv(core.Env):
         self.simulator = Simulator(self.diagram)
         #simulator.set_target_realtime_rate(1.0)
         self.simulator.set_publish_every_time_step(True)
-        #simulator.get_integrator().set_fixed_step_mode(True)
-        self.simulator.get_integrator().set_target_accuracy(.001)
-        
+        #self.simulator.get_integrator().set_fixed_step_mode(True)
+        #self.simulator.get_integrator().set_maximum_step_size(self.dt/5)
+        #simulator.get_integrator().set_target_accuracy(.001)
         self.context = self.simulator.get_mutable_context()
-
-        init_state = InitialState().CopyToVector() + 0.3*np.random.randn(4,)
+        
+        init_state = InitialState().CopyToVector() + 0.1*np.random.randn(4,)
         self.context.SetContinuousState(init_state)
 
         self.simulator.Initialize()
@@ -134,7 +136,7 @@ class DrakeAcroEnv(core.Env):
         global g_action
         g_action = a
 
-        self.t += self.dt
+        self.t += self.dt*5
         self.simulator.AdvanceTo(self.t)
         ns = self.state_logger.data()[:,-1]
         reward =  -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
