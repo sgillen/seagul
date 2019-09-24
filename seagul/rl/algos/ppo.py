@@ -137,9 +137,9 @@ def ppo(
             for t in range(env_timesteps):
 
 
-  #              if(torch.isnan(state).any()):
- #                   print("hellllooo")
-#                    import ipdb; ipdb.set_trace()
+                if(torch.isnan(state).any()):
+                    print("hellllooo")
+                    import ipdb; ipdb.set_trace()
 
                 state_list.append(state)
                                   
@@ -149,8 +149,8 @@ def ppo(
 
                 if(np.isnan(state_np).any()):
                     state_np = np.zeros((4,))
-#                    print("hellllooo")
- #                   import ipdb; ipdb.set_trace()
+                    print("hellllooo")
+                    import ipdb; ipdb.set_trace()
                
                    
                 state = torch.as_tensor(state_np)
@@ -247,8 +247,8 @@ def ppo(
 
                 p_loss.backward()
                                         
-                # if(torch.isnan(p_loss)):
-                #    import ipdb; ipdb.set_trace()
+                if(torch.isnan(p_loss)):
+                   import ipdb; ipdb.set_trace()
 
 
                 # Now we do the update for our value function
@@ -271,8 +271,8 @@ def ppo(
                         v_optimizer.step()
 
                         
-                # if(torch.isnan(v_loss)):
-                #    import ipdb; ipdb.set_trace()
+                if(torch.isnan(v_loss)):
+                   import ipdb; ipdb.set_trace()
 
 
                 # keep track of rewards for metrics later

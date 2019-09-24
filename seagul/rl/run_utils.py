@@ -24,7 +24,7 @@ import seagul.envs
 import dill
 import subprocess
 
-import torch
+import pickle as torch
 
 import time, datetime, json, yaml
 import os

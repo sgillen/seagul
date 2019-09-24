@@ -9,8 +9,7 @@ from seagul.rl.models import switchedPpoModel
 
 import numpy as np
 from tqdm import trange
-import pickle
-
+import dill
 
 import torch
 from torch.utils import data
@@ -136,7 +135,7 @@ def ppo_switch(
 
     
     # need a copy of the old policy for the ppo loss
-    old_model = pickle.loads(pickle.dumps(model))
+    old_model = dill.loads(dill.dumps(model))
     
     # intialize our optimizers
     p_optimizer = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
@@ -357,7 +356,7 @@ def ppo_switch(
                             v_loss.backward()
                             v_optimizer.step()
 
-                    old_model = pickle.loads(pickle.dumps(model))
+                    old_model = dill.loads(dill.dumps(model))
 
 
                     # update gating function
@@ -398,7 +397,7 @@ def ppo_switch(
                     v_loss_hist.append(v_loss)
                     g_loss_hist.append(g_loss)
 
-                    old_model = pickle.loads(pickle.dumps(model))
+                    old_model = dill.loads(dill.dumps(model))
                     if action_var_schedule is not None:
                         model.action_var = action_var_lookup(epoch)
 
