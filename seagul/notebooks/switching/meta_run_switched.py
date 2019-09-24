@@ -82,7 +82,7 @@ for seed in range(6,10):
         policy = torch.load("warm_policy_dr"),
         value_fn = torch.load("warm_value_dr"),
         #MLP(input_size, 1, num_layers, layer_size, activation),
-        gate_fn  = torch.load("gate_fn_drv"),
+        gate_fn  = torch.load("gate_fn_dr"),
         nominal_policy=control,
         hold_count = 200,
     )
@@ -102,18 +102,21 @@ for seed in range(6,10):
     arg_dict = {
         'env_name' : env_name,
         'model' : model,
-        'num_epochs' : 1000,
-        'epoch_batch_size': 1024,
-        'action_var_schedule' : [1,1],
+        'num_epochs' : 1500,
+        'epoch_batch_size': 2048,
+        'action_var_schedule' : [.1,.1],
         'gate_var_schedule'   : [.2,.2],
         'gamma' : 1,
         'seed': seed,
     }
 
 
-    run_name = "1000_drv_fs_sat" + str(seed)
+    run_name = "1500_nhb_redo" + str(seed)
 
-    p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'saturate at 700Nm, 4 second episode length, fixed step integrator, dt = .01, no noise on initial state ', "/data/drake_acro_switch3/"))
+    #  import ipdb; ipdb.set_trace()
+    # run_sg(arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/drake_acro_switch4/")
+
+    p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/drake_acro_switch4/"))
     p.start()
     proc_list.append(p)
 

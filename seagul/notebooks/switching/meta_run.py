@@ -18,7 +18,7 @@ import torch.nn as nn
 #init policy, valuefn
 input_size = 4
 output_size = 1
-layer_size = 24
+layer_size = 12
 num_layers=2
 activation=nn.ReLU
 
@@ -42,7 +42,7 @@ for seed in range(6,10):
         policy=policy,
         value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
         discrete=False,
-        hold_count = 400
+        hold_count = 40
     )
 
     # model = PpoModel(
@@ -65,11 +65,16 @@ for seed in range(6,10):
     
     run_name = "seed" + str(seed)
 
-    p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'just debugging', "/data/drake_acro5/"))
-    p.start()
-    proc_list.append(p)
+
+    run_sg(arg_dict, ppo, run_name, 'fts', "/data/drake_acro2/")
+    
+    
+    
+    # p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'retrying swingup with more power (700N*m)', "/data/drake_acro4/"))
+    # p.start()
+    # proc_list.append(p)
 
     
-for p in proc_list:
-    print("joining")
-    p.join()
+# for p in proc_list:
+#     print("joining")
+#     p.join()
