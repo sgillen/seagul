@@ -100,8 +100,9 @@ class DrakeAcroEnv(core.Env):
         self.t = 0
         self.simulator = simulator
         self.context = context
-        self.max_t = 4
-        self.num_steps = int(self.max_t / (5*self.dt))
+        self.max_t = 5
+        self.act_hold = 200
+        self.num_steps = int(self.max_t / (self.act_hold*self.dt))
         self.state_logger = state_logger
         self.act_logger = act_logger
         self.diagram = diagram
@@ -136,7 +137,7 @@ class DrakeAcroEnv(core.Env):
         global g_action
         g_action = a
 
-        self.t += self.dt*5
+        self.t += self.dt*self.act_hold
         self.simulator.AdvanceTo(self.t)
         ns = self.state_logger.data()[:,-1]
         reward =  -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))

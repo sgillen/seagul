@@ -24,14 +24,14 @@ from multiprocessing import Process
 ## init policy, valuefn
 input_size = 4
 output_size = 1
-layer_size = 24
-num_layers=3
+layer_size = 12
+num_layers= 2
 activation=nn.ReLU
 
 torch.set_default_dtype(torch.double)
 proc_list = []
 
-for seed in range(6,10):
+for seed in range(4):
 
     env_name = 'su_acro_drake-v0'
     env = gym.make(env_name)
@@ -84,7 +84,7 @@ for seed in range(6,10):
         #MLP(input_size, 1, num_layers, layer_size, activation),
         gate_fn  = torch.load("gate_fn_dr"),
         nominal_policy=control,
-        hold_count = 200,
+        hold_count = 1,
     )
 
     
@@ -102,21 +102,21 @@ for seed in range(6,10):
     arg_dict = {
         'env_name' : env_name,
         'model' : model,
-        'num_epochs' : 1500,
-        'epoch_batch_size': 2048,
-        'action_var_schedule' : [.1,.1],
-        'gate_var_schedule'   : [.2,.2],
+        'num_epochs' : 400,
+        'epoch_batch_size': 512,
+        'action_var_schedule' : [1,1],
+        'gate_var_schedule'   : [.3,.3],
         'gamma' : 1,
         'seed': seed,
     }
 
 
-    run_name = "1500_nhb_redo" + str(seed)
+    run_name = "400_nhb_se" + str(seed)
 
     #  import ipdb; ipdb.set_trace()
     # run_sg(arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/drake_acro_switch4/")
 
-    p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/drake_acro_switch4/"))
+    p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked, this time with a shorter episode ', "/data/drake_acro_switch6/"))
     p.start()
     proc_list.append(p)
 

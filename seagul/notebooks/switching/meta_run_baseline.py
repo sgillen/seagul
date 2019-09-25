@@ -21,8 +21,8 @@ import torch.nn as nn
 ## init policy, valuefn
 input_size = 4
 output_size = 1
-layer_size = 24
-num_layers=3
+layer_size = 12
+num_layers= 2
 activation=nn.ReLU
 
 torch.set_default_dtype(torch.double)
@@ -36,19 +36,20 @@ for seed in range(4):
         'env': 'su_acro_drake-v0',
         'alg': 'ppo2',
         'network': 'mlp',
-        'num_timesteps': '2e6',
-        'num_env': '8',
+        'num_timesteps': '3e6',
+        'num_env': '1',
         'num_layers': '2',
         'num_hidden': '24',
         'seed' :  str(seed)
     }
 
 
-    run_name = "bs_ppo2" + str(seed)    
-#    run_and_save_bs(arg_dict, run_name, 'baseline for ppo2', "/data/drake_base/")
-    p = Process(target=run_and_save_bs, args=(arg_dict, run_name, 'baseline for ppo2', "/data/drake_base/"))
-    p.start()
-    p.join()
+    run_name = "bs_ppo2_ah" + str(seed)
+    run_and_save_bs(arg_dict, run_name, 'baseline for ppo2 with act_hold = 200', "/data/drake_base/")
+    #    run_and_save_bs(arg_dict, run_name, 'baseline for ppo2', "/data/drake_base/")
+    #p = Process(target=run_and_save_bs, args=(arg_dict, run_name, 'baseline for ppo2 with act_hold = 200', "/data/drake_base/"))
+    #p.start()
+#    p.join()
     
 # for seed in range(6,10):
 
