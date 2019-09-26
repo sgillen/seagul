@@ -30,8 +30,7 @@ class StepController(VectorSystem):
     def __init__(self):
         VectorSystem.__init__(self,4,1)
     def DoCalcVectorOutput(self, context, state, _ , output):
-        output[:] = g_action
-                                 
+        output[:] = g_action                                 
 
 
 def InitialState():
@@ -101,7 +100,7 @@ class DrakeAcroEnv(core.Env):
         self.simulator = simulator
         self.context = context
         self.max_t = 5
-        self.act_hold = 200
+        self.act_hold = 5
         self.num_steps = int(self.max_t / (self.act_hold*self.dt))
         self.state_logger = state_logger
         self.act_logger = act_logger
@@ -117,7 +116,7 @@ class DrakeAcroEnv(core.Env):
         self.simulator = Simulator(self.diagram)
         #simulator.set_target_realtime_rate(1.0)
         self.simulator.set_publish_every_time_step(True)
-        self.simulator.get_integrator().set_fixed_step_mode(True)
+        #self.simulator.get_integrator().set_fixed_step_mode(True)
         self.simulator.get_integrator().set_maximum_step_size(self.dt)
         #simulator.get_integrator().set_target_accuracy(.001)
         self.context = self.simulator.get_mutable_context()
@@ -134,19 +133,26 @@ class DrakeAcroEnv(core.Env):
 
 
     def step(self, a):
+        import time
+        f_start = time.time()
+
+
         global g_action
-        g_action = a
+        self.g_action = a
 
         self.t += self.dt*self.act_hold
+
+
         self.simulator.AdvanceTo(self.t)
-        ns = self.state_logger.data()[:,-1]
-        reward =  -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+        ns = self.context.get_continuous_state_vector().CopyToVector()
+
+        reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
 
         done = False
         if self.t > self.max_t:
             done = True
             
-        
+        #print("function", time.time() - f_start)
         return (ns, reward, done, {})
 
     def render(self):
