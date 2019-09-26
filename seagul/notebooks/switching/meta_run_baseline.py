@@ -1,3 +1,8 @@
+import sys
+sys.path.append('/home/sgillen/Downloads/drake/underactuated/src/')
+sys.path.append('/opt/drake/lib/python3.6/site-packages/')
+
+
 import seagul.envs
 import gym
 gym.make('su_acro_drake-v0')
@@ -28,7 +33,7 @@ activation=nn.ReLU
 torch.set_default_dtype(torch.double)
 proc_list = []
 
-for seed in range(4):
+for seed in range(1):
 
     #seed = int((time.time() % 1)*1e8)
     
@@ -37,7 +42,7 @@ for seed in range(4):
         'alg': 'ppo2',
         'network': 'mlp',
         'num_timesteps': '3e6',
-        'num_env': '1',
+        'num_env': '8',
         'num_layers': '2',
         'num_hidden': '24',
         'seed' :  str(seed)
