@@ -11,7 +11,6 @@ from seagul.rl.models import PpoModel, switchedPpoModel, SwitchedPpoModelActHold
 from seagul.nn import MLP, CategoricalMLP, DummyNet
 
 
-
 import torch
 import torch.nn as nn
 
@@ -31,7 +30,7 @@ activation=nn.ReLU
 torch.set_default_dtype(torch.double)
 proc_list = []
 
-for seed in range(4):
+for seed in range(3,4):
 
     env_name = 'su_acro_drake-v0'
     env = gym.make(env_name)
@@ -79,12 +78,12 @@ for seed in range(4):
     
     model = SwitchedPpoModelActHold(
         #policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-        policy = torch.load("warm_policy_dr"),
-        value_fn = torch.load("warm_value_dr"),
+        policy = torch.load("policy_warm_final"),
+        value_fn = torch.load("value_warm_final"),
         #MLP(input_size, 1, num_layers, layer_size, activation),
         gate_fn  = torch.load("gate_fn_dr"),
         nominal_policy=control,
-        hold_count = 1,
+        hold_count = 200,
     )
 
     
@@ -102,10 +101,10 @@ for seed in range(4):
     arg_dict = {
         'env_name' : env_name,
         'model' : model,
-        'num_epochs' : 1000,
+        'num_epochs' : 500,
         'epoch_batch_size': 2048,
-        'action_var_schedule' : [1,1],
-        'gate_var_schedule'   : [.3,.3],
+        'action_var_schedule' : [2,2],
+        'gate_var_schedule'   : [.1,.1],
         'gamma' : 1,
         'seed': seed,
     }
@@ -114,7 +113,7 @@ for seed in range(4):
     run_name = "1000_nhb_se" + str(seed)
 
     #  import ipdb; ipdb.set_trace()
-    # run_sg(arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/drake_acro_switch4/")
+#    run_sg(arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/drake_acro_switch4/")
 
     p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked, this time with a shorter episode ', "/data/drake_acro_switch_final/"))
     p.start()

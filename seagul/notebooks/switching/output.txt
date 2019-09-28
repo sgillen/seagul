@@ -1,0 +1,12 @@
+Logging to /tmp/openai-2019-09-25-21-06-51-658252
+> [0;32m/home/sgillen/work/seagul/seagul/rl/algos/ppo.py[0m(138)[0;36mppo[0;34m()[0m
+[0;32m    137 [0;31m            [0;31m# Do a single policy rollout[0m[0;34m[0m[0;34m[0m[0;34m[0m[0m
+[0m[0;32m--> 138 [0;31m            [0;32mfor[0m [0mt[0m [0;32min[0m [0mrange[0m[0;34m([0m[0menv_timesteps[0m[0;34m)[0m[0;34m:[0m[0;34m[0m[0;34m[0m[0m
+[0m[0;32m    139 [0;31m                [0mprint[0m[0;34m([0m[0mstate_list[0m[0;34m[[0m[0;36m1[0m[0;34m:[0m[0;36m4[0m[0;34m][0m[0;34m)[0m[0;34m[0m[0;34m[0m[0m
+[0m
+ipdb> --KeyboardInterrupt--
+ipdb> --KeyboardInterrupt--
+ipdb> --KeyboardInterrupt--
+ipdb> --KeyboardInterrupt--
+ipdb> 
+Exiting Debugger.

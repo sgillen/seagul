@@ -34,15 +34,14 @@ proc_list = []
 
 
 
-for seed in range(6,10):
+for seed in [0,1,2,3]:
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
-
     model = PpoModelActHold(
         policy=policy,
         value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
         discrete=False,
-        hold_count = 40
+        hold_count = 200
     )
 
     # model = PpoModel(
@@ -54,27 +53,25 @@ for seed in range(6,10):
     arg_dict = {
         'env_name' : env_name,
         'model' : model,
-        'action_var_schedule' : [10,1],
+        'action_var_schedule' : [2,2],
         'seed' : seed, #int((time.time() % 1)*1e8),
-        'num_epochs' : 50,
+        'num_epochs' : 600,
         'epoch_batch_size': 2048,
         'gamma' : 1,
         'p_epochs' : 10,
         'v_epochs' : 10,
     }
     
-    run_name = "seed" + str(seed)
-
-
-    run_sg(arg_dict, ppo, run_name, 'fts', "/data/drake_acro2/")
-    
-    
-    
-    # p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'retrying swingup with more power (700N*m)', "/data/drake_acro4/"))
-    # p.start()
-    # proc_list.append(p)
+    run_name = "paper_policy" + str(seed)
 
     
-# for p in proc_list:
-#     print("joining")
-#     p.join()
+#    run_sg(arg_dict, ppo, run_name, 'run with 100 epochs, torque limit', "/data/drake_acro_final/")
+    
+    p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'the last one (hahahahh)', "/data/drake_acro_final/"))
+    p.start()
+    proc_list.append(p)
+
+    
+for p in proc_list:
+    print("joining")
+    p.join()

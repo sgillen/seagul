@@ -135,13 +135,19 @@ def ppo(
 
             # Do a single policy rollout
             for t in range(env_timesteps):
+                # try:
+                #     print("state" , state)
+                #     print("state list", state_list[:2])
+                #     print()
+                # except:
+                #     pass
 
 
                 if(torch.isnan(state).any()):
                     print("hellllooo")
                     import ipdb; ipdb.set_trace()
 
-                state_list.append(state)
+                state_list.append(state.clone())
                                   
                 
                 action, logprob = model.select_action(state)
@@ -153,17 +159,17 @@ def ppo(
                     import ipdb; ipdb.set_trace()
                
                    
-                state = torch.as_tensor(state_np)
+                state = torch.as_tensor(state_np).detach()
+                # for s in state:
+                #     if torch.isnan(s) or abs(s.item()) < 1e-6:
+                #         print(s)
+                #         s1 = 0
 
                 reward_list.append(reward)
-                action_list.append(torch.as_tensor(action))
-
+                action_list.append(torch.as_tensor(action.clone()))
+                #import ipdb; ipdb.set_trace()
                 batch_steps += 1
                 traj_steps += 1
-
-                # for i,s in enumerate(state_list):
-                #     if torch.isnan(s).any():
-                #         print(s), print(i)
                         
                 if done:
                     traj_count += 1
@@ -176,6 +182,8 @@ def ppo(
 
             # =======================================================================
             # make a tensor storing the current episodes state, actions, and rewards
+
+#            import ipdb; ipdb.set_trace()
             ep_state_tensor = torch.stack(state_list).reshape(-1, env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
             ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
@@ -239,6 +247,10 @@ def ppo(
                             -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
                             / r.shape[0]
                         )
+
+                        if(torch.isnan(p_loss)):
+                            import ipdb; ipdb.set_trace()
+
 
                         # do the normal pytorch update
                         p_loss.backward(retain_graph=True)
