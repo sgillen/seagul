@@ -135,19 +135,42 @@ def ppo(
 
             # Do a single policy rollout
             for t in range(env_timesteps):
+                # try:
+                #     print("state" , state)
+                #     print("state list", state_list[:2])
+                #     print()
+                # except:
+                #     pass
 
-                state_list.append(state)
 
+                if(torch.isnan(state).any()):
+                    print("hellllooo")
+                    import ipdb; ipdb.set_trace()
+
+                state_list.append(state.clone())
+                                  
+                
                 action, logprob = model.select_action(state)
                 state_np, reward, done, _ = env.step(action.numpy())
-                state = torch.as_tensor(state_np)
+
+                if(np.isnan(state_np).any()):
+                    state_np = np.zeros((4,))
+                    print("hellllooo")
+                    import ipdb; ipdb.set_trace()
+               
+                   
+                state = torch.as_tensor(state_np).detach()
+                # for s in state:
+                #     if torch.isnan(s) or abs(s.item()) < 1e-6:
+                #         print(s)
+                #         s1 = 0
 
                 reward_list.append(reward)
-                action_list.append(torch.as_tensor(action))
-
+                action_list.append(torch.as_tensor(action.clone()))
+                #import ipdb; ipdb.set_trace()
                 batch_steps += 1
                 traj_steps += 1
-
+                        
                 if done:
                     traj_count += 1
                     break
@@ -157,7 +180,10 @@ def ppo(
                 traj_steps = 0
                 break
 
+            # =======================================================================
             # make a tensor storing the current episodes state, actions, and rewards
+
+#            import ipdb; ipdb.set_trace()
             ep_state_tensor = torch.stack(state_list).reshape(-1, env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
             ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
@@ -167,6 +193,9 @@ def ppo(
             value_preds = model.value_fn(ep_state_tensor)
             deltas = torch.as_tensor(reward_list[:-1]) + gamma * value_preds[1:].squeeze() - value_preds[:-1].squeeze()
             ep_adv = discount_cumsum(deltas.detach(), gamma * lam).reshape(-1, 1)
+
+            #if np.isnan(ep_adv).any():
+                #import ipdb; ipdb.set_trace()
 
             # append to the tensors storing information for the whole batch
             state_tensor = torch.cat((state_tensor, ep_state_tensor[:-1]))
@@ -179,9 +208,8 @@ def ppo(
             disc_rewards_std  = (disc_rewards_tensor.std()*ep_length + disc_rewards_std*num_states)/(ep_length + num_states)
             disc_rewards_tensor = (disc_rewards_tensor - disc_rewards_mean)/(disc_rewards_std + 1e-5)
 
-
-            state_mean = (state_tensor.mean()*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
-            state_var =  (state_tensor.std()*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
+            state_mean = (state_tensor.mean(dim=0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
+            state_var =  (state_tensor.std(dim=0)*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
                           
             #model.policy.state_means = state_mean
             #model.policy.state_var = state_var
@@ -220,12 +248,20 @@ def ppo(
                             / r.shape[0]
                         )
 
+                        if(torch.isnan(p_loss)):
+                            import ipdb; ipdb.set_trace()
+
+
                         # do the normal pytorch update
                         p_loss.backward(retain_graph=True)
                         p_optimizer.step()
                         p_optimizer.zero_grad()
 
                 p_loss.backward()
+                                        
+                if(torch.isnan(p_loss)):
+                   import ipdb; ipdb.set_trace()
+
 
                 # Now we do the update for our value function
                 # construct a training data generator
@@ -246,6 +282,9 @@ def ppo(
                         v_loss.backward()
                         v_optimizer.step()
 
+                        
+                if(torch.isnan(v_loss)):
+                   import ipdb; ipdb.set_trace()
 
 
                 # keep track of rewards for metrics later
@@ -273,7 +312,7 @@ if __name__ == "__main__":
 
     torch.set_default_dtype(torch.double)
 
-    input_size = 6
+    input_size = 4
     output_size = 1
     layer_size = 64
     num_layers = 3
@@ -301,6 +340,6 @@ if __name__ == "__main__":
     eps = 0.2
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    t_model, rewards, var_dict = ppo("su_acrobot-v0", 100, model, action_var_schedule=[3,2,1,0])
+    t_model, rewards, var_dict = ppo("su_acro_drake-v0", 100, model, action_var_schedule=[3,2,1,0])
     plt.plot(rewards)
     plt.show()

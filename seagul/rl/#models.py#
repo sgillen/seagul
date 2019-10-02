@@ -89,7 +89,6 @@ class PpoModelActHold:
         return action, logp
             
         
-
     def get_logp(self, states, actions):
         return self._get_logp(self.policy, states, actions, self.action_var)
 
