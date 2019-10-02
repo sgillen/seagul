@@ -1,15 +1,19 @@
+import gym
+import seagul.envs
+
+env_name = 'su_acro_drake-v0'
+env = gym.make(env_name)
+
+
 from seagul.rl.run_utils import run_sg, run_and_save_bs
 from seagul.rl.algos import ppo, ppo_switch
-from seagul.rl.models import PpoModel, switchedPpoModel
+from seagul.rl.models import PpoModel, switchedPpoModel, SwitchedPpoModelActHold
 from seagul.nn import MLP, CategoricalMLP, DummyNet
-from seagul.sims.cartpole import LQRControl
-import seagul.envs
 
 
 import torch
 import torch.nn as nn
 
-import gym
 
 import numpy as np
 from numpy import pi
@@ -17,22 +21,19 @@ from numpy import pi
 from multiprocessing import Process
 
 ## init policy, valuefn
-input_size = 6
+input_size = 4
 output_size = 1
-layer_size = 24
-num_layers=3
+layer_size = 12
+num_layers= 2
 activation=nn.ReLU
 
 torch.set_default_dtype(torch.double)
 proc_list = []
 
-for seed in range(6,10):
+for seed in range(3,4):
 
-    env_name = 'su_acrobot-v0'
+    env_name = 'su_acro_drake-v0'
     env = gym.make(env_name)
-
-
-    
     
 
     # # hard coded gate for debugging
@@ -58,55 +59,69 @@ for seed in range(6,10):
 
 
     
-#    gate_fn.net_fn = gate
+    #    gate_fn.net_fn = gate
     
-    def control(env,q):
-        k = np.array([-1000, 1000, -10, -10])
-        goal = np.copy(env.state)
-        goal[0] -= pi
-        return -k.dot(goal)
+    # def control(env,q):
+    #     k = np.array([-1000, 1000, -10, -10])
+    #     goal = np.copy(env.state)
+    #     goal[0] -= pi
+    #     return -k.dot(goal)
+
+    def control(q):
+        k = np.array([[1316.85000612,  555.41763935,  570.32667002,  272.57631536]])
+        #k = np.array([[278.44223126, 112.29125985, 119.72457377,  56.82824017]])
+        gs = np.array([pi,0,0,0])
+        #return 0
+        return (-k.dot(gs - np.asarray(q))).squeeze()
 
 
-
-
-    model = switchedPpoModel(
+    
+    model = SwitchedPpoModelActHold(
         #policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-        policy = torch.load("policy_warm"),
-        value_fn = torch.load("value_fn_warm"),
+        policy = torch.load("policy_warm_final"),
+        value_fn = torch.load("value_warm_final"),
         #MLP(input_size, 1, num_layers, layer_size, activation),
-        gate_fn  = torch.load("gate_fn_ac"),
+        gate_fn  = torch.load("gate_fn_dr"),
         nominal_policy=control,
-        env=env
+        hold_count = 200,
     )
-
 
     
     # model = switchedPpoModel(
-    #     #policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-    #     policy = torch.load("policy_warm"),
-    #     value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
-    #     gate_fn  = torch.load("gate_fn_ac"),
+    #     policy = torch.load("warm_policy_dr"),
+    #     value_fn = torch.load("warm_value_dr"),
+    #     gate_fn  = torch.load("gate_fn_dr"),
+    #     # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
+    #     # value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
+    #     # gate_fn = CategoricalMLP(input_size, 1, num_layers, layer_size, activation), 
     #     nominal_policy=control,
-    #     env=env
+    #     env=None
     # )
         
     arg_dict = {
         'env_name' : env_name,
         'model' : model,
-        'num_epochs' : 1000,
+        'num_epochs' : 500,
         'epoch_batch_size': 2048,
-        'action_var_schedule' : [1,1],
-        'gate_var_schedule'   : [.3,.3],
+        'action_var_schedule' : [2,2],
+        'gate_var_schedule'   : [.1,.1],
         'gamma' : 1,
-        'seed': seed
+        'seed': seed,
     }
 
 
-    run_name = "r3_longer_seed_" + str(seed)
-    p = Process(target=run_sg, args=(arg_dict, ppo_switch, run_name, 'new warm start net', "/data/acrobot_switch4/"))
+    run_name = "1000_nhb_se" + str(seed)
+
+    #  import ipdb; ipdb.set_trace()
+#    run_sg(arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/drake_acro_switch4/")
+
+    p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked, this time with a shorter episode ', "/data/drake_acro_switch_final/"))
     p.start()
     proc_list.append(p)
 
 for p in proc_list:
     print("joining")
     p.join()
+
+
+print("finished run ", run_name)

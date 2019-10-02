@@ -9,8 +9,7 @@ from seagul.rl.models import switchedPpoModel
 
 import numpy as np
 from tqdm import trange
-import pickle
-
+import dill
 
 import torch
 from torch.utils import data
@@ -32,9 +31,9 @@ def ppo_switch(
     policy_batch_size=1024,
     value_batch_size=1024,
     gate_batch_size=1024,
-    policy_lr=1e-3,
-    value_lr=1e-3,
-    gate_lr=1e-3,
+    policy_lr=1e-4,
+    value_lr=1e-5,
+    gate_lr=1e-4,
     p_epochs=10,
     v_epochs=10,
     use_gpu=False,
@@ -136,7 +135,7 @@ def ppo_switch(
 
     
     # need a copy of the old policy for the ppo loss
-    old_model = pickle.loads(pickle.dumps(model))
+    old_model = dill.loads(dill.dumps(model))
     
     # intialize our optimizers
     p_optimizer = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
@@ -196,19 +195,23 @@ def ppo_switch(
             for t in range(env.num_steps):
 
                 state_list.append(state.clone())
+                if(torch.isnan(state).any()):
+                    print("hellllooo")
+                    import ipdb; ipdb.set_trace()
+
 
                 path, gate_out = model.select_path(state)
 
                 if path:
-                    action = model.nominal_policy(env, state)
+                    action = model.nominal_policy(state)
                 else:
                     action, logprob = model.select_action(state)
-                    action = action.numpy()
+                    action = action.clone().numpy()
 
                 state_np, reward, done, _ = env.step(action)
                 state = torch.as_tensor(state_np)
 
-                gate_list.append(gate_out)
+                gate_list.append(gate_out.clone())
                 path_list.append(torch.as_tensor(path))
                 reward_list.append(reward)
                 action_list.append(torch.as_tensor(action, dtype=torch.double))
@@ -231,6 +234,8 @@ def ppo_switch(
             ep_length = len(reward_list)
             
             # make a tensor storing the current episodes state, actions, and rewards
+
+#            import ipdb; ipdb.set_trace()
             ep_state_tensor = torch.stack(state_list).reshape(-1, env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
             ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
@@ -287,10 +292,13 @@ def ppo_switch(
                 p_adv_list = []
                 for state, action, adv, path in zip(state_tensor, action_tensor, adv_tensor, path_tensor):
                     if not path:
-                        p_state_list.append(state)
-                        p_action_list.append(action)
-                        p_adv_list.append(adv)
+                        p_state_list.append(state.clone())
+                        p_action_list.append(action.clone())
+                        p_adv_list.append(adv.clone())
 
+                old_model = dill.loads(dill.dumps(model))
+                                    
+                        
                 if len(p_state_list):
                     p_state_tensor = torch.stack(p_state_list).reshape(-1, env.observation_space.shape[0])
                     p_action_tensor = torch.stack(p_action_list).reshape(-1, action_size)
@@ -307,6 +315,7 @@ def ppo_switch(
                     for p_epoch in range(p_epochs):
                         for (local_states, local_actions, local_adv) in training_generator:
                             # Transfer to GPU (if GPU is enabled, else this does nothing)
+#                            import ipdb; ipdb.set_trace()
                             local_states, local_actions, local_adv = (
                                 local_states.to(device),
                                 local_actions.to(device),
@@ -323,8 +332,12 @@ def ppo_switch(
                             r = torch.exp(logp - old_logp)
                             p_loss = (
                                 -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
-                                / traj_count
+                                / r.shape[0]
                             )
+
+                            if(torch.isnan(p_loss)):
+                                import ipdb; ipdb.set_trace()
+
 
                             # do the normal pytorch update
                             p_loss.backward(retain_graph=True)
@@ -355,7 +368,7 @@ def ppo_switch(
                             v_loss.backward()
                             v_optimizer.step()
 
-                    old_model = pickle.loads(pickle.dumps(model))
+                    old_model = dill.loads(dill.dumps(model))
 
 
                     # update gating function
@@ -384,7 +397,7 @@ def ppo_switch(
 
                             g_loss = (
                                 -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
-                                / traj_count
+                                / r.shape[0]
                             )
 
                             # do the normal pytorch update
@@ -396,7 +409,7 @@ def ppo_switch(
                     v_loss_hist.append(v_loss)
                     g_loss_hist.append(g_loss)
 
-                    old_model = pickle.loads(pickle.dumps(model))
+                    old_model = dill.loads(dill.dumps(model))
                     if action_var_schedule is not None:
                         model.action_var = action_var_lookup(epoch)
 

@@ -16,7 +16,7 @@ __author__ = "Christoph Dann <cdann@cdann.de>"
 # SOURCE:
 # https://github.com/rlpy/rlpy/blob/master/rlpy/Domains/Acrobot.py
 
-class AcrobotEnv(core.Env):
+class AcrobotEnv2(core.Env):
 
     """
     Acrobot is a 2-link pendulum with only the second joint actuated.
@@ -62,7 +62,7 @@ class AcrobotEnv(core.Env):
         'video.frames_per_second' : 15
     }
 
-    dt = .001
+    dt = .2
 
     LINK_LENGTH_1 = 1.  # [m]
     LINK_LENGTH_2 = 2.  # [m]
@@ -109,7 +109,7 @@ class AcrobotEnv(core.Env):
 
     def step(self, a):
 
-#        torque = np.clip(a, -200, 200) 
+        torque = np.clip(a, -200, 200) 
         torque = a
         # Add noise to the force action
         if self.torque_noise_max > 0:
@@ -123,7 +123,7 @@ class AcrobotEnv(core.Env):
         #ns = euler(self._dsdt, s_augmented, [0, self.dt])
 
         # only care about final timestep of integration returned by integrator
-        for i in range(5):
+        for i in range(1):
             s = self.state
             s_augmented = np.append(s, torque)
             
@@ -143,7 +143,7 @@ class AcrobotEnv(core.Env):
 
             self.state = ns
 
-        self.cur_step +=1
+        self.cur_step +=(200/5)
 
         if self.cur_step >= self.num_steps:
             terminal = True

@@ -37,3 +37,5 @@ register(id="su_acrobot-v1" , entry_point="seagul.envs.classic_control:AcrobotEn
 register(id="su_cartpole_gym-v0" , entry_point="seagul.envs.classic_control:CartPoleEnv")
 
 #register(id="walker2d_five_link-v0", entry_point="seagul.envs.bullet:Walker2DFiveLink")
+
+register(id="su_acro_drake-v0", entry_point="seagul.envs.drake:DrakeAcroEnv")
