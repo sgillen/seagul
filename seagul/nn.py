@@ -220,7 +220,7 @@ class MLP(nn.Module):
     Simple MLP that has a linear layer at the output
     """
 
-    def __init__(self, input_size, output_size, num_layers, layer_size, activation):
+    def __init__(self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU):
         """
          :param input_size: how many inputs
          :param output_size: how many outputs
