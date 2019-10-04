@@ -1,29 +1,27 @@
 import gym
 import torch
+import numpy as np
 
 from seagul.nn import LinearNet
 
-
-
 def do_rollout(policy, env):
-    max_ep_length = 100
-    reward_hist = torch.zeros((max_ep_length, 1))
-    action_hist = torch.zeros((max_ep_length, 1))
-    state_hist = torch.zeros((max_ep_length, 4))
+    reward_list = []
+    action_list = []
+    state_list = []
+
     obs = env.reset()
-    for i in range(max_ep_length):
+    while not done:
         action = policy(torch.as_tensor(obs))
         obs, reward, done, _ = env.step(action.detach())
-        action_hist[i, :] = action.clone()
-        state_hist[i, :] = torch.tensor(obs).clone()
-        reward_hist[i, :] = reward
-        # env.render()
-        if done:
-            break
-
-    return reward_hist, action_hist, state_hist
+        
+        action_list.append(action.clone())
+        state_list.append(torch.as_tensor(obs).clone())   # Clone???
+        reward_list.append(torch.as_tensor(reward).clone())
 
 
+
+    reward_list = torch.stack(
+    return reward_list, action_list, state_list
 
 def ars(
         env_name,
@@ -33,7 +31,6 @@ def ars(
         n_delta = 10,
         exp_noise = .3,
 ):
-
     """
     Augmented Random Search
     https://arxiv.org/pdf/1803.07055
@@ -43,27 +40,28 @@ def ars(
     Returns:
 
     Example:
-
-
     """
 
-    n_param = policy
-    n_param = 4
-    th = torch.zeros((n_param, 1))
-    s_mean = torch.zeros((n_param, 1))
-    s_stdv = torch.ones((n_param, 1))
-    policy = LinearNet(n_param, 1)
-    total_steps = 0
+    th = torch.nn.utils.parameters_to_vector(model.parameters())
 
+
+    
+    s_mean = torch.zeros((n_param, 1)) 
+    s_stdv = torch.ones((n_param, 1)) 
+    
+    total_steps = 0
     exp_dist = torch.distributions.Normal(torch.zeros(n_param), torch.ones(n_param) * exp_noise)
 
     for _ in range(num_epochs):
+
         delta = exp_dist.sample().reshape(n_param, 1)
 
-        policy.layer.weight[0, :] = (th + delta).reshape(-1);
+        th_plus = (th + delta).reshape(-1);
+        torch.nn.utils.vector_to_parameters(th, model.parameters())
         states_p, _, returns_p = do_rollout(policy)
 
-        policy.layer.weight[0, :] = (th + delta).reshape(-1);
+        th_minus =  (th + delta).reshape(-1);
+        torch.nn.utils.vector_to_parameters(th, model.parameters())
         states_n, _, returns_n = do_rollout(policy)
 
         returns = torch.cat((returns_p, returns_n))
@@ -77,9 +75,10 @@ def ars(
         policy.state_means = s_mean
         policy.state_var = s_stdv
 
+        torch.nn.utils.vector_to_parameters(th, model.parameters())
+        
         # print(returns.std())
         th = th + np.array(
-            step_size / (n_delta * returns.std() + 1e-6) * np.sum((returns_p - returns_n) * delta, 1)).reshape(n_param,
-                                                                                                               -1)
+            step_size / (n_delta * returns.std() + 1e-6) * np.sum((returns_p - returns_n) * delta, 1)).reshape(n_param, -1)
 
     return th
