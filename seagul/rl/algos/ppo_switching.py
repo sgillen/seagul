@@ -68,11 +68,9 @@ def ppo_switch(
         reward_stop: reward value to stop if we achieve
 
     Returns:
-        policy: the trained policy network
-        value_fn: the trained value function
-        gate_fn: the trained gate fn
-        avg_reward_hist: list of average rewards per epoch
-        arg_dict: dictionary of parameters used, used for saving runs
+       model: trained model
+       avg_reward_hist: list with the average reward per episode at each epoch
+       var_dict: dictionary with all locals, for logging/debugging purposes
 
     Example:
         import torch.nn as nn
@@ -87,9 +85,6 @@ def ppo_switch(
         env2, t_policy, t_val, t_gate, rewards = ppo_switch(
             "su_cartpole-v0", 1000, policy, value_fn, gate_fn, epoch_batch_size=500
         )
-
-        print(rewards)
-
     """
 
     env = gym.make(env_name)
