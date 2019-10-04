@@ -39,24 +39,46 @@ def ppo(
     """
     Implements proximal policy optimization with clipping
 
-    :param env_name: name of the openAI gym environment to solve
-    :param num_epochs: number of epochs to run_util the PPO for
-    :param policy: policy function, must be a pytorch module
-    :param value_fn: value function, must be a pytorch module
-    :param epoch_batch_size: number of environment steps to take per batch, total steps will be num_epochs*epoch_batch_size
-    :param seed: seed for all the rngs
-    :param gamma: discount applied to future rewards, usually close to 1
-    :param lam: lambda for the Advantage estimmation, usually close to 1
-    :param eps: epsilon for the clipping, usually .1 or .2
-    :param policy_batch_size: batch size for policy updates
-    :param value_batch_size: batch size for value function updates
-    :param policy_lr: learning rate for policy p_optimizer
-    :param value_lr: learning rate of value function p_optimizer
-    :param p_epochs: how many epochs to use for each policy update
-    :param v_epochs: how many epochs to use for each value update
-    :param use_gpu:  want to use the GPU? set to true
-    :param reward_stop: reward value to stop if we achieve
-    :return:
+    Args:
+        env_name: name of the openAI gym environment to solve
+        num_epochs: number of epochs to run_util the PPO for
+        policy: policy function, must be a pytorch module
+        value_fn: value function, must be a pytorch module
+        epoch_batch_size: number of environment steps to take per batch, total steps will be num_epochs*epoch_batch_size
+        seed: seed for all the rngs
+        gamma: discount applied to future rewards, usually close to 1
+        lam: lambda for the Advantage estimmation, usually close to 1
+        eps: epsilon for the clipping, usually .1 or .2
+        policy_batch_size: batch size for policy updates
+        value_batch_size: batch size for value function updates
+        policy_lr: learning rate for policy p_optimizer
+        value_lr: learning rate of value function p_optimizer
+        p_epochs: how many epochs to use for each policy update
+        v_epochs: how many epochs to use for each value update
+        use_gpu:  want to use the GPU? set to true
+        reward_stop: reward value to stop if we achieve
+
+    Returns:
+        model: trained model
+        avg_reward_hist: list with the average reward per episode at each epoch
+        var_dict: dictionary with all locals, for logging/debugging purposes
+
+    Example:
+        import torch.nn as nn
+        from seagul.rl.algos.ppo import ppo
+        from seagul.nn import MLP, CategoricalMLP
+        import torch
+
+        torch.set_default_dtype(torch.double)
+
+        input_size = 4; output_size = 1; layer_size = 64; num_layers = 3
+        activation = nn.ReLU
+
+        policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+        value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+
+        model = PpoModel(policy, value_fn, action_var=4, discrete=False)
+        t_model, rewards, var_dict = ppo("su_acro_drake-v0", 100, model, action_var_schedule=[3,2,1,0])
     """
 
     env = gym.make(env_name)
@@ -298,7 +320,7 @@ def ppo(
 
                 break
 
-    return model,  avg_reward_hist, locals()
+    return model, avg_reward_hist, locals()
 
 
 # ============================================================================================
