@@ -59,7 +59,7 @@ class SUCartPoleEnv(gym.Env):
         low = -high
         self.observation_space = gym.spaces.Box(low=low, high=high)
 
-        self.TORQUE_MAX = 50.0
+        self.TORQUE_MAX = 5.0
         self.torque_noise_max = 0.0
         self.action_space = gym.spaces.Box(-self.TORQUE_MAX, self.TORQUE_MAX, shape=(1,))
 
@@ -90,8 +90,8 @@ class SUCartPoleEnv(gym.Env):
         # RL algorithms aware of the action space won't need this but things like the
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
-        #torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
-        torque = action
+        torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
+        #torque = action
         # Add noise to the force action
         if self.torque_noise_max > 0:
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
