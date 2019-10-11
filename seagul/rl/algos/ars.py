@@ -1,34 +1,40 @@
 import gym
+import seagul.envs
 import torch
 import numpy as np
+import copy
 
 from seagul.nn import LinearNet
+torch.set_default_dtype(torch.float64)
 
-def do_rollout(policy, env):
-    reward_list = []
-    action_list = []
+def do_rollout(env, policy):
+
     state_list = []
+    action_list = []
+    reward_list = []
 
     obs = env.reset()
+    done = False
     while not done:
-        action = policy(torch.as_tensor(obs))
-        obs, reward, done, _ = env.step(action.detach())
-        
-        action_list.append(action.clone())
+        actions = policy(torch.as_tensor(obs))
+        obs, reward, done, _ = env.step(actions.detach())
+
         state_list.append(torch.as_tensor(obs).clone())   # Clone???
+        action_list.append(actions.clone())
         reward_list.append(torch.as_tensor(reward).clone())
 
 
-
-    reward_list = torch.stack(
-    return reward_list, action_list, state_list
+    state_tens = torch.stack(state_list)
+    action_tens = torch.stack(action_list)
+    reward_tens = torch.stack(reward_list)
+    return  state_tens, action_tens, reward_tens
 
 def ars(
         env_name,
         policy,
-        num_epochs=1000,
+        num_epochs= 10,
         step_size = 1,
-        n_delta = 10,
+        n_delta = 1,
         exp_noise = .3,
 ):
     """
@@ -42,27 +48,35 @@ def ars(
     Example:
     """
 
-    th = torch.nn.utils.parameters_to_vector(model.parameters())
+    env = gym.make(env_name)
+    #env_vec = lambda x: torch.tensor([env for _ in range (n_delta)])
+    env_vec = env  # TODO
+
+    policy_list = [copy.deepcopy(policy) for _ in range(n_delta)]
+    #policy_vec = lambda x: torch.tensor([p(x) for p in policy_list])
+    policy_vec = policy # TODO
 
 
-    
-    s_mean = torch.zeros((n_param, 1)) 
-    s_stdv = torch.ones((n_param, 1)) 
+    th = torch.nn.utils.parameters_to_vector(policy.parameters())
+    n_param = th.shape[0]
+
+    s_mean = torch.zeros((n_param,))
+    s_stdv = torch.ones((n_param,))
     
     total_steps = 0
     exp_dist = torch.distributions.Normal(torch.zeros(n_param), torch.ones(n_param) * exp_noise)
 
     for _ in range(num_epochs):
 
-        delta = exp_dist.sample().reshape(n_param, 1)
+        delta = exp_dist.sample()
 
-        th_plus = (th + delta).reshape(-1);
-        torch.nn.utils.vector_to_parameters(th, model.parameters())
-        states_p, _, returns_p = do_rollout(policy)
+        th_plus = (th + delta);
+        torch.nn.utils.vector_to_parameters(th_plus, policy.parameters())
+        states_p, _, returns_p = do_rollout(env_vec,policy_vec)
 
-        th_minus =  (th + delta).reshape(-1);
-        torch.nn.utils.vector_to_parameters(th, model.parameters())
-        states_n, _, returns_n = do_rollout(policy)
+        th_minus =  (th + delta);
+        torch.nn.utils.vector_to_parameters(th_minus, policy.parameters())
+        states_n, _, returns_n = do_rollout(env_vec, policy_vec)
 
         returns = torch.cat((returns_p, returns_n))
         states = torch.cat((states_p, states_n))
@@ -75,10 +89,19 @@ def ars(
         policy.state_means = s_mean
         policy.state_var = s_stdv
 
-        torch.nn.utils.vector_to_parameters(th, model.parameters())
+        torch.nn.utils.vector_to_parameters(th, policy.parameters())
         
         # print(returns.std())
-        th = th + np.array(
-            step_size / (n_delta * returns.std() + 1e-6) * np.sum((returns_p - returns_n) * delta, 1)).reshape(n_param, -1)
-
+        th = th + step_size / (n_delta * returns.std() + 1e-6) * torch.sum(returns_p - returns_n,0)*delta
     return th
+
+if __name__ == "__main__":
+    import seagul.envs
+
+    policy = LinearNet(4,1)
+    env_name = "su_cartpole-v0"
+    th = ars(env_name, policy)
+
+    env = gym.make(env_name)
+    state_hist, act_hist, returns = do_rollout(env, policy)
+    print(returns)
