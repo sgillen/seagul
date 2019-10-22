@@ -34,7 +34,7 @@ def ars(
         policy,
         num_epochs= 10,
         step_size = 1,
-        n_delta = 1,
+        n_delta = 10,
         exp_noise = .3,
 ):
     """

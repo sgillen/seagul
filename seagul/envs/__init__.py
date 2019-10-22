@@ -1,6 +1,7 @@
 from gym.envs.registration import register
 
 register(id="mj_su_cartpole-v0", entry_point="seagul.envs.mujoco:MJSUCartPoleEnv")
+#register(id="five_link")
 
 register(id="mj_su_cartpole_sparse-v0", entry_point="seagul.envs.mujoco:MJSUCartPoleSparseEnv")
 
