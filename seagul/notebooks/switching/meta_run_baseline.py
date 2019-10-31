@@ -38,7 +38,7 @@ for seed in range(1):
     #seed = int((time.time() % 1)*1e8)
     
     arg_dict = {
-        'env': 'su_acro_drake-v0',
+        'env': 'Walker2d-v2',
         'alg': 'ppo2',
         'network': 'mlp',
         'num_timesteps': '3e6',
@@ -50,7 +50,7 @@ for seed in range(1):
 
 
     run_name = "bs_ppo2_ah" + str(seed)
-    run_and_save_bs(arg_dict, run_name, 'baseline for ppo2 with act_hold = 200', "/data/drake_base/")
+    run_and_save_bs(arg_dict, run_name, 'baselines ppo with nn', "/data/linear_ppo/")
     #    run_and_save_bs(arg_dict, run_name, 'baseline for ppo2', "/data/drake_base/")
     #p = Process(target=run_and_save_bs, args=(arg_dict, run_name, 'baseline for ppo2 with act_hold = 200', "/data/drake_base/"))
     #p.start()
