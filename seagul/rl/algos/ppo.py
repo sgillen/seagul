@@ -233,11 +233,11 @@ def ppo(
             state_mean = (state_tensor.mean(dim=0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
             state_var =  (state_tensor.std(dim=0)*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
                           
-            #model.policy.state_means = state_mean
-            #model.policy.state_var = state_var
+            model.policy.state_means = state_mean
+            model.policy.state_var = state_var
 
-            #model.value_fn.state_means = state_mean
-            #model.value_fn.state_var = state_var
+            model.value_fn.state_means = state_mean
+            model.value_fn.state_var = state_var
         
             num_states += ep_length
             
