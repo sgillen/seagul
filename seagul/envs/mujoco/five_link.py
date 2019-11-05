@@ -33,23 +33,23 @@ class FiveLinkWalkerEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         # print("can't reach v2.0", id(self))
 
 #This function for training
-    def step(self, a):
-        posbefore = self.sim.data.qpos[0]
-        self.do_simulation(a, self.frame_skip)
-        posafter, height, ang = self.sim.data.qpos[0:3]
-        alive_bonus = 1.0
-        reward = ((posafter - posbefore) / self.dt)
-        # print(self.sim.data.time)
+    # def step(self, a):
+    #     posbefore = self.sim.data.qpos[0]
+    #     self.do_simulation(a, self.frame_skip)
+    #     posafter, height, ang = self.sim.data.qpos[0:3]
+    #     alive_bonus = 1.0
+    #     reward = ((posafter - posbefore) / self.dt)
+    #     # print(self.sim.data.time)
 
-        reward += alive_bonus
-        reward -= 1e-3 * np.square(a).sum()
+    #     reward += alive_bonus
+    #     reward -= 1e-3 * np.square(a).sum()
 
-        done = not (height > -0.4 and height < 0.4 and
-                    ang > -1 and ang < 1)
+    #     done = not (height > -0.4 and height < 0.4 and
+    #                 ang > -1 and ang < 1)
 
-        ob = self._get_obs()
-        # print("from 5linkwalerEnv", ob)
-        return ob, reward, done, {}
+    #     ob = self._get_obs()
+    #     # print("from 5linkwalerEnv", ob)
+    #     return ob, reward, done, {}
 
 # This function for evaluating friction
 #     def step(self, a):
@@ -111,70 +111,70 @@ class FiveLinkWalkerEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 #         return ob, reward, done, {}
 
 
-# # This function for evaluating
-#     def step(self, a):
-#         # print("actions:", a)
-#         posbefore = self.sim.data.qpos[0]
-#         self.do_simulation(a, self.frame_skip)
-#         posafter, height, ang = self.sim.data.qpos[0:3]
-#         alive_bonus = 1.0
-#         reward = ((posafter - posbefore) / self.dt)
-#         # print(self.sim.data.time)
-#         self.fall = 0
-#         reward += alive_bonus
-#         reward -= 1e-3 * np.square(a).sum()
-#         self.rbody_xpos = self.sim.data.body_xpos[3, 0]
-#         self.lbody_xpos = self.sim.data.body_xpos[5, 0]
-#         self.qpos_cur[0, :] = self.sim.data.qpos
-#         self.qvel_cur[0, :] = self.sim.data.qvel
-#         if self.sim.data.time > self.t_imp and self.sim.data.time < self.t_imp + 0.02:
-#             # test_force = np.array([250, 0, 0, 0, 0, 0])
-#             self.sim.data.xfrc_applied[1, :] = self.impact
-#             self.set_impact += 1
-#
-#         # if self.sim.data.time > self.t_imp + 0.1 and self.sim.data.time < self.t_imp + 0.2:
-#         if self.set_impact > 1 and self.set_impact < 10:
-#             test_force = np.array([0, 0, 0, 0, 0, 0])
-#             self.sim.data.xfrc_applied[1, :] = test_force
-#             self.set_impact += 1
-#
-#         # if self.sim.data.time > 4 and self.sim.data.time < 4 + 0.02:
-#         #     print("Applying force")
-#         #     test_force = np.array([800, 0, 0, 0, 0, 0])
-#         #     self.sim.data.xfrc_applied[1, :] = test_force
-#         #     self.set_impact += 1
-#         #
-#         # # if self.sim.data.time > self.t_imp + 0.1 and self.sim.data.time < self.t_imp + 0.2:
-#         # if self.sim.data.time > 4 + 0.02:
-#         #     print("clearing force")
-#         #     test_force = np.array([0, 0, 0, 0, 0, 0])
-#         #     self.sim.data.xfrc_applied[1, :] = test_force
-#         #     self.set_impact += 1
-#
-#         done_contact = 0
-#         done = not (height > -0.4 and height < 0.4 and
-#                     ang > -2 and ang < 2)
-#         if done:
-#             self.fall = 1
-#         if self.sim.data.ncon and self.sim.data.time > self.detect_impact_time:
-#             # print("Contact Detected")
-#             for i in range(self.sim.data.ncon):
-#                 # print(self.sim.data.contact[i].geom1, " ", self.sim.data.contact[i].geom2)
-#                 if self.sim.data.contact[i].geom2 == 5:
-#                     # print(self.sim.data.time)
-#                     done_contact = 1
-#                     self.step_success = 1
-#                     break
-#                 # if self.sim.data.contact[i].geom2 == 3:
-#                 #     print("right leg: ", self.sim.data.time)
-#                 #     # done_contact = 1
-#                 #     # self.step_success = 1
-#                 #     # break
-#         done = np.array([done, done_contact])
-#         done = done.any()
-#         ob = self._get_obs()
-#         # print("from 5linkwalerEnv", ob)
-#         return ob, reward, done, {}
+# This function for evaluating
+    def step(self, a):
+        # print("actions:", a)
+        posbefore = self.sim.data.qpos[0]
+        self.do_simulation(a, self.frame_skip)
+        posafter, height, ang = self.sim.data.qpos[0:3]
+        alive_bonus = 1.0
+        reward = ((posafter - posbefore) / self.dt)
+        # print(self.sim.data.time)
+        self.fall = 0
+        reward += alive_bonus
+        reward -= 1e-3 * np.square(a).sum()
+        self.rbody_xpos = self.sim.data.body_xpos[3, 0]
+        self.lbody_xpos = self.sim.data.body_xpos[5, 0]
+        self.qpos_cur[0, :] = self.sim.data.qpos
+        self.qvel_cur[0, :] = self.sim.data.qvel
+        if self.sim.data.time > self.t_imp and self.sim.data.time < self.t_imp + 0.02:
+            # test_force = np.array([250, 0, 0, 0, 0, 0])
+            self.sim.data.xfrc_applied[1, :] = self.impact
+            self.set_impact += 1
+
+        # if self.sim.data.time > self.t_imp + 0.1 and self.sim.data.time < self.t_imp + 0.2:
+        if self.set_impact > 1 and self.set_impact < 10:
+            test_force = np.array([0, 0, 0, 0, 0, 0])
+            self.sim.data.xfrc_applied[1, :] = test_force
+            self.set_impact += 1
+
+        # if self.sim.data.time > 4 and self.sim.data.time < 4 + 0.02:
+        #     print("Applying force")
+        #     test_force = np.array([800, 0, 0, 0, 0, 0])
+        #     self.sim.data.xfrc_applied[1, :] = test_force
+        #     self.set_impact += 1
+        #
+        # # if self.sim.data.time > self.t_imp + 0.1 and self.sim.data.time < self.t_imp + 0.2:
+        # if self.sim.data.time > 4 + 0.02:
+        #     print("clearing force")
+        #     test_force = np.array([0, 0, 0, 0, 0, 0])
+        #     self.sim.data.xfrc_applied[1, :] = test_force
+        #     self.set_impact += 1
+
+        done_contact = 0
+        done = not (height > -0.4 and height < 0.4 and
+                    ang > -2 and ang < 2)
+        if done:
+            self.fall = 1
+        if self.sim.data.ncon and self.sim.data.time > self.detect_impact_time:
+            # print("Contact Detected")
+            for i in range(self.sim.data.ncon):
+                # print(self.sim.data.contact[i].geom1, " ", self.sim.data.contact[i].geom2)
+                if self.sim.data.contact[i].geom2 == 5:
+                    # print(self.sim.data.time)
+                    done_contact = 1
+                    self.step_success = 1
+                    break
+                # if self.sim.data.contact[i].geom2 == 3:
+                #     print("right leg: ", self.sim.data.time)
+                #     # done_contact = 1
+                #     # self.step_success = 1
+                #     # break
+        done = np.array([done, done_contact])
+        done = done.any()
+        ob = self._get_obs()
+        # print("from 5linkwalerEnv", ob)
+        return ob, reward, done, {}
 
     def _get_obs(self):
         qpos = self.sim.data.qpos
