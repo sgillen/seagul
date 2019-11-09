@@ -1,4 +1,3 @@
-
 import gym
 
 from seagul.rl.models import PpoModel
@@ -15,10 +14,12 @@ from torch.utils import data
 
 
 # ============================================================================================
-def ppo(
+def ppo_sym(
     env_name,
     num_epochs,
     model,
+    state_mirror_fn,
+    act_mirror_fn,
     action_var_schedule=None,
     env_timesteps = 2048,
     epoch_batch_size=2048,
@@ -37,7 +38,7 @@ def ppo(
 ):
 
     """
-    Implements proximal policy optimization with clipping
+    Implements "Symmetric" proximal policy optimization with clipping
 
     Args:
         env_name: name of the openAI gym environment to solve
@@ -156,39 +157,23 @@ def ppo(
 
             # Do a single policy rollout
             for t in range(env_timesteps):
-                # try:
-                #     print("state" , state)
-                #     print("state list", state_list[:2])
-                #     print()
-                # except:
-                #     pass
-
-
-                if(torch.isnan(state).any()):
-                    print("hellllooo")
-                    import ipdb; ipdb.set_trace()
 
                 state_list.append(state.clone())
+                mirror_state = state_mirror_fn(state.clone())
+                state_list.append(mirror_state.clone())
                                   
                 
                 action, logprob = model.select_action(state)
                 state_np, reward, done, _ = env.step(action.numpy())
 
-                if(np.isnan(state_np).any()):
-                    state_np = np.zeros((4,))
-                    print("hellllooo")
-                    import ipdb; ipdb.set_trace()
-               
                    
                 state = torch.as_tensor(state_np).detach()
-                # for s in state:
-                #     if torch.isnan(s) or abs(s.item()) < 1e-6:
-                #         print(s)
-                #         s1 = 0
-
                 reward_list.append(reward)
                 action_list.append(torch.as_tensor(action.clone()))
-                #import ipdb; ipdb.set_trace()
+
+                mirror_action = act_mirror_fn(action.clone())
+                action_list.append(torch.as_tensor(action.clone()))
+
                 batch_steps += 1
                 traj_steps += 1
                         
@@ -204,7 +189,7 @@ def ppo(
             # =======================================================================
             # make a tensor storing the current episodes state, actions, and rewards
 
-#            import ipdb; ipdb.set_trace()
+            #            import ipdb; ipdb.set_trace()
             ep_state_tensor = torch.stack(state_list).reshape(-1, env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
             ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
@@ -330,7 +315,6 @@ if __name__ == "__main__":
     import torch
 
     import matplotlib.pyplot as plt
-
     torch.set_default_dtype(torch.double)
 
     input_size = 4
@@ -340,10 +324,8 @@ if __name__ == "__main__":
     activation = nn.ReLU
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
-
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-
-    model = PpoModel(policy, value_fn, action_var=.1, discrete=True)
+    model = PpoModel(policy, value_fn, action_var=4, discrete=True)
 
     # Define our hyper parameters
     num_epochs = 100
@@ -361,7 +343,13 @@ if __name__ == "__main__":
     eps = 0.2
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    t_model, rewards, var_dict = ppo("CartPole-v0", 100, model, action_var_schedule=[1])
+    def cartpole_mirror_obs(obs):
+        return -obs
+
+    def cartpole_mirror_act(act):
+        return -act
+    
+    t_model, rewards, var_dict = ppo_sym("CartPole-v0", 100, model, action_var_schedule=[3,2,1,0])
     print(rewards)
     plt.plot(rewards)
     plt.show()
