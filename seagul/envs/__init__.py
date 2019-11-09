@@ -10,10 +10,7 @@ register(id="mj_su_cartpole_et-v0", entry_point="seagul.envs.mujoco:MJSUCartPole
 register(id="mj_su_cartpole_discrete-v0", entry_point="seagul.envs.mujoco:MJSUCartPoleDiscreteEnv")
 
 register(id="su_cartpole-v0", entry_point="seagul.envs.classic_control:SUCartPoleEnv")
-register(id="su_cartpole-v1", entry_point="seagul.envs.classic_control:SUCartPoleEnv1")
-register(id="su_cartpole-v2", entry_point="seagul.envs.classic_control:SUCartPoleEnv2")
-register(id="su_cartpole-v3", entry_point="seagul.envs.classic_control:SUCartPoleEnv3")
-
+register(id="sg_cartpole-v0", entry_point="seagul.envs.classic_control:SGCartPoleEnv")
 
 register(id="su_cartpole_push-v0", entry_point="seagul.envs.classic_control:SUCartPolePushEnv")
 

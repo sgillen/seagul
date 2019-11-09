@@ -1,7 +1,5 @@
 from seagul.envs.classic_control.su_cartpole import SUCartPoleEnv
-from seagul.envs.classic_control.su_cartpole1 import SUCartPoleEnv1
-from seagul.envs.classic_control.su_cartpole2 import SUCartPoleEnv2
-from seagul.envs.classic_control.su_cartpole3 import SUCartPoleEnv3
+from seagul.envs.classic_control.sg_cartpole import SGCartPoleEnv
 
 from seagul.envs.classic_control.su_cartpole_gym import CartPoleEnv
 
