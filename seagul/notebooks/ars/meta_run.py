@@ -66,7 +66,7 @@ for seed in [0]:
     
 #    run_sg(arg_dict, ppo, run_name, 'run with 100 epochs, torque limit', "/data/drake_acro_final/")
     
-    p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'ppo for walker with nn policy, state norm turned on', "/data/walker/"))
+    p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'ppo for walker with nn policy, state norm turned on', "./data/walker/"))
     p.start()
     proc_list.append(p)
 
