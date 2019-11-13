@@ -23,7 +23,7 @@ tf = try_import_tf()
 
 
 # seagul/local imports
-from mirror_fns import mirror_walker_obs, mirror_walker_act
+from seagul.mirror_fns import mirror_walker_obs, mirror_walker_act, mirror_humanoid_obs, mirror_humanoid_obs
 
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,8 @@ class PPOLoss(object):
             model_config (dict): (Optional) model config for use in specifying
                 action distributions.
         """
-
+        
+        
         def reduce_mean_valid(t):
             return tf.reduce_mean(tf.boolean_mask(t, valid_mask))
 
@@ -117,12 +118,27 @@ class PPOLoss(object):
 
 def ppo_surrogate_loss(policy, model, dist_class, train_batch):
 
+    
+    #sgillen- this is obviously jank, but because we are only interested in using Walker2dBullet-v0 and HumanoidBullet-v0
+    # we use the action space as a proxy to tell us which of these two envs were passed in
+    import ipdb.ipdb.set_trace()
+    
+    if action_space.shape[0] == 6:
+        mirror_act = mirror_walker_act
+        mirror_obs = mirror_walker_obs
+    elif action_space.shape[0] == 17: #???
+        mirror_act = mirror_humanoid_act
+        mirror_obs = mirror_humanoid_obs
+    else:
+        raise NotImplementedError("Passed invalid environment, symmetric PPO only supports Walker2dBullet-v0 or HumanoidBullet-v0")
+    
+    
     m_train_batch = {k:tf.identity(t) for k,t in train_batch.items()}
-    m_train_batch['obs'] = mirror_walker_obs(train_batch['obs'])
-    m_train_batch['new_obs'] = mirror_walker_obs(train_batch['new_obs'])
+    m_train_batch['obs'] = mirror_obs(train_batch['obs'])
+    m_train_batch['new_obs'] = mirror_obs(train_batch['new_obs'])
 
-    m_train_batch['actions'] = mirror_walker_act(train_batch['actions'])
-    m_train_batch['prev_actions'] = mirror_walker_act(train_batch['prev_actions'])
+    m_train_batch['actions'] = mirror_act(train_batch['actions'])
+    m_train_batch['prev_actions'] = mirror_act(train_batch['prev_actions'])
 
         
 #    import ipdb; ipdb.set_trace()
