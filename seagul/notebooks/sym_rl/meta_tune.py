@@ -10,22 +10,10 @@ from ray.tune.registry import register_env
 import pybullet_envs
 from tqdm import trange
 
-from sym_ppo_policy import PPOTFSymPolicy
+from seagul.rllib.sym_ppo_policy import PPOTFSymPolicy
+from seagul.rllib.register_envs import register_all_envs
 
-
-def five_link_creator(env_config):
-    return FiveLinkWalkerEnv()  # return an env instance
-
-
-def bullet_walker_creator(env_config):
-    return Walker2DBulletEnv()  # return an env instance
-
-
-register_env("five_link-v3", five_link_creator)
-register_env("Walker2DBulletEnv-v0", bullet_walker_creator)
-
-
-# %%
+register_all_envs()
 
 config = ppo.DEFAULT_CONFIG.copy()
 config["num_workers"] = 15
@@ -33,29 +21,29 @@ config["num_gpus"] = 0
 
 config["eager"] = False
 config["model"]["fcnet_hiddens"] = [64, 64]
-config["lr"] = 5e-5
+config["lr"] =  .0001
 config["kl_coeff"] = 1.0
 config["num_sgd_iter"] = 20
 config["batch_mode"] = "complete_episodes"
-config['vf_clip_param'] = 100.0
+config['vf_clip_param'] = 50.0
 config['observation_filter'] = 'MeanStdFilter'
-config["sgd_minibatch_size"] = 2048
-config["train_batch_size"] = 20480
+config["sgd_minibatch_size"] = 8192
+config["train_batch_size"] = 80000
 
 env_name =  "Walker2DBulletEnv-v0"
+#env_name =   "HumanoidBulletEnv-v0"
 config["env"] = env_name  
 
-import pprint
-pprint.pprint(config)
+#import pprint
+#pprint.pprint(config)
 
 PPOSymTrainer = ppo.PPOTrainer.with_updates(name="SymPPO", default_policy = PPOTFSymPolicy)
 
 analysis = tune.run(
     PPOSymTrainer,
+#    ppo.PPOTrainer,
     config=config,
-    stop={"timesteps_total": 8e6},
-    local_dir="./data/gpu_grid/",
+    stop={"timesteps_total": 32e6},
+    local_dir="./data/mirror_walker/",
     checkpoint_at_end=True,
 )
-
-

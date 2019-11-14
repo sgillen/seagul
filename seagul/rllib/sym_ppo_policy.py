@@ -23,7 +23,7 @@ tf = try_import_tf()
 
 
 # seagul/local imports
-from seagul.mirror_fns import mirror_walker_obs, mirror_walker_act, mirror_humanoid_obs, mirror_humanoid_obs
+from seagul.rllib.mirror_fns import mirror_walker_obs, mirror_walker_act, mirror_human_obs, mirror_human_act
 
 
 logger = logging.getLogger(__name__)
@@ -117,20 +117,16 @@ class PPOLoss(object):
 
 
 def ppo_surrogate_loss(policy, model, dist_class, train_batch):
-
+    # import ipdb;ipdb.set_trace()
     
-    #sgillen- this is obviously jank, but because we are only interested in using Walker2dBullet-v0 and HumanoidBullet-v0
-    # we use the action space as a proxy to tell us which of these two envs were passed in
-    import ipdb.ipdb.set_trace()
-    
-    if action_space.shape[0] == 6:
+    if policy.config['env'] == 'HumanoidBulletEnv-v0':
+        mirror_act = mirror_human_act
+        mirror_obs = mirror_human_obs
+    elif policy.config['env'] == 'Walker2DBulletEnv-v0':
         mirror_act = mirror_walker_act
         mirror_obs = mirror_walker_obs
-    elif action_space.shape[0] == 17: #???
-        mirror_act = mirror_humanoid_act
-        mirror_obs = mirror_humanoid_obs
     else:
-        raise NotImplementedError("Passed invalid environment, symmetric PPO only supports Walker2dBullet-v0 or HumanoidBullet-v0")
+        raise NotImplementedError("Passed invalid environment, symmetric PPO only supports Walker2dBulletEnv-v0 or HumanoidBulletEnv-v0")
     
     
     m_train_batch = {k:tf.identity(t) for k,t in train_batch.items()}
@@ -140,11 +136,9 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
     m_train_batch['actions'] = mirror_act(train_batch['actions'])
     m_train_batch['prev_actions'] = mirror_act(train_batch['prev_actions'])
 
-        
-#    import ipdb; ipdb.set_trace()
     
     logits, state = model.from_batch(train_batch)
-    m_logits, m_state = model.from_batch(m_train_batch)
+    m_logits, m_state = model.from_batch(m_train_batch) 
 
     action_dist = dist_class(logits, model)
     m_action_dist = dist_class(m_logits, model)
@@ -204,7 +198,7 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
         model_config=policy.config["model"])
 
 
-    return policy.loss_obj.loss# + policy.m_loss_obj.loss
+    return policy.loss_obj.loss #+ policy.m_loss_obj.loss
 
 
 def kl_and_loss_stats(policy, train_batch):
