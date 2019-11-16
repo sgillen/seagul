@@ -1,49 +1,47 @@
-# %%
-
 import ray
 from ray import tune
 import ray.rllib.agents.ppo as ppo
-from ray.rllib.agents.ppo.appo import DEFAULT_CONFIG
-from seagul.envs.mujoco.five_link import FiveLinkWalkerEnv
-from pybullet_envs.gym_locomotion_envs import Walker2DBulletEnv
-from ray.tune.registry import register_env
-import pybullet_envs
-from tqdm import trange
 
-from seagul.rllib.sym_ppo_policy import PPOTFSymPolicy
 from seagul.rllib.register_envs import register_all_envs
-
 register_all_envs()
 
 config = ppo.DEFAULT_CONFIG.copy()
-config["num_workers"] = 15
+config["num_workers"] = 0
+config["num_envs_per_worker"] = 10
+config["lambda"] = .1
+config["gamma"] = .95
 config["num_gpus"] = 0
-
 config["eager"] = False
 config["model"]["fcnet_hiddens"] = [64, 64]
-config["lr"] =  .0001
+config["lr"] =  .0003
 config["kl_coeff"] = 1.0
-config["num_sgd_iter"] = 20
+config["num_sgd_iter"] = 10
 config["batch_mode"] = "complete_episodes"
-config['vf_clip_param'] = 50.0
+config['vf_clip_param'] = 10.0
 config['observation_filter'] = 'MeanStdFilter'
-config["sgd_minibatch_size"] = 8192
-config["train_batch_size"] = 80000
+config["sgd_minibatch_size"] = tune.grid_search([64]) 
+#config["train_batch_size"] = tune.sample_from(lambda spec: spec.config.sgd_minibatch_size*32)
+config["train_batch_size"] = 2048
 
-env_name =  "Walker2DBulletEnv-v0"
+#env_name = "Walker2d-v3"
+#env_name =  "Walker2DBulletEnv-v0"
 #env_name =   "HumanoidBulletEnv-v0"
+env_name  = "Pendulum-v0"
+
 config["env"] = env_name  
+
 
 #import pprint
 #pprint.pprint(config)
 
-PPOSymTrainer = ppo.PPOTrainer.with_updates(name="SymPPO", default_policy = PPOTFSymPolicy)
+from seagul.rllib.sym_ppo_policy import PPOTFSymPolicy
+#PPOSymTrainer = ppo.PPOTrainer.with_updates(name="SymPPO", default_policy = PPOTFSymPolicy)
 
 analysis = tune.run(
-    PPOSymTrainer,
-#    ppo.PPOTrainer,
+    #PPOSymTrainer,
+    ppo.PPOTrainer,
     config=config,
-    stop={"timesteps_total": 32e6},
-    local_dir="./data/mirror_walker/",
+    stop={"timesteps_total": 6e5},
+    local_dir="./data/pendulum/",
     checkpoint_at_end=True,
 )
