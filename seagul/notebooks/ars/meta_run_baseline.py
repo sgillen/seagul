@@ -67,7 +67,7 @@ for seed in range(1):
 #     arg_dict = {
 #         'env': 'su_acrobot-v0',
 #         'alg': 'ppo2',
-#         'network': 'mlp',
+#         'network': 'mlp'
 #         'num_timesteps': '3e6',
 #         'num_env': '4',
 #         'num_layers': '2',
