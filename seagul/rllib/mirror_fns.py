@@ -96,3 +96,12 @@ def mirror_human_act(act):
     m_act = tf.concat([m_abd,m_hip_c,m_hip_r,m_knee_r,m_hip_l,m_knee_l,m_shld_r,m_elb_r,m_shld_l,m_elb_l],axis=1)
     return m_act
 
+
+def mirror_pend_obs(obs):
+    mask = tf.constant([1,-1,-1],dtype=obs.dtype)
+    return tf.multiply(mask,obs)
+
+
+def mirror_pend_act(act):
+    mask = tf.constant([-1],dtype=act.dtype)
+    return tf.multiply(mask,act)

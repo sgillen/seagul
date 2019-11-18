@@ -1,9 +1,7 @@
 import ray
 from ray import tune
 import ray.rllib.agents.ppo as ppo
-
-from seagul.rllib.register_envs import register_all_envs
-register_all_envs()
+import seagul.envs
 
 config = ppo.DEFAULT_CONFIG.copy()
 config["num_workers"] = 0
@@ -26,7 +24,8 @@ config["train_batch_size"] = 2048
 #env_name = "Walker2d-v3"
 #env_name =  "Walker2DBulletEnv-v0"
 #env_name =   "HumanoidBulletEnv-v0"
-env_name  = "Pendulum-v0"
+#env_name  = "Pendulum-v0"
+env_name = "sym_pendulum-v0"
 
 config["env"] = env_name  
 
@@ -38,10 +37,10 @@ from seagul.rllib.sym_ppo_policy import PPOTFSymPolicy
 #PPOSymTrainer = ppo.PPOTrainer.with_updates(name="SymPPO", default_policy = PPOTFSymPolicy)
 
 analysis = tune.run(
-    #PPOSymTrainer,
+ #   PPOSymTrainer,
     ppo.PPOTrainer,
     config=config,
     stop={"timesteps_total": 6e5},
-    local_dir="./data/pendulum/",
+    local_dir="./data/pendulum4/",
     checkpoint_at_end=True,
 )

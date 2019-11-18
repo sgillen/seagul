@@ -23,7 +23,7 @@ tf = try_import_tf()
 
 
 # seagul/local imports
-from seagul.rllib.mirror_fns import mirror_walker_obs, mirror_walker_act, mirror_human_obs, mirror_human_act
+from seagul.rllib.mirror_fns import mirror_walker_obs, mirror_walker_act, mirror_human_obs, mirror_human_act, mirror_pend_act, mirror_pend_obs
 
 
 logger = logging.getLogger(__name__)
@@ -125,6 +125,9 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
     elif policy.config['env'] == 'Walker2DBulletEnv-v0':
         mirror_act = mirror_walker_act
         mirror_obs = mirror_walker_obs
+    elif policy.config['env'] == 'Pendulum-v0':
+        mirror_act = mirror_pend_act
+        mirror_obs = mirror_pend_obs
     else:
         raise NotImplementedError("Passed invalid environment, symmetric PPO only supports Walker2dBulletEnv-v0 or HumanoidBulletEnv-v0")
     
@@ -198,7 +201,7 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
         model_config=policy.config["model"])
 
 
-    return policy.loss_obj.loss #+ policy.m_loss_obj.loss
+    return policy.loss_obj.loss + policy.m_loss_obj.loss
 
 
 def kl_and_loss_stats(policy, train_batch):
