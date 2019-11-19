@@ -41,6 +41,6 @@ analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
     stop={"timesteps_total": 6e5},
-    local_dir="./data/sym_noact/",
+    local_dir="./data/sym_noact2/",
     checkpoint_at_end=True,
 )
