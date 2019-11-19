@@ -17,15 +17,15 @@ config["num_sgd_iter"] = 10
 config["batch_mode"] = "complete_episodes"
 config['vf_clip_param'] = 10.0
 config['observation_filter'] = 'MeanStdFilter'
-config["sgd_minibatch_size"] = tune.grid_search([64]) 
+config["sgd_minibatch_size"] = 64
 #config["train_batch_size"] = tune.sample_from(lambda spec: spec.config.sgd_minibatch_size*32)
 config["train_batch_size"] = 2048
-
+#config["seed"] = tune.grid_search([0,1,2,3,4,5,6,7])
 #env_name = "Walker2d-v3"
 #env_name =  "Walker2DBulletEnv-v0"
 #env_name =   "HumanoidBulletEnv-v0"
 #env_name  = "Pendulum-v0"
-env_name = "sym_pendulum-v0"
+env_name = "sym_pendulum-v0"#
 
 config["env"] = env_name  
 
@@ -41,6 +41,6 @@ analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
     stop={"timesteps_total": 6e5},
-    local_dir="./data/pendulum4/",
+    local_dir="./data/sym_noact/",
     checkpoint_at_end=True,
 )
