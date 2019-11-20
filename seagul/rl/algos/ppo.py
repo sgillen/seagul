@@ -170,9 +170,9 @@ def ppo(
 
                 state_list.append(state.clone())
                                   
-                
+                #import ipdb; ipdb.set_trace()
                 action, logprob = model.select_action(state)
-                state_np, reward, done, _ = env.step(action.numpy())
+                state_np, reward, done, _ = env.step(action.numpy().reshape(-1))
 
                 if(np.isnan(state_np).any()):
                     state_np = np.zeros((4,))
@@ -319,6 +319,7 @@ def ppo(
 
                 break
 
+    print(avg_reward_hist[-1])
     return model, avg_reward_hist, locals()
 
 

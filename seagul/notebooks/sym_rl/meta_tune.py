@@ -24,23 +24,25 @@ config["train_batch_size"] = 2048
 #env_name = "Walker2d-v3"
 #env_name =  "Walker2DBulletEnv-v0"
 #env_name =   "HumanoidBulletEnv-v0"
-#env_name  = "Pendulum-v0"
-env_name = "sym_pendulum-v0"#
+env_name  = "Pendulum-v0"
+#env_name = "sym_pendulum-v0"#
 
 config["env"] = env_name  
-
 
 #import pprint
 #pprint.pprint(config)
 
 from seagul.rllib.sym_ppo_policy import PPOTFSymPolicy
-#PPOSymTrainer = ppo.PPOTrainer.with_updates(name="SymPPO", default_policy = PPOTFSymPolicy)
+from seagul.rllib.symrew_ppo_policy import PPOTFSymRewPolicy
+PPOSymTrainer = ppo.PPOTrainer.with_updates(name="SymPPO", default_policy = PPOTFSymPolicy)
+PPOSymRewTrainer = ppo.PPOTrainer.with_updates(name="SymRewPPO", default_policy = PPOTFSymRewPolicy)
 
 analysis = tune.run(
- #   PPOSymTrainer,
-    ppo.PPOTrainer,
+#    PPOSymRewTrainer,
+    PPOSymTrainer,
+    #ppo.PPOTrainer,
     config=config,
     stop={"timesteps_total": 6e5},
-    local_dir="./data/sym_noact2/",
+    local_dir="./data/sym_debug/",
     checkpoint_at_end=True,
 )
