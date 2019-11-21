@@ -245,7 +245,18 @@ def ppo(
 
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
-               
+
+                # Update our mean/std preprocessors
+                state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
+                state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
+
+                model.policy.state_means = state_mean
+                model.policy.state_var = state_var
+
+                model.value_fn.state_means = state_mean
+                model.value_fn.state_var = state_var
+
+                
                 # construct a training data generator
                 training_data = data.TensorDataset(state_tensor, action_tensor, adv_tensor)
                 training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)

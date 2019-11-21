@@ -49,17 +49,19 @@ for seed in [0]:
         'model' : model,
         'action_var_schedule' : [.5,.5],
         'seed' : seed, #int((time.time() % 1)*1e8),
-        'num_epochs' : 200,
+        'num_epochs' : 300,
         'epoch_batch_size': 2048,
-        'gamma' : 1,
+        'gamma' : .95,
         'p_epochs' : 32,
         'v_epochs' : 32,
+        'policy_batch_size' : 64,
+        'value_batch_size' : 64
     }
     
-    run_name = "state_norm2" + str(seed)
+    run_name = "state_norm" + str(seed)
 
     
-    run_sg(arg_dict, ppo, run_name, '', "/data/sg_pend/")
+    run_sg(arg_dict, ppo, run_name, '', "/data/sg_pend2/")
     
     #p = Process(target=run_sg, args=(arg_dict, ppo, run_name, 'ppo for walker with nn policy, state norm turned on', "/data/linear_ppo/"))
     #p.start()

@@ -131,24 +131,13 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
     else:
         raise NotImplementedError("Passed invalid environment, symmetric PPO only supports Walker2dBulletEnv-v0 or HumanoidBulletEnv-v0")
     
-
-
-    m_train_batch = {k:tf.identity(t) for k,t in train_batch.items()}
-    m_train_batch['obs'] = mirror_obs(train_batch['obs'])
-    m_train_batch['new_obs'] = mirror_obs(train_batch['new_obs'])
-
-    m_train_batch['actions'] = mirror_act(train_batch['actions'])
-    m_train_batch['prev_actions'] = mirror_act(train_batch['prev_actions'])
-
+    
+    
+ 
     logits, state = model.from_batch(train_batch)
-    #m_logits, m_state = model.from_batch(m_train_batch) 
-
     action_dist = dist_class(logits, model)
-    #m_action_dist = dist_class(m_logits, model)
-
-    # m_train_batch[BEHAVIOUR_LOGITS] = m_logits
-    # m_train_batch[ACTION_LOGP] = m_action_dist.logp(m_train_batch['obs'])
-        
+    
+    
     if state:
         max_seq_len = tf.reduce_max(train_batch["seq_lens"])
         mask = tf.sequence_mask(train_batch["seq_lens"], max_seq_len)
@@ -157,8 +146,8 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
         mask = tf.ones_like(
             train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool)
 
+    import ipdb; ipdb.set_trace()
 
-#    import ipdb; ipdb.set_trace()
     policy.loss_obj = PPOLoss(
         policy.action_space,
         dist_class,
@@ -180,30 +169,45 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
         use_gae=policy.config["use_gae"],
         model_config=policy.config["model"])
 
+    m_train_batch = {k:tf.identity(t) for k,t in train_batch.items()}
+
+    m_train_batch['obs'] = mirror_obs(train_batch['obs'])
+    m_train_batch['new_obs'] = mirror_obs(train_batch['new_obs'])
+
+    m_train_batch['actions'] = mirror_act(train_batch['actions'])
+    m_train_batch['prev_actions'] = mirror_act(train_batch['prev_actions'])
+
+
+    m_logits, m_state = model.from_batch(m_train_batch) 
+    m_action_dist = dist_class(m_logits, model)
+
+    m_train_batch[BEHAVIOUR_LOGITS] = m_logits
+    m_train_batch[ACTION_LOGP] = m_action_dist.logp(m_train_batch['obs'])
+
     
-    # policy.m_loss_obj = PPOLoss(
-    #     policy.action_space,
-    #     dist_class,
-    #     model,
-    #     m_train_batch[Postprocessing.VALUE_TARGETS],
-    #     m_train_batch[Postprocessing.ADVANTAGES],
-    #     m_train_batch[SampleBatch.ACTIONS],
-    #     m_train_batch[BEHAVIOUR_LOGITS],
-    #     m_train_batch[ACTION_LOGP],
-    #     m_train_batch[SampleBatch.VF_PREDS],
-    #     m_action_dist,
-    #     model.value_function(),
-    #     policy.kl_coeff,
-    #     mask,
-    #     entropy_coeff=policy.entropy_coeff,
-    #     clip_param=policy.config["clip_param"],
-    #     vf_clip_param=policy.config["vf_clip_param"],
-    #     vf_loss_coeff=policy.config["vf_loss_coeff"],
-    #     use_gae=policy.config["use_gae"],
-    #     model_config=policy.config["model"])
+    policy.m_loss_obj = PPOLoss(
+        policy.action_space,
+        dist_class,
+        model,
+        m_train_batch[Postprocessing.VALUE_TARGETS],
+        m_train_batch[Postprocessing.ADVANTAGES],
+        m_train_batch[SampleBatch.ACTIONS],
+        m_train_batch[BEHAVIOUR_LOGITS],
+        m_train_batch[ACTION_LOGP],
+        m_train_batch[SampleBatch.VF_PREDS],
+        m_action_dist,
+        model.value_function(),
+        policy.kl_coeff,
+        mask,
+        entropy_coeff=policy.entropy_coeff,
+        clip_param=policy.config["clip_param"],
+        vf_clip_param=policy.config["vf_clip_param"],
+        vf_loss_coeff= policy.config["vf_loss_coeff"],
+        use_gae=policy.config["use_gae"],
+        model_config=policy.config["model"])
 
 
-    return policy.loss_obj.loss# + policy.m_loss_obj.loss
+    return policy.loss_obj.loss + policy.m_loss_obj.loss
 
 
 def kl_and_loss_stats(policy, train_batch):
