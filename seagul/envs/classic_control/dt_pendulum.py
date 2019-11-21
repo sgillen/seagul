@@ -6,7 +6,7 @@ from gym.utils import seeding
 import numpy as np
 from os import path
 
-class PendulumSymEnv(gym.Env):
+class PendulumDtEnv(gym.Env):
     metadata = {
         'render.modes' : ['human', 'rgb_array'],
         'video.frames_per_second' : 30
@@ -15,7 +15,7 @@ class PendulumSymEnv(gym.Env):
     def __init__(self, g=10.0):
         self.max_speed=8
         self.max_torque=2.
-        self.dt=.05
+        self.dt=.001
         self.g = g
         self.m = 1.
         self.l = 1.
@@ -43,15 +43,17 @@ class PendulumSymEnv(gym.Env):
         dt = self.dt
 
         u = np.clip(u, -self.max_torque, self.max_torque)[0]
-        u = np.sign(np.sin(th))*u
+        #u = np.sign(np.sin(th))*u
         
         self.last_u = u # for rendering
         costs = angle_normalize(th)**2 + .1*thdot**2 + .001*(u**2)
 
-        newthdot = thdot + (-3*g/(2*l) * np.sin(th + np.pi) + 3./(m*l**2)*u) * dt
-        newth = th + newthdot*dt
-        newthdot = np.clip(newthdot, -self.max_speed, self.max_speed) #pylint: disable=E1111
-
+        for i in range (50):
+            newthdot = thdot + (-3*g/(2*l) * np.sin(th + np.pi) + 3./(m*l**2)*u) * dt
+            newth = th + newthdot*dt
+            newthdot = np.clip(newthdot, -self.max_speed, self.max_speed) #pylint: disable=E1111
+            th = newth
+            thdot = newthdot
 
         self.state = np.array([newth, newthdot])
         return self._get_obs(), -costs, False, {}
@@ -66,7 +68,7 @@ class PendulumSymEnv(gym.Env):
         theta, thetadot = self.state
         thetadot = np.sign(np.sin(theta))*thetadot
         
-        return np.array([np.cos(theta), np.abs(np.sin(theta)), thetadot])
+        return np.array([np.cos(theta), np.sin(theta), thetadot])
 
     def render(self, mode='human'):
 
