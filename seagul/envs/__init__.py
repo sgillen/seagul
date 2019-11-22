@@ -57,12 +57,17 @@ try:
         #return HumanoidBulletEnv()
         return gym.make("dt_pendulum-v0")
 
+    def sg_pendulum_creator(env_config):
+        #return HumanoidBulletEnv()
+        return gym.make("sg_cartpole-v0")
+    
     register_env("five_link-v3", five_link_creator)
     register_env("Walker2DBulletEnv-v0", bullet_walker_creator)
     register_env("HumanoidBulletEnv-v0", bullet_humanoid_creator)
     register_env("sym_pendulum-v0", sym_pendulum_creator)
     register_env("dt_pendulum-v0", dt_pendulum_creator)
-        
+    register_env("sg_cartpole-v0", sg_pendulum_creator)
+
 
 
 except:
