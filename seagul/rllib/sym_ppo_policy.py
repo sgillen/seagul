@@ -146,7 +146,7 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
         mask = tf.ones_like(
             train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool)
 
-    import ipdb; ipdb.set_trace()
+
 
     policy.loss_obj = PPOLoss(
         policy.action_space,
@@ -176,14 +176,15 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
 
     m_train_batch['actions'] = mirror_act(train_batch['actions'])
     m_train_batch['prev_actions'] = mirror_act(train_batch['prev_actions'])
-
-
+    
+    
     m_logits, m_state = model.from_batch(m_train_batch) 
     m_action_dist = dist_class(m_logits, model)
 
     m_train_batch[BEHAVIOUR_LOGITS] = m_logits
     m_train_batch[ACTION_LOGP] = m_action_dist.logp(m_train_batch['obs'])
 
+    model.forward({'obs_flat':m_train_batch['obs']},None,None)
     
     policy.m_loss_obj = PPOLoss(
         policy.action_space,

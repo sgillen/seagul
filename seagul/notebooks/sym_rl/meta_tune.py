@@ -29,6 +29,8 @@ env_name  = "Pendulum-v0"
 #env_name = "sym_pendulum-v0"#
 #env_name = "dt_pendulum-v0"
 
+#env_name = "sg_cartpole-v0"
+
 config["env"] = env_name  
 
 #import pprint
@@ -41,10 +43,10 @@ PPOSymRewTrainer = ppo.PPOTrainer.with_updates(name="SymRewPPO", default_policy 
 
 analysis = tune.run(
 #    PPOSymRewTrainer,
-#    PPOSymTrainer,
-    ppo.PPOTrainer,
+    PPOSymTrainer,
+    #ppo.PPOTrainer,
     config=config,
     stop={"timesteps_total": 6e5},
-    local_dir="./data/bench_novf/",
+    local_dir="./data/bench_model/",
     checkpoint_at_end=True,
 )

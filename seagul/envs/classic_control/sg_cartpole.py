@@ -34,7 +34,7 @@ class SGCartPoleEnv(gym.Env):
 
     metadata = {"render.modes": ["human"], "video.frames_per_second": 15}
 
-    def __init__(self, num_steps=1500, dt=0.001):
+    def __init__(self, num_steps=1500, dt=0.01):
         self.L = 1.0  # length of the pole (m)
         self.mc = 4.0  # mass of the cart (kg)
         self.mp = 1.0  # mass of the ball at the end of the pole
@@ -55,7 +55,7 @@ class SGCartPoleEnv(gym.Env):
 
         self.state_noise_max = 0
         self.init_state_noise_max = .1
-        high = np.array([pi, self.X_MAX, self.DTHETA_MAX, self.DX_MAX])
+        high = np.array([2*pi, self.X_MAX, self.DTHETA_MAX, self.DX_MAX])
         low = -high
         self.observation_space = gym.spaces.Box(low=low, high=high)
 
@@ -139,7 +139,7 @@ class SGCartPoleEnv(gym.Env):
             #done = True
             reward -= 5
 
-        return self.state, reward, done, {}
+        return self.state.copy(), reward, done, {}
 
     # def reset_model(self):
     #   self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
