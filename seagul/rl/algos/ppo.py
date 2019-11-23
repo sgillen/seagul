@@ -101,8 +101,10 @@ def ppo(
     # init mean and var variables
     state_mean = torch.zeros(obs_size)
     state_var = torch.ones(obs_size)
-    rewards_mean = torch.zeros(1)
-    rewards_std = torch.ones(1)
+    adv_mean = torch.zeros(1)
+    adv_std = torch.ones(1)
+#    rew_mean
+#    rew_std
     
     num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
     
@@ -164,8 +166,6 @@ def ppo(
                 mean = model.policy(state)
                 state_np, reward, done, _ = env.step(action.numpy().reshape(-1))
                 
-               
-                   
                 state = torch.as_tensor(state_np).detach()
 
                 reward_list.append(torch.as_tensor(reward))
@@ -175,8 +175,13 @@ def ppo(
                 batch_steps += 1
                 traj_steps += 1
                         
-                if done:
-                    traj_count += 1
+                if done:  # assume failure???
+
+                    print()
+                    print("episode failed!!")
+                    print()
+
+                    traj_count += 1 # TODO pretty sure this makes no sense to put here..
                     break
 
             # if we failed at the first time step start again
@@ -193,18 +198,22 @@ def ppo(
             ep_length = ep_state_tensor.shape[0]
             
             ep_rewards_tensor = torch.stack(reward_list).reshape(-1)
-            rewards_mean = (ep_rewards_tensor.mean()*ep_length + rewards_mean*num_states)/(ep_length + num_states)
-            rewards_std  = (ep_rewards_tensor.std()*ep_length + rewards_std*num_states)/(ep_length + num_states)
-            ep_rewards_tensor = (ep_rewards_tensor - rewards_mean)/(rewards_std + 1e-5)
-            ep_disc_rewards = torch.as_tensor(discount_cumsum(ep_rewards_tensor, gamma)).reshape(-1, 1)
 
+            if not done: # implies episode did not fail 
+                torch.cat((ep_rewards_tensor, model.value_fn(state)))
+            
+            ep_disc_rewards = torch.as_tensor(discount_cumsum(ep_rewards_tensor, gamma)).reshape(-1, 1)
             disc_rewards_tensor = torch.cat((disc_rewards_tensor, ep_disc_rewards[:-1]))
             
             # calculate our advantage for this rollout
             value_preds = model.value_fn(ep_state_tensor)
             deltas = torch.as_tensor(ep_rewards_tensor[:-1]) + gamma * value_preds[1:].squeeze() - value_preds[:-1].squeeze()
             ep_adv = discount_cumsum(deltas.detach(), gamma * lam).reshape(-1, 1)
+            adv_mean = (ep_adv.mean()*ep_length + adv_mean*num_states)/(ep_length + num_states)
+            adv_std  = (ep_adv.std()*ep_length + adv_std*num_states)/(ep_length + num_states)
+            ep_adv = (ep_adv - adv_mean)/(adv_std + 1e-5)
 
+            
             # append to the tensors storing information for the whole batch
             state_tensor = torch.cat((state_tensor, ep_state_tensor[:-1]))
             action_tensor = torch.cat((action_tensor, ep_action_tensor[:-1]))
@@ -219,8 +228,6 @@ def ppo(
 
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
-
-                              
                 # Update our mean/std preprocessors
                 state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
                 state_var = (torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
@@ -230,7 +237,6 @@ def ppo(
 
                 model.value_fn.state_means = state_mean
                 model.value_fn.state_var = state_var
-
                 
                 # construct a training data generator
                 training_data = data.TensorDataset(state_tensor, action_tensor, adv_tensor)
@@ -255,7 +261,6 @@ def ppo(
                             / r.shape[0]
                         )
 
-
                         # do the normal pytorch update
                         p_loss.backward(retain_graph=True)
                         p_optimizer.step()
@@ -265,7 +270,6 @@ def ppo(
                                         
                 if(torch.isnan(p_loss)):
                    import ipdb; ipdb.set_trace()
-
 
                 # Now we do the update for our value function
                 # construct a training data generator
@@ -324,9 +328,7 @@ if __name__ == "__main__":
     activation = nn.ReLU
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
-
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-
     model = PpoModel(policy, value_fn, action_var=.1, discrete=True)
 
     # Define our hyper parameters
