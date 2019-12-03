@@ -293,7 +293,7 @@ def select_cont_action(policy, state, variance):
     m = Normal(loc=means, scale=torch.ones_like(means) * variance)
     action = m.sample()
     logprob = m.log_prob(action)
-    return action.detach(), logprob
+    return action.detach().reshape(-1), logprob
 
 
 # given a policy plus a state/action pair, what is the log liklihood of having taken that action?
@@ -310,7 +310,7 @@ def select_discrete_action(policy, state, variance=None):
     m = Categorical(probs)
     action = m.sample()
     logprob = m.log_prob(action)
-    return action.detach(), logprob
+    return action.detach().reshape(-1), logprob
 
 
 # given a policy plus a state/action pair, what is the log liklihood of having taken that action?
