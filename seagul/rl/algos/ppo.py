@@ -103,8 +103,8 @@ def ppo(
     state_var = torch.ones(obs_size)
     adv_mean = torch.zeros(1)
     adv_std = torch.ones(1)
-    rew_mean = torch.zeros(1)
-    rew_std  = torch.ones(1)
+    #rew_mean = torch.zeros(1)
+    #rew_std  = torch.ones(1)
     
     num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
     
@@ -198,9 +198,9 @@ def ppo(
             ep_length = ep_state_tensor.shape[0]
             
             ep_rewards_tensor = torch.stack(reward_list).reshape(-1)
-            rew_mean = (ep_rewards_tensor.mean()*ep_length + rew_mean*num_states)/(ep_length + num_states)
-            rew_std  = (ep_rewards_tensor.std()*ep_length + rew_std*num_states)/(ep_length + num_states)
-            ep_rewards_tensor = (ep_rewards_tensor - rew_mean)/(rew_std + 1e-5)
+            #rew_mean = (ep_rewards_tensor.mean()*ep_length + rew_mean*num_states)/(ep_length + num_states)
+            #rew_std  = (ep_rewards_tensor.std()*ep_length + rew_std*num_states)/(ep_length + num_states)
+            #ep_rewards_tensor = (ep_rewards_tensor - rew_mean)/(rew_std + 1e-5)
 
 
             if not done: # implies episode did not fail 

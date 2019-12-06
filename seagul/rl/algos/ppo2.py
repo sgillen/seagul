@@ -135,9 +135,9 @@ def ppo(
                   batch_act = torch.cat((batch_act, ep_act))
 
                   raw_rew_hist.append(sum(ep_rew))
-                  rew_mean = update_mean(ep_rew, rew_mean, cur_total_steps)
-                  rew_var = update_mean(ep_rew, rew_var, cur_total_steps)
-                  ep_rew = (ep_rew - rew_mean)/(rew_var)
+                  # rew_mean = update_mean(ep_rew, rew_mean, cur_total_steps)
+                  # rew_var = update_mean(ep_rew, rew_var, cur_total_steps)
+                  # ep_rew = (ep_rew - rew_mean)/(rew_var)
                   
                   ep_discrew = discount_cumsum(ep_rew, gamma) # [:-1] because we appended the value function to the end as an extra reward
                   batch_discrew = torch.cat((batch_discrew, ep_discrew))
@@ -152,9 +152,9 @@ def ppo(
                   ep_adv = discount_cumsum(deltas.detach(), gamma*lam)
                   batch_adv = torch.cat((batch_adv, ep_adv))
 
-                  adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
-                  adv_var = update_var(batch_adv, adv_var, cur_total_steps)
-                  batch_adv = (batch_adv - adv_mean) / (adv_var+1e-6)
+                  # adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
+                  # adv_var = update_var(batch_adv, adv_var, cur_total_steps)
+                  # batch_adv = (batch_adv - adv_mean) / (adv_var+1e-6)
 
 
                   cur_batch_steps += ep_steps

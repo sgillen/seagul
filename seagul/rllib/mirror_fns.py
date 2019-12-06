@@ -97,11 +97,17 @@ def mirror_human_act(act):
     return m_act
 
 
+import torch
 def mirror_pend_obs(obs):
-    mask = tf.constant([1,-1,-1],dtype=obs.dtype)
-    return tf.multiply(mask,obs)
+    mask = torch.tensor([1, -1, -1], dtype=obs.dtype)
+    return mask*obs
+    #mask = tf.constant([1,-1,-1],dtype=obs.dtype)
+    #return tf.multiply(mask,obs)
 
 
 def mirror_pend_act(act):
-    mask = tf.constant([-1],dtype=act.dtype)
-    return tf.multiply(mask,act)
+    mask = torch.tensor([-1], dtype=act.dtype)
+    return mask*act
+
+    #mask = tf.constant([-1],dtype=act.dtype)
+    #return tf.multiply(mask,act)
