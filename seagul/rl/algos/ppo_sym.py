@@ -11,6 +11,7 @@ import pickle
 import torch
 from torch.utils import data
 
+from seagul.rllib.mirror_fns import *
 
 
 # ============================================================================================
@@ -18,8 +19,6 @@ def ppo_sym(
     env_name,
     num_epochs,
     model,
-    state_mirror_fn,
-    act_mirror_fn,
     action_var_schedule=None,
     env_timesteps = 2048,
     epoch_batch_size=2048,
@@ -38,7 +37,7 @@ def ppo_sym(
 ):
 
     """
-    Implements "Symmetric" proximal policy optimization with clipping
+    Implements proximal policy optimization with clipping
 
     Args:
         env_name: name of the openAI gym environment to solve
@@ -81,6 +80,20 @@ def ppo_sym(
         t_model, rewards, var_dict = ppo("su_acro_drake-v0", 100, model, action_var_schedule=[3,2,1,0])
     """
 
+        
+    if env_name == 'HumanoidBulletEnv-v0':
+        mirror_act = mirror_human_act
+        mirror_obs = mirror_human_obs
+    elif env_name == 'Walker2DBulletEnv-v0':
+        mirror_act = mirror_walker_act
+        mirror_obs = mirror_walker_obs
+    elif env_name == 'Pendulum-v0':
+        mirror_act = mirror_pend_act
+        mirror_obs = mirror_pend_obs
+    else:
+        raise NotImplementedError("Passed invalid environment, symmetric PPO only supports Walker2dBulletEnv-v0 or HumanoidBulletEnv-v0")
+
+    
     env = gym.make(env_name)
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         action_size = 1
@@ -103,8 +116,10 @@ def ppo_sym(
     # init mean and var variables
     state_mean = torch.zeros(obs_size)
     state_var = torch.ones(obs_size)
-    disc_rewards_mean = torch.zeros(1)
-    disc_rewards_std = torch.ones(1)
+    adv_mean = torch.zeros(1)
+    adv_std = torch.ones(1)
+    #rew_mean = torch.zeros(1)
+    #rew_std  = torch.ones(1)
     
     num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
     
@@ -140,6 +155,7 @@ def ppo_sym(
         disc_rewards_tensor = torch.empty(0)
         state_tensor = torch.empty(0)
         action_tensor = torch.empty(0,dtype=action_dtype)
+        mean_tensor = torch.empty(0)
 
         # Check if we have maxed out the reward, so that we can stop early
         if traj_count > 2:
@@ -153,32 +169,34 @@ def ppo_sym(
             action_list = []
             state_list = []
             reward_list = []
+            mean_list = []
             traj_steps = 0
 
             # Do a single policy rollout
             for t in range(env_timesteps):
-
                 state_list.append(state.clone())
-                mirror_state = state_mirror_fn(state.clone())
-                state_list.append(mirror_state.clone())
                                   
-                
+                #import ipdb; ipdb.set_trace()
                 action, logprob = model.select_action(state)
-                state_np, reward, done, _ = env.step(action.numpy())
-
-                   
+                mean = model.policy(state)
+                state_np, reward, done, _ = env.step(action.numpy().reshape(-1))
+                
                 state = torch.as_tensor(state_np).detach()
-                reward_list.append(reward)
-                action_list.append(torch.as_tensor(action.clone()))
 
-                mirror_action = act_mirror_fn(action.clone())
+                reward_list.append(torch.as_tensor(reward))
                 action_list.append(torch.as_tensor(action.clone()))
-
+                mean_list.append(torch.as_tensor(mean).clone())
+                #import ipdb; ipdb.set_trace()
                 batch_steps += 1
                 traj_steps += 1
                         
-                if done:
-                    traj_count += 1
+                if done:  # assume failure???
+
+                    print()
+                    print("episode failed!!")
+                    print()
+
+                    traj_count += 1 # TODO pretty sure this makes no sense to put here..
                     break
 
             # if we failed at the first time step start again
@@ -192,37 +210,36 @@ def ppo_sym(
             #            import ipdb; ipdb.set_trace()
             ep_state_tensor = torch.stack(state_list).reshape(-1, env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
-            ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
             ep_length = ep_state_tensor.shape[0]
+            
+            ep_rewards_tensor = torch.stack(reward_list).reshape(-1)
+            #rew_mean = (ep_rewards_tensor.mean()*ep_length + rew_mean*num_states)/(ep_length + num_states)
+            #rew_std  = (ep_rewards_tensor.std()*ep_length + rew_std*num_states)/(ep_length + num_states)
+            #ep_rewards_tensor = (ep_rewards_tensor - rew_mean)/(rew_std + 1e-5)
 
+
+            if not done: # implies episode did not fail 
+                torch.cat((ep_rewards_tensor, model.value_fn(state)))
+            
+            ep_disc_rewards = torch.as_tensor(discount_cumsum(ep_rewards_tensor, gamma)).reshape(-1, 1)
+            disc_rewards_tensor = torch.cat((disc_rewards_tensor, ep_disc_rewards[:-1]))
+            
             # calculate our advantage for this rollout
             value_preds = model.value_fn(ep_state_tensor)
-            deltas = torch.as_tensor(reward_list[:-1]) + gamma * value_preds[1:].squeeze() - value_preds[:-1].squeeze()
+            deltas = torch.as_tensor(ep_rewards_tensor[:-1]) + gamma * value_preds[1:].squeeze() - value_preds[:-1].squeeze()
             ep_adv = discount_cumsum(deltas.detach(), gamma * lam).reshape(-1, 1)
+            adv_mean = (ep_adv.mean()*ep_length + adv_mean*num_states)/(ep_length + num_states)
+            adv_std  = (ep_adv.std()*ep_length + adv_std*num_states)/(ep_length + num_states)
+            ep_adv = (ep_adv - adv_mean)/(adv_std + 1e-5)
 
-            #if np.isnan(ep_adv).any():
-                #import ipdb; ipdb.set_trace()
-
+            
             # append to the tensors storing information for the whole batch
             state_tensor = torch.cat((state_tensor, ep_state_tensor[:-1]))
             action_tensor = torch.cat((action_tensor, ep_action_tensor[:-1]))
+            mean_tensor = torch.cat((mean_tensor, torch.stack(mean_list)[:-1]))
 
             adv_tensor = torch.cat((adv_tensor, ep_adv))
-            
-            disc_rewards_tensor = torch.cat((disc_rewards_tensor, ep_disc_rewards[:-1]))
-            disc_rewards_mean = (disc_rewards_tensor.mean()*ep_length + disc_rewards_mean*num_states)/(ep_length + num_states)
-            disc_rewards_std  = (disc_rewards_tensor.std()*ep_length + disc_rewards_std*num_states)/(ep_length + num_states)
-            disc_rewards_tensor = (disc_rewards_tensor - disc_rewards_mean)/(disc_rewards_std + 1e-5)
 
-            state_mean = (state_tensor.mean(dim=0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
-            state_var =  (state_tensor.std(dim=0)*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
-                          
-            model.policy.state_means = state_mean
-            model.policy.state_var = state_var
-
-            model.value_fn.state_means = state_mean
-            model.value_fn.state_var = state_var
-        
             num_states += ep_length
             
             # keep track of rewards for metrics later
@@ -230,7 +247,22 @@ def ppo_sym(
 
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
-               
+                # Update our mean/std preprocessors
+
+                state_tensor = torch.cat((state_tensor, mirror_obs(state_tensor)))
+                action_tensor = torch.cat((action_tensor, mirror_act(action_tensor)))
+                adv_tensor = torch.cat((adv_tensor, adv_tensor))
+                disc_rewards_tensor = torch.cat((disc_rewards_tensor, disc_rewards_tensor))
+                                                        
+                state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
+                state_var = (torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
+                
+                model.policy.state_means = state_mean
+                model.policy.state_var = state_var
+
+                model.value_fn.state_means = state_mean
+                model.value_fn.state_var = state_var
+                
                 # construct a training data generator
                 training_data = data.TensorDataset(state_tensor, action_tensor, adv_tensor)
                 training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
@@ -254,10 +286,6 @@ def ppo_sym(
                             / r.shape[0]
                         )
 
-                        if(torch.isnan(p_loss)):
-                            import ipdb; ipdb.set_trace()
-
-
                         # do the normal pytorch update
                         p_loss.backward(retain_graph=True)
                         p_optimizer.step()
@@ -267,7 +295,6 @@ def ppo_sym(
                                         
                 if(torch.isnan(p_loss)):
                    import ipdb; ipdb.set_trace()
-
 
                 # Now we do the update for our value function
                 # construct a training data generator
@@ -304,6 +331,7 @@ def ppo_sym(
 
                 break
 
+    print(avg_reward_hist[-1])
     return model, avg_reward_hist, locals()
 
 
@@ -315,6 +343,7 @@ if __name__ == "__main__":
     import torch
 
     import matplotlib.pyplot as plt
+
     torch.set_default_dtype(torch.double)
 
     input_size = 4
@@ -325,7 +354,7 @@ if __name__ == "__main__":
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PpoModel(policy, value_fn, action_var=4, discrete=True)
+    model = PpoModel(policy, value_fn, action_var=.1, discrete=True)
 
     # Define our hyper parameters
     num_epochs = 100
@@ -343,13 +372,7 @@ if __name__ == "__main__":
     eps = 0.2
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    def cartpole_mirror_obs(obs):
-        return -obs
-
-    def cartpole_mirror_act(act):
-        return -act
-    
-    t_model, rewards, var_dict = ppo_sym("CartPole-v0", 100, model, action_var_schedule=[3,2,1,0])
+    t_model, rewards, var_dict = ppo("CartPole-v0", 100, model, action_var_schedule=[1])
     print(rewards)
     plt.plot(rewards)
     plt.show()
