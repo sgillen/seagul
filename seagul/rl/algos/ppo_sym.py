@@ -192,10 +192,6 @@ def ppo_sym(
                         
                 if done:  # assume failure???
 
-                    print()
-                    print("episode failed!!")
-                    print()
-
                     traj_count += 1 # TODO pretty sure this makes no sense to put here..
                     break
 
@@ -218,8 +214,8 @@ def ppo_sym(
             #ep_rewards_tensor = (ep_rewards_tensor - rew_mean)/(rew_std + 1e-5)
 
 
-            if not done: # implies episode did not fail 
-                torch.cat((ep_rewards_tensor, model.value_fn(state)))
+            #            if not done: # implies episode did not fail 
+            torch.cat((ep_rewards_tensor, model.value_fn(state)))
             
             ep_disc_rewards = torch.as_tensor(discount_cumsum(ep_rewards_tensor, gamma)).reshape(-1, 1)
             disc_rewards_tensor = torch.cat((disc_rewards_tensor, ep_disc_rewards[:-1]))
@@ -249,11 +245,7 @@ def ppo_sym(
             if batch_steps > epoch_batch_size:
                 # Update our mean/std preprocessors
 
-                state_tensor = torch.cat((state_tensor, mirror_obs(state_tensor)))
-                action_tensor = torch.cat((action_tensor, mirror_act(action_tensor)))
-                adv_tensor = torch.cat((adv_tensor, adv_tensor))
-                disc_rewards_tensor = torch.cat((disc_rewards_tensor, disc_rewards_tensor))
-                                                        
+                                                                        
                 state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
                 state_var = (torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
                 
@@ -263,8 +255,13 @@ def ppo_sym(
                 model.value_fn.state_means = state_mean
                 model.value_fn.state_var = state_var
                 
+                mir_state_tensor = torch.cat((state_tensor, mirror_obs(state_tensor)))
+                mir_action_tensor = torch.cat((action_tensor, mirror_act(action_tensor)))
+                mir_adv_tensor = torch.cat((adv_tensor, adv_tensor))
+                #disc_rewards_tensor = torch.cat((disc_rewards_tensor, disc_rewards_tensor))
+                
                 # construct a training data generator
-                training_data = data.TensorDataset(state_tensor, action_tensor, adv_tensor)
+                training_data = data.TensorDataset(mir_state_tensor, mir_action_tensor, mir_adv_tensor)
                 training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
 
                 # iterate through the data, doing the updates for our policy

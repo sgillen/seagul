@@ -177,10 +177,6 @@ def ppo(
                         
                 if done:  # assume failure???
 
-                    print()
-                    print("episode failed!!")
-                    print()
-
                     traj_count += 1 # TODO pretty sure this makes no sense to put here..
                     break
 
@@ -202,9 +198,7 @@ def ppo(
             #rew_std  = (ep_rewards_tensor.std()*ep_length + rew_std*num_states)/(ep_length + num_states)
             #ep_rewards_tensor = (ep_rewards_tensor - rew_mean)/(rew_std + 1e-5)
 
-
-            if not done: # implies episode did not fail 
-                torch.cat((ep_rewards_tensor, model.value_fn(state)))
+            torch.cat((ep_rewards_tensor, model.value_fn(state)))
             
             ep_disc_rewards = torch.as_tensor(discount_cumsum(ep_rewards_tensor, gamma)).reshape(-1, 1)
             disc_rewards_tensor = torch.cat((disc_rewards_tensor, ep_disc_rewards[:-1]))
