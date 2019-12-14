@@ -16,11 +16,9 @@ from seagul.rl.algos import ppo, ppo_sym
 from seagul.rl.models import PpoModel, PpoModelActHold
 from seagul.nn import MLP, CategoricalMLP
 
-
-
 input_size = env.observation_space.shape[0]
 output_size = env.action_space.shape[0]
-layer_size = 64
+layer_size = 32
 num_layers=2
 activation=nn.ReLU
 
@@ -47,24 +45,24 @@ for seed in [4,5,6,7]:
     arg_dict = {
         'env_name' : env_name,
         'model' : model,
-        'action_var_schedule' : [.5],
+        'action_var_schedule' : [.7],
         'seed' : seed, #int((time.time() % 1)*1e8),
         'num_epochs' : 800,
         'env_timesteps' : 200,
         'epoch_batch_size': 1024,
         'gamma' : .95,
         'p_epochs' : 10,
-        'v_epochs' : 20,
+        'v_epochs' : 10,
         'policy_batch_size' : 2048,
         'value_batch_size' : 2048,
     }
     
-    run_name = "sym2_" + str(seed)
+    run_name = "sym_mean" + str(seed)
 
     
 #    run_sg(arg_dict, ppo, run_name, '', "/data/sym_comp/ppo")
     
-    p = Process(target=run_sg, args=(arg_dict, ppo_sym, run_name, 'updating value fn only on non mirrored rewards', "/data/sym_comp/"))
+    p = Process(target=run_sg, args=(arg_dict, ppo_sym, run_name, 'update means after the fact', "/data/sym_comp/"))
     p.start()
     proc_list.append(p)
 

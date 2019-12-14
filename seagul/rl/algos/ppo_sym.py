@@ -244,24 +244,22 @@ def ppo_sym(
             # once we have enough data, update our policy and value function
             if batch_steps > epoch_batch_size:
                 # Update our mean/std preprocessors
+                
+              
+                state_tensor = mirror_obs(state_tensor)
+                action_tensor = mirror_act(action_tensor)
 
-                                                                        
                 state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
                 state_var = (torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
-                
-                model.policy.state_means = state_mean
-                model.policy.state_var = state_var
 
-                model.value_fn.state_means = state_mean
-                model.value_fn.state_var = state_var
                 
-                mir_state_tensor = torch.cat((state_tensor, mirror_obs(state_tensor)))
-                mir_action_tensor = torch.cat((action_tensor, mirror_act(action_tensor)))
-                mir_adv_tensor = torch.cat((adv_tensor, adv_tensor))
-                #disc_rewards_tensor = torch.cat((disc_rewards_tensor, disc_rewards_tensor))
+                state_tensor = torch.cat((state_tensor, mirror_obs(state_tensor)))
+                action_tensor = torch.cat((action_tensor, mirror_act(action_tensor)))
+                adv_tensor = torch.cat((adv_tensor, adv_tensor))
+                disc_rewards_tensor = torch.cat((disc_rewards_tensor, disc_rewards_tensor))
                 
                 # construct a training data generator
-                training_data = data.TensorDataset(mir_state_tensor, mir_action_tensor, mir_adv_tensor)
+                training_data = data.TensorDataset(state_tensor, action_tensor, adv_tensor)
                 training_generator = data.DataLoader(training_data, batch_size=policy_batch_size, shuffle=True)
 
                 # iterate through the data, doing the updates for our policy
@@ -321,10 +319,20 @@ def ppo_sym(
                 avg_reward_hist.append(sum(episode_reward_sum) / len(episode_reward_sum))
                 v_loss_hist.append(v_loss)
                 p_loss_hist.append(p_loss)
+                
                         
                 old_model = pickle.loads(pickle.dumps(model))
                 if action_var_schedule is not None:
                     model.action_var = action_var_lookup(epoch)
+
+
+                                
+                model.policy.state_means = state_mean
+                model.policy.state_var = state_var
+
+                model.value_fn.state_means = state_mean
+                model.value_fn.state_var = state_var
+
 
                 break
 
