@@ -10,47 +10,6 @@ Utility functions for seagul, all vaguely related to neural networks
 """
 
 
-# Marco Molnar
-def make_histories(states, history_length, sampling_sparsity=1):
-    """Used to make a dataset suitable for a neural network who's state is a history of inputs.
-
-
-    This function takes numpy array states which should be a time series, and returns an array of histories of size
-    (history_length, num_states) the optional sampling_sparsity parameter decides how many time steps to look back for
-    every entry in a history. This is probably best explained by looking at the return value:
-
-    histories[i] = np.array([states[i], states[i - T], states[i - 2*T], ... ])
-
-    Attributes:
-        states:  input numpy array, must be 2 dimensional (num_samples, num_states)
-        history_length:  number of samples in each history
-        sampling_sparsity:  timesteps between samples in each history
-
-    Returns:
-        histories: numpy array (num_samples, num_states, history_length)
-
-    Example:
-        states = np.random.randn(12,2)
-        history_state = make_histories(states, 3)
-
-
-      """
-
-    num_set = states.shape[0]
-    z_ext = np.zeros(((history_length - 1) * sampling_sparsity, states.shape[1]))
-    states = np.concatenate((z_ext, states), axis=0)
-    histories = np.zeros((num_set,) + (states.shape[1],) + (history_length,))  # initialize output matrix
-    step = 0
-
-    while step < num_set:
-        # select vectors according to history_length and sampling_sparsity
-        histories[step, :, :] = np.transpose(
-            states[step : (history_length - 1) * sampling_sparsity + 1 + step : sampling_sparsity, :]
-        )
-        step += 1
-    return histories
-
-
 def fit_model(
     model,
     state_train,
@@ -369,6 +328,49 @@ class LinearNet(nn.Module):
         return self.layer(data)
 
 
+
+# Marco Molnar
+def make_histories(states, history_length, sampling_sparsity=1):
+    """Used to make a dataset suitable for a neural network who's state is a history of inputs.
+
+
+    This function takes numpy array states which should be a time series, and returns an array of histories of size
+    (history_length, num_states) the optional sampling_sparsity parameter decides how many time steps to look back for
+    every entry in a history. This is probably best explained by looking at the return value:
+
+    histories[i] = np.array([states[i], states[i - T], states[i - 2*T], ... ])
+
+    Attributes:
+        states:  input numpy array, must be 2 dimensional (num_samples, num_states)
+        history_length:  number of samples in each history
+        sampling_sparsity:  timesteps between samples in each history
+
+    Returns:
+        histories: numpy array (num_samples, num_states, history_length)
+
+    Example:
+        states = np.random.randn(12,2)
+        history_state = make_histories(states, 3)
+
+
+      """
+
+    num_set = states.shape[0]
+    z_ext = np.zeros(((history_length - 1) * sampling_sparsity, states.shape[1]))
+    states = np.concatenate((z_ext, states), axis=0)
+    histories = np.zeros((num_set,) + (states.shape[1],) + (history_length,))  # initialize output matrix
+    step = 0
+
+    while step < num_set:
+        # select vectors according to history_length and sampling_sparsity
+        histories[step, :, :] = np.transpose(
+            states[step : (history_length - 1) * sampling_sparsity + 1 + step : sampling_sparsity, :]
+        )
+        step += 1
+    return histories
+
+
+    
 # One day this might be a unit test
 if __name__ == "__main__":
     policy = MLP(input_size=4, output_size=1, num_layers=3, layer_size=12, activation=nn.ReLU)
@@ -379,3 +381,5 @@ if __name__ == "__main__":
 
     policy = LinearNet(input_size=4, output_size=1, bias=False)
     print(policy(torch.randn(1, 4)))
+
+    
