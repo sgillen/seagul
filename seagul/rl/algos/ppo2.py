@@ -4,6 +4,7 @@ from torch.utils import data
 import tqdm
 import copy
 import gym
+import pickle
 
 from seagul.rl.common import discount_cumsum
 
@@ -92,10 +93,9 @@ def ppo(
       rew_var  = torch.ones(1)
 
       
-      old_model = copy.deepcopy(model)
-
-      policy_opt = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
-      value_opt  = torch.optim.Adam(model.value_fn.parameters(), lr=value_lr)
+      old_model = pickle.loads(pickle.dumps(model))
+      p_opt = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
+      v_opt  = torch.optim.Adam(model.value_fn.parameters(), lr=value_lr)
 
       # seed all our RNGs
       env.seed(seed); torch.manual_seed(seed); np.random.seed(seed)
@@ -114,6 +114,7 @@ def ppo(
       progress_bar = tqdm.tqdm(total=total_steps)
       cur_total_steps = 0
       progress_bar.update(0)
+      early_stop = False
       
       while (cur_total_steps < total_steps):
 
@@ -123,13 +124,19 @@ def ppo(
             batch_discrew = torch.empty(0)
             
             cur_batch_steps = 0
+
+            if len(raw_rew_hist) > 2:
+                  if raw_rew_hist[-1] >= reward_stop and raw_rew_hist[-2] >= reward_stop:
+                        early_stop = True
+                        break
+
             
             while (cur_batch_steps < epoch_batch_size):
                   
                   ep_obs, ep_act, ep_rew, ep_steps = do_rollout(env, model)
 
-                  batch_obs = torch.cat((batch_obs, ep_obs))
-                  batch_act = torch.cat((batch_act, ep_act))
+                  batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
+                  batch_act = torch.cat((batch_act, ep_act[:-1]))
 
                   raw_rew_hist.append(sum(ep_rew))
                   # rew_mean = update_mean(ep_rew, rew_mean, cur_total_steps)
@@ -137,30 +144,29 @@ def ppo(
                   # ep_rew = (ep_rew - rew_mean)/(rew_var)
                   
                   ep_discrew = discount_cumsum(ep_rew, gamma) # [:-1] because we appended the value function to the end as an extra reward
-                  batch_discrew = torch.cat((batch_discrew, ep_discrew))
+                  batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
 
                   # calculate this episodes advantages
                   last_val = model.value_fn(ep_obs[-1]).reshape(-1,1)
-                  ep_rew = torch.cat((ep_rew, last_val)) # append value_fn to last reward
+                  # ep_rew = torch.cat((ep_rew, last_val)) # append value_fn to last reward
                   ep_val = model.value_fn(ep_obs)
-                  ep_val = torch.cat((ep_val, last_val))
+                  # ep_val = torch.cat((ep_val, last_val))
+                  ep_val[-1] = last_val
 
                   deltas = ep_rew[:-1] + gamma*ep_val[1:] - ep_val[:-1]
                   ep_adv = discount_cumsum(deltas.detach(), gamma*lam)
                   batch_adv = torch.cat((batch_adv, ep_adv))
 
-                  # adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
-                  # adv_var = update_var(batch_adv, adv_var, cur_total_steps)
-                  # batch_adv = (batch_adv - adv_mean) / (adv_var+1e-6)
-
-
                   cur_batch_steps += ep_steps
                   cur_total_steps += ep_steps
 
 
-            #update filters and apply them
 
 
+            #make sure our advantages are zero mean and unit variance
+            adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
+            adv_var = update_var(batch_adv, adv_var, cur_total_steps)
+            batch_adv = (batch_adv - adv_mean) / (adv_var+1e-6)
 
             # policy update
             # ========================================================================
@@ -177,10 +183,11 @@ def ppo(
                               local_act.to(device),
                               local_adv.to(device),
                         )
-                        
+
+                        #import ipdb; ipdb.set_trace()
                         # predict and calculate loss for the batch
-                        logp = model.get_logp(local_obs, local_act)
-                        old_logp = old_model.get_logp(local_obs, local_act)
+                        logp = model.get_logp(local_obs, local_act).reshape(-1,1)
+                        old_logp = old_model.get_logp(local_obs, local_act).reshape(-1,1)
                         r = torch.exp(logp - old_logp)
                         p_loss = (
                               -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
@@ -188,9 +195,9 @@ def ppo(
                         )
                         
                         # do the normal pytorch update
-                        policy_opt.zero_grad()
+                        p_opt.zero_grad()
                         p_loss.backward()
-                        policy_opt.step()
+                        p_opt.step()
                         
                         
                  
@@ -215,21 +222,13 @@ def ppo(
                         v_loss = torch.sum(torch.pow(value_preds - local_val, 2))/(value_preds.shape[0])
                         
                         # do the normal pytorch update
-                        value_opt.zero_grad()
+                        v_opt.zero_grad()
                         v_loss.backward()
-                        value_opt.step()
+                        v_opt.step()
 
 
-            old_model = copy.deepcopy(model)
-                        
-            obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
-            obs_var = update_var(batch_obs, obs_var, cur_total_steps)
 
-#            import ipdb; ipdb.set_trace()
-            model.policy.state_means = obs_mean
-            model.value_fn.state_means = obs_mean
-            model.policy.state_var = obs_var
-            model.value_fn.state_var = obs_var
+            old_model = pickle.loads(pickle.dumps(model))
 
             model.action_var = actvar_lookup(cur_total_steps)
 
@@ -238,7 +237,17 @@ def ppo(
 
             progress_bar.update(cur_batch_steps)
       
+            
 
+      #update observation mean and variance
+      obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
+      obs_var = update_var(batch_obs, obs_var, cur_total_steps)
+      model.policy.state_means = obs_mean
+      model.value_fn.state_means = obs_mean
+      model.policy.state_var = obs_var
+      model.value_fn.state_var = obs_var
+
+            
       progress_bar.close()
       return model, raw_rew_hist, locals()
 
@@ -272,7 +281,7 @@ def do_rollout(env, model):
       
       while not done:
             obs = torch.as_tensor(obs).detach()
-            obs_list.append(obs)
+            obs_list.append(obs.clone())
             
             act, logprob = model.select_action(obs)
             obs, rew, done, _ = env.step(act.numpy().reshape(-1))

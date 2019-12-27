@@ -253,6 +253,7 @@ def ppo(
                             local_adv.to(device),
                         )
 
+                        #import ipdb; ipdb.set_trace()
                         # predict and calculate loss for the batch
                         logp = model.get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
                         old_logp = old_model.get_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)

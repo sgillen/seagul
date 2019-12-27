@@ -300,7 +300,7 @@ def select_cont_action(policy, state, variance):
 def get_cont_logp(policy, states, actions, variance):
     means = policy(torch.as_tensor(states)).squeeze()
     m = Normal(loc=means, scale=torch.ones_like(means) * variance)
-    logprob = m.log_prob(actions)
+    logprob = m.log_prob(actions.squeeze())
     return logprob
 
 
@@ -317,6 +317,6 @@ def select_discrete_action(policy, state, variance=None):
 def get_discrete_logp(policy, state, action, variance=None):
     probs = policy(state)
     m = Categorical(probs)
-    logprob = m.log_prob(action)
+    logprob = m.log_prob(action.squeeze())
     return logprob
 
