@@ -31,14 +31,14 @@ register(id="su_acro_drake-v0", entry_point="seagul.envs.drake:DrakeAcroEnv")
 try:
     # Ray requires it's own registry, can't rely on the normal mechanisms that gym uses
 
-    from seagul.envs.mujoco.five_link import FiveLinkWalkerEnv
+#    from seagul.envs.mujoco.five_link import FiveLinkWalkerEnv
     import gym
     import pybullet_envs
     
     from ray.tune.registry import register_env
 
-    def five_link_creator(env_config):
-        return FiveLinkWalkerEnv()
+ #   def five_link_creator(env_config):
+ #       return FiveLinkWalkerEnv()
     
     def bullet_walker_creator(env_config):
         #    return Walker2DBulletEnv()
@@ -63,7 +63,7 @@ try:
     def humanoid_long_creator(env_config):
         return gym.make("humanoid_long-v1")
     
-    register_env("five_link-v3", five_link_creator)
+  #  register_env("five_link-v3", five_link_creator)
     register_env("Walker2DBulletEnv-v0", bullet_walker_creator)
     register_env("HumanoidBulletEnv-v0", bullet_humanoid_creator)
     register_env("sym_pendulum-v0", sym_pendulum_creator)
