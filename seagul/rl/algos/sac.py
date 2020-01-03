@@ -12,7 +12,7 @@ def sac(
         total_steps,
         model,
         epoch_batch_size = 2048,
-        sample_batch_size = 2048,
+        replay_batch_size = 2048,
         seed=0,
         gamma = .95,
         polyak = .9,
@@ -23,9 +23,6 @@ def sac(
         pol_lr=1e-4,
         val_lr=1e-5,
         q_lr  = 1e-5,
-        pol_epochs=10,
-        val_epochs=10,
-        q_epochs = 10,
         replay_buf_size = 10000,
         use_gpu=False,
         reward_stop=None,
@@ -49,8 +46,6 @@ def sac(
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
-
-    
     obs_size = env.observation_space.shape[0]
     obs_mean = torch.zeros(obs_size)
     obs_var  = torch.ones(obs_size)
@@ -95,7 +90,10 @@ def sac(
                 early_stop = True
                 break
 
-        
+
+            
+        # collect data with the current policy
+        # ========================================================================
         while (cur_batch_steps < epoch_batch_size):
             
             ep_obs1, ep_acts, ep_rews, ep_obs2, ep_done  = do_rollout(env, model)
@@ -103,70 +101,103 @@ def sac(
             # can def be made more efficient if found to be a bottleneck
             for obs1,acts,rews,obs2,done in zip(ep_obs1, ep_acts, ep_rews, ep_obs2, ep_done):
                 replay_buf.store(obs1,acts,rews,obs2,done)
-            
-            batch_obs = torch.cat((batch_obs, ep_obs1[:-1]))
-            batch_act = torch.cat((batch_act, ep_acts[:-1]))
-            
-            # ep_discrew = discount_cumsum(ep_rew, gamma) # [:-1] because we appended the value function to the end as an extra reward
-            # batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
-            
-            # # calculate this episodes advantages
-            # last_val = model.value_fn(ep_obs[-1]).reshape(-1,1)
-            # # ep_rew = torch.cat((ep_rew, last_val)) # append value_fn to last reward
-            # ep_val = model.value_fn(ep_obs)
-            # # ep_val = torch.cat((ep_val, last_val))
-            # ep_val[-1] = last_val
-        
-            # deltas = ep_rew[:-1] + gamma*ep_val[1:] - ep_val[:-1]
-            # ep_adv = discount_cumsum(deltas.detach(), gamma*lam)
-            # batch_adv = torch.cat((batch_adv, ep_adv))
+
+
 
             ep_steps = ep_rews.shape[0]
             cur_batch_steps += ep_steps
             cur_total_steps += ep_steps
             
-
+        raw_rew_hist.append(torch.sum(ep_rews))
         # compute targets for Q and V
         # ========================================================================
         progress_bar.update(cur_batch_steps)
-        sample_obs1, sample_obs2, sample_acts, sample_rews, sample_done = replay_buf.sample_batch(sample_batch_size)
+        replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)
 
-        q_targ = sample_rews + gamma*(1 - sample_done)*target_value_fn(sample_obs2)
-        q_input = torch.cat((sample_obs1, sample_acts),dim=1)
-        q_preds = torch.cat((model.q1_fn(q_input), model.q1_fn(q_input)),dim=1)
+        q_targ = replay_rews + gamma*(1 - replay_done)*target_value_fn(replay_obs2)
+        q_targ = q_targ.detach()
+        
+        q_input = torch.cat((replay_obs1, replay_acts),dim=1)
+        q_preds = torch.cat((model.q1_fn(q_input), model.q2_fn(q_input)),dim=1)
         q_min, q_min_idx = torch.min(q_preds, dim=1)
 
-        v_targ = q_min - alpha*model.get_logp(sample_obs1, sample_acts)
+        
+        noise = torch.randn(replay_batch_size, act_size)
+        sample_acts, sample_logp = model.select_action(replay_obs1, noise)
+        v_targ = q_min - alpha*sample_logp
+        v_targ = v_targ.detach()
+        
+        # q_fn update 
+        # ========================================================================
+        training_data = data.TensorDataset(replay_obs1, replay_acts, q_targ)
+        training_generator = data.DataLoader(training_data, batch_size=q_batch_size, shuffle=True)
 
+        for local_obs, local_act, local_qtarg in training_generator:
+            # Transfer to GPU (if GPU is enabled, else this does nothing)
+            local_obs, local_act, local_qtarg = (local_obs.to(device), local_act.to(device), local_qtarg.to(device))
+
+            q_in = torch.cat((local_obs, local_act),dim=1)
+            q1_preds = model.q1_fn(q_in)
+            q2_preds = model.q2_fn(q_in)
+            q1_loss = torch.sum(torch.pow(q1_preds - local_qtarg, 2))/(q1_preds.shape[0])
+            q2_loss = torch.sum(torch.pow(q2_preds - local_qtarg, 2))/(q2_preds.shape[0])
+
+            q1_opt.zero_grad(); q2_opt.zero_grad()
+            q1_loss.backward(); q2_loss.backward()
+            q1_opt.step(); q2_opt.step()
+                
+        # val_fn update 
+        # ========================================================================
+        training_data = data.TensorDataset(replay_obs1, v_targ)
+        training_generator = data.DataLoader(training_data, batch_size=q_batch_size, shuffle=True)
+
+        for local_obs, local_vtarg in training_generator:
+            # Transfer to GPU (if GPU is enabled, else this does nothing)
+            local_obs, local_vtarg = (local_obs.to(device), local_vtarg.to(device))
+            
+            # predict and calculate loss for the batch
+            val_preds = model.value_fn(local_obs)
+            val_loss =  torch.sum(torch.pow(val_preds - local_vtarg, 2))/(val_preds.shape[0])
+            
+            # do the normal pytorch update
+            val_opt.zero_grad()
+            val_loss.backward()
+            val_opt.step()
+
+        
+        # policy_fn update
+        # ========================================================================                
+
+        training_data = data.TensorDataset(replay_obs1, sample_acts, sample_logp)
+        training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True)
+
+        for local_obs in training_generator:
+            # Transfer to GPU (if GPU is enabled, else this does nothing)
+            local_obs = local_obs[0].to(device)
+            
+            noise = torch.randn(pol_batch_size, act_size)
+            local_acts, local_logp = model.select_action(local_obs, noise)
+            
+            q_in = torch.cat((local_obs, local_acts), dim=1)
+            pol_loss =  torch.sum(model.q1_fn(q_in) - alpha*local_logp)
+
+            # do the normal pytorch update
+            pol_opt.zero_grad()
+            pol_loss.backward()
+            pol_opt.step()
+        
+                
         # Update target value fn with polyak average
-        val_sd = model.value_fn.state_dict().values()
-        tar_sd = target_value_fn.state_dict().values()
-        for t_targ, t in zip(val_sd, tar_sd):
+        # ========================================================================                
+        val_sd = model.value_fn.state_dict()
+        tar_sd = target_value_fn.state_dict()
+        for t_targ, t in zip(val_sd.values(), tar_sd.values()):
             t_targ = polyak*t_targ + (1-polyak)*t
 
         target_value_fn.load_state_dict(tar_sd)
 
-        
 
-    # q_fn update (recall we have two q functions
-    # ========================================================================
-    # training_data = data.TensorDataset(batch_obs, batch_discrew)
-    # training_generator = data.DataLoader(training_data, batch_size=q_batch_size, shuffle=True)
-    
-    # # Update que function with the standard L2 Loss
-    # for q_epoch in range(q_epochs):
-    #     for local_obs, local_act, local_val in training_generator:
-    #         # Transfer to GPU (if GPU is enabled, else this does nothing)
-    #         local_obs, local_act, local_val = (local_obs.to(device), local_act.to(device), local_val.to(device))
-            
-    #         # predict and calculate loss for the batch
-    #         q_preds = model.q_fn(local_obs, local_act)
-    #         q_loss =  #TODO# torch.sum(torch.pow(q_preds - local_q, 2))/(q_preds.shape[0])
-            
-    #         # do the normal pytorch update
-    #         q_opt.zero_grad()
-    #         q_loss.backward()
-    #         q_opt.step()
+    return (model, raw_rew_hist)
 
 
 def do_rollout(env, model):
@@ -178,6 +209,7 @@ def do_rollout(env, model):
     done_list = []
 
     dtype = torch.float32
+    act_size = env.action_space.shape[0]
     obs = env.reset()
     done = False
     
@@ -185,7 +217,10 @@ def do_rollout(env, model):
         obs = torch.as_tensor(obs,dtype=dtype).detach()
         obs1_list.append(obs.clone())
 
-        act  = model.select_action(obs).detach()
+        noise = torch.randn(1, act_size)
+        act, _  = model.select_action(obs.reshape(1,-1), noise)
+        act = act.detach()
+        
         obs, rew, done, _ = env.step(act.numpy().reshape(-1))
         obs = torch.as_tensor(obs,dtype=dtype).detach()
 
@@ -199,7 +234,7 @@ def do_rollout(env, model):
     ep_acts = torch.stack(acts_list)
     ep_rews = torch.tensor(rews_list, dtype=dtype).reshape(-1,1)
     ep_obs2 = torch.stack(obs2_list)
-    ep_done = torch.stack(done_list)
+    ep_done = torch.stack(done_list).reshape(-1,1)
 
 
     return (ep_obs1, ep_acts, ep_rews, ep_obs2, ep_done)

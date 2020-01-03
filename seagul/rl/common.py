@@ -21,8 +21,8 @@ class ReplayBuffer:
         self.obs1_buf = torch.zeros([size, obs_dim], dtype=torch.float32)
         self.obs2_buf = torch.zeros([size, obs_dim], dtype=torch.float32)
         self.acts_buf = torch.zeros([size, act_dim], dtype=torch.float32)
-        self.rews_buf = torch.zeros(size, dtype=torch.float32)
-        self.done_buf = torch.zeros(size, dtype=torch.float32)
+        self.rews_buf = torch.zeros([size,1], dtype=torch.float32)
+        self.done_buf = torch.zeros([size,1], dtype=torch.float32)
         self.ptr, self.size, self.max_size = 0, 0, size
 
     def store(self, obs, act, rew, next_obs, done):
