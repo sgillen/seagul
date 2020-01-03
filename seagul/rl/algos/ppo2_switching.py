@@ -2,17 +2,19 @@ import numpy as np
 import torch
 from torch.utils import data
 import tqdm
+import copy
 import gym
 import pickle
 
 from seagul.rl.common import discount_cumsum
 
 
-def ppo(
+def ppo_switch(
         env_name,
         total_steps,
         model,
         act_var_schedule = [.7],
+        gate_var_schedule=None,
         epoch_batch_size = 2048,
         gamma = .99,
         lam = .99,
@@ -20,8 +22,10 @@ def ppo(
         seed=0,
         pol_batch_size=1024,
         val_batch_size=1024,
+        gate_batch_size=1024,
         pol_lr=1e-4,
         val_lr=1e-5,
+        gate_lr=1e-4,
         pol_epochs=10,
         val_epochs=10,
         use_gpu=False,
@@ -70,9 +74,8 @@ def ppo(
 
         model = PpoModel(policy, value_fn, action_var=4, discrete=False)
         t_model, rewards, var_dict = ppo("su_acro_drake-v0", 100, model, action_var_schedule=[3,2,1,0])
-
     """
-      
+
       # init everything
       # ==============================================================================
       env = gym.make(env_name)
@@ -83,18 +86,24 @@ def ppo(
             raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
 
-      actvar_lookup = make_variance_schedule(act_var_schedule, model, total_steps)
+      actvar_lookup  = make_variance_schedule(act_var_schedule, model, total_steps)
+      gatevar_lookup = make_variance_schedule(gae_var_schedule, model, total_steps)
+      
       model.action_var = actvar_lookup(0)
+      model.gate_var = gatevar_lookup(0)
 
       obs_size = env.observation_space.shape[0]
       obs_mean = torch.zeros(obs_size)
       obs_var  = torch.ones(obs_size)
       adv_mean = torch.zeros(1)
       adv_var  = torch.ones(1)
+      rew_mean = torch.zeros(1)
+      rew_var  = torch.ones(1)
 
       old_model = pickle.loads(pickle.dumps(model)) #copy.deepcopy broke for me with older version of torch. Using pickle for this is weird but works fine
-      pol_opt = torch.optim.Adam(model.policy.parameters(), lr=pol_lr)
+      pol_opt  = torch.optim.Adam(model.policy.parameters(), lr=pol_lr)
       val_opt  = torch.optim.Adam(model.value_fn.parameters(), lr=val_lr)
+      gate_opt = torch.optim.Adam(model.gate_fn.parameters(), lr=gate_lr) 
 
       # seed all our RNGs
       env.seed(seed); torch.manual_seed(seed); np.random.seed(seed)
@@ -119,6 +128,8 @@ def ppo(
             batch_obs = torch.empty(0)
             batch_act = torch.empty(0)
             batch_adv = torch.empty(0)
+            batch_path = torch.empty(0)
+            batch_gate = torch.empty(0)
             batch_discrew = torch.empty(0)
             cur_batch_steps = 0
 
@@ -132,11 +143,13 @@ def ppo(
             # ==============================================================================
             while (cur_batch_steps < epoch_batch_size):
                   
-                  ep_obs, ep_act, ep_rew, ep_steps = do_rollout(env, model)
+                  ep_obs, ep_act, ep_rew, ep_steps, ep_path, ep_gate = do_rollout(env, model)
 
                   batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
                   batch_act = torch.cat((batch_act, ep_act[:-1]))
-                  
+                  batch_path = torch.cat((batch_path, ep_path[:-1]))
+                  batch_path = torch.cat((batch_gate, ep_gate[:-1]))
+                                         
                   ep_discrew = discount_cumsum(ep_rew, gamma) # [:-1] because we appended the value function to the end as an extra reward
                   batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
 
@@ -154,28 +167,43 @@ def ppo(
                   cur_batch_steps += ep_steps
                   cur_total_steps += ep_steps
 
-            
                   
             raw_rew_hist.append(sum(ep_rew))
 
-            #make sure our advantages are zero mean and unit variance
+            # make sure our advantages are zero mean and unit variance
             adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
             adv_var = update_var(batch_adv, adv_var, cur_total_steps)
             batch_adv = (batch_adv - adv_mean) / (adv_var+1e-6)
 
             # policy update
             # ========================================================================
-            training_data = data.TensorDataset(batch_obs, batch_act, batch_adv)
-            training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True)
-                        
-            # Update the policy using the PPO loss 
-            for pol_epoch in range(pol_epochs):
-                  for local_obs, local_act, local_adv in training_generator:
+            p_obs_list = []
+            p_act_list = []
+            p_adv_list = []
+            for obs, act, adv, path in zip(batch_obs, batch_act, batch_adv, batch_path):
+                if not path:
+                    p_obs_list.append(state.clone())
+                    p_act_list.append(action.clone())
+                    p_adv_list.append(adv.clone())
+
+                                    
+            if len(p_state_list):
+                p_batch_obs = torch.stack(p_obs_list).reshape(-1, env.observation_space.shape[0])
+                p_batch_act = torch.stack(p_act_list).reshape(-1, action_size)
+                p_batch_adv = torch.stack(p_adv_list).reshape(-1, 1)
+
+                    
+                training_data = data.TensorDataset(p_batch_obs, p_batch_act, p_batch_adv)
+                training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True)
+            
+                # Update the policy using the PPO loss 
+                for pol_epoch in range(pol_epochs):
+                    for local_obs, local_act, local_adv in training_generator:
                         # Transfer to GPU (if GPU is enabled, else this does nothing)
                         local_states, local_actions, local_adv = (
-                              local_obs.to(device),
-                              local_act.to(device),
-                              local_adv.to(device),
+                            local_obs.to(device),
+                            local_act.to(device),
+                            local_adv.to(device),
                         )
 
                         # Compute the loss 
@@ -183,8 +211,8 @@ def ppo(
                         old_logp = old_model.get_logp(local_obs, local_act).reshape(-1,1)
                         r = torch.exp(logp - old_logp)
                         pol_loss = (
-                              -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
-                              / r.shape[0]
+                            -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
+                            / r.shape[0]
                         )
                         
                         # do the normal pytorch update
@@ -214,7 +242,38 @@ def ppo(
                         val_opt.step()
 
 
+            
+            # update gating function
+            # ----------------------------------------------------------------------
+            # construct a training data generator
+            training_data = data.TensorDataset(batch_obs, batch_gate, adv_tensor)
+            training_generator = data.DataLoader(training_data, batch_size=gate_batch_size, shuffle=True)
+                    
+            # Update the policy using the PPO loss 
+            for pol_epoch in range(pol_epochs):
+                  for local_obs, local_gate, local_adv in training_generator:
+                        # Transfer to GPU (if GPU is enabled, else this does nothing)
+                        local_states, local_actions, local_adv = (
+                              local_obs.to(device),
+                              local_gate.to(device),
+                              local_adv.to(device),
+                        )
 
+                        # Compute the loss 
+                        logp = model.get_logp(local_obs, local_gate).reshape(-1,1)
+                        old_logp = old_model.get_logp(local_obs, local_gate).reshape(-1,1)
+                        r = torch.exp(logp - old_logp)
+                        pol_loss = (
+                              -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
+                              / r.shape[0]
+                        )
+                        
+                        # do the normal pytorch update
+                        gate_opt.zero_grad()
+                        gate_loss.backward()
+                        gate_opt.step()
+
+            
 
             old_model = pickle.loads(pickle.dumps(model))
                   
@@ -226,9 +285,11 @@ def ppo(
             model.policy.state_var = obs_var
             model.value_fn.state_var = obs_var
             model.action_var = actvar_lookup(cur_total_steps)
+            model.gate_var = gatevar_lookup(cur_total_steps)
 
             val_loss_hist.append(val_loss)
             pol_loss_hist.append(pol_loss)
+            gate_loss_hist.append(gate_loss)
 
             progress_bar.update(cur_batch_steps)
       
@@ -259,6 +320,8 @@ def do_rollout(env, model):
       act_list = []
       obs_list = []
       rew_list = []
+      path_list = []
+      gate_list = []
       num_steps = 0
 
       obs = env.reset()
@@ -267,12 +330,20 @@ def do_rollout(env, model):
       while not done:
             obs = torch.as_tensor(obs).detach()
             obs_list.append(obs.clone())
-            
-            act, logprob = model.select_action(obs)
+
+            path, gate_out = model.select_path(obs)
+
+            if path:
+                act = model.nominal_policy(obs)
+            else:
+                act, logprob = model.select_action(obs)
+                
             obs, rew, done, _ = env.step(act.numpy().reshape(-1))
 
             act_list.append(torch.as_tensor(act.clone()))
             rew_list.append(rew)
+            path_list.append(path)
+            gate_list.append(gate_out)
       
       ep_length = len(rew_list)
       ep_obs = torch.stack(obs_list)
@@ -280,4 +351,4 @@ def do_rollout(env, model):
       ep_rew = torch.tensor(rew_list)
       ep_rew = ep_rew.reshape(-1,1)
 
-      return (ep_obs, ep_act, ep_rew, ep_length)
+      return (ep_obs, ep_act, ep_rew, ep_length, path_list, gate_list)
