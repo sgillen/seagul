@@ -128,8 +128,6 @@ def run_sg(arg_dict, algo, run_name = None, run_desc = None, base_path ='/data/'
     save_dir = save_base_path + run_name + "/"
     save_path = save_dir + "saved_model"
 
-
-
     start_time = time.time()
     t_model, rewards, var_dict = algo(**arg_dict)
     runtime = time.time() - start_time
@@ -166,7 +164,6 @@ def load_model(save_path, backend="baselines"):
     """
     Loads and plays back a trained model.
 
-
     You must either specify a relative directory with the ./notation, or the absolute path. 
     However absolute paths only work with mac or Linux.
 
@@ -178,7 +175,6 @@ def load_model(save_path, backend="baselines"):
 
     Returns:
        returns the model and the environment
-
 
     Example:
         from run_rl.run_baselines import play_baselines

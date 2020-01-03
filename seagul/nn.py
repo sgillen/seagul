@@ -171,7 +171,7 @@ def policy_render_loop(policy, env, select_action):
 
     except KeyboardInterrupt:
         env.close()
-
+        
 
 class MLP(nn.Module):
     """
@@ -179,7 +179,7 @@ class MLP(nn.Module):
     Simple MLP that has a linear layer at the output
     """
 
-    def __init__(self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU):
+    def __init__(self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity):
         """
          :param input_size: how many inputs
          :param output_size: how many outputs
@@ -190,22 +190,27 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
 
         self.activation = activation()
+        self.output_activation = output_activation()
 
+        
         self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
         self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers)])
         self.output_layer = nn.Linear(layer_size, output_size)
 
         self.state_means = torch.zeros(input_size)
         self.state_var = torch.ones(input_size)
+
+
         
 
     def forward(self, data):
+        
         data = (torch.as_tensor(data) - self.state_means)/torch.sqrt(self.state_var)
 
         for layer in self.layers:
             data = self.activation(layer(data))
 
-        return self.output_layer(data)
+        return self.output_activation(self.output_layer(data))
 
 
 class CategoricalMLP(nn.Module):
