@@ -20,11 +20,14 @@ class SACModel:
     """
     Model for use with seagul's ppo algorithm
     """
-    def __init__(self, policy, value_fn, q_fn, act_limit):
+    LOG_STD_MAX = 2
+    LOG_STD_MIN = -20
+
+    def __init__(self, policy, value_fn, q1_fn, q2_fn, act_limit):
         self.policy = policy
         self.value_fn = value_fn
-        self.q1_fn = q_fn
-        self.q2_fn = dill.loads(dill.dumps(q_fn))
+        self.q1_fn = q1_fn
+        self.q2_fn = q2_fn
         
         self.num_acts = int(policy.output_layer.out_features/2)
         self.act_limit = act_limit
@@ -37,24 +40,28 @@ class SACModel:
 
         return action, value, None , logp
 
-    def select_action(self, state):
+    def select_action(self, state, noise):
         out = self.policy(state)
-        means = out[:self.num_acts]
-        lgstd = out[self.num_acts:]
+        means = out[:, :self.num_acts]
+        logstd = torch.clamp(out[:, self.num_acts:], self.LOG_STD_MIN, self.LOG_STD_MAX)
 
-        noise = torch.randn(self.num_acts)# May need to pass this in
+        acts = torch.tanh(means + torch.exp(logstd)*noise)*self.act_limit
 
-        acts = torch.tanh(means + torch.exp(lgstd)*noise)*self.act_limit
-        return acts
+        std = torch.exp(logstd)
+        logp = torch.log(1/(std*math.sqrt(2*np.pi))*torch.exp(-.5*torch.pow((acts-means)/std,2)))
+
+        #spinning up says to clip this term to avoid problems with machine percision..
+        logp -= torch.sum(torch.clamp(1 - torch.pow(torch.tanh(means),2),0,1)+1e-6)
+        return acts, logp
 
     def get_logp(self, states, actions):
         # TODO as an optimization we can pass in the means and stds predicted
         out = self.policy(states)
         means = out[:,:self.num_acts]/self.act_limit
-        lgstd = out[:,self.num_acts:]
+        lgstd = torch.clamp(out[:,self.num_acts:], self.LOG_STD_MIN, self.LOG_STD_MAX)
 
         std = torch.exp(lgstd)
-        prob = 1/(std*math.sqrt(2*np.pi))*torch.exp(-.5*torch.pow((actions-means)/std,2))
+        prob = torch.log(1/(std*math.sqrt(2*np.pi))*torch.exp(-.5*torch.pow((actions-means)/std,2)))
         return prob 
 
 
