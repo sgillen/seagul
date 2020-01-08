@@ -15,7 +15,20 @@ They all must implement step(state) which takes as input state and returns actio
 
 
 
+class RandModel:
+    """ 
+    class that just takes actions from a uniform random distribution 
+    """
 
+    def __init__(self, act_limit, act_size):
+        self.act_limit = act_limit
+        self.act_size = act_size
+
+    def select_action(self, state, noise):
+        return torch.rand(self.act_size)*2*self.act_limit - self.act_limit, 1/(self.act_limit*2)
+        
+    
+    
 class SACModel:
     """
     Model for use with seagul's ppo algorithm
@@ -48,10 +61,12 @@ class SACModel:
         acts = torch.tanh(means + torch.exp(logstd)*noise)*self.act_limit
 
         std = torch.exp(logstd)
-        logp = torch.log(1/(std*math.sqrt(2*np.pi))*torch.exp(-.5*torch.pow((acts-means)/std,2)))
-
+        # logp = torch.log(1/(std*math.sqrt(2*np.pi))*torch.exp(-.5*torch.pow((acts-means)/std,2)))
+        m = torch.distributions.normal.Normal(means, std)
+        logp = m.log_prob(acts)
+        
         #spinning up says to clip this term to avoid problems with machine percision..
-        logp -= torch.sum(torch.clamp(1 - torch.pow(torch.tanh(means),2),0,1)+1e-6)
+        logp -= torch.sum(torch.clamp(1 - torch.pow(torch.tanh(means),2),0,1)+1e-6,dim=1).reshape(-1,1)
         return acts, logp
 
     def get_logp(self, states, actions):
