@@ -6,24 +6,26 @@ import gym
 import dill
 
 from seagul.rl.common import ReplayBuffer
+from seagul.rl.models import RandModel
 
 def sac(
         env_name,
         total_steps,
         model,
-        epoch_batch_size = 2048,
+        epoch_batch_size = 4096,
         replay_batch_size = 2048,
         seed=0,
         gamma = .95,
-        polyak = .9,
-        alpha  =  .9,
-        pol_batch_size=1024,
-        val_batch_size=1024,
-        q_batch_size  =1024,
+        polyak = .995,
+        alpha  =  .2,
+        pol_batch_size=512,
+        val_batch_size=512,
+        q_batch_size  =512,
         pol_lr=1e-4,
         val_lr=1e-5,
         q_lr  = 1e-5,
-        replay_buf_size = 10000,
+        exploration_steps = 10000,
+        replay_buf_size = 1000000,
         use_gpu=False,
         reward_stop=None,
 ):
@@ -50,6 +52,7 @@ def sac(
     obs_mean = torch.zeros(obs_size)
     obs_var  = torch.ones(obs_size)
 
+    random_model = RandModel(model.act_limit, act_size)
     replay_buf = ReplayBuffer(obs_size, act_size, replay_buf_size)
     target_value_fn = dill.loads(dill.dumps(model.value_fn))
     
@@ -68,13 +71,33 @@ def sac(
     raw_rew_hist = []
     val_loss_hist = []
     pol_loss_hist = []
-    #    q_loss_hist  = ???
+    q1_loss_hist  = []
+    q2_loss_hist = []
+    
+    sample_logp_hist =[]
+    q_targ_hist = []
+    q_preds_hist = []
+    q_min_hist = []
+    val_preds_hist = []
+    val_targ_hist = []
 
     
     progress_bar = tqdm.tqdm(total=total_steps)
     cur_total_steps = 0
     progress_bar.update(0)
     early_stop = False
+
+    while(cur_total_steps < exploration_steps):
+        ep_obs1, ep_acts, ep_rews, ep_obs2, ep_done  = do_rollout(env, random_model)
+        
+        # can def be made more efficient if found to be a bottleneck
+        for obs1,acts,rews,obs2,done in zip(ep_obs1, ep_acts, ep_rews, ep_obs2, ep_done):
+            replay_buf.store(obs1,acts,rews,obs2,done)
+            
+        ep_steps = ep_rews.shape[0]
+        cur_total_steps += ep_steps
+
+    
     
     while (cur_total_steps < total_steps):
         batch_obs = torch.empty(0)
@@ -102,8 +125,6 @@ def sac(
             for obs1,acts,rews,obs2,done in zip(ep_obs1, ep_acts, ep_rews, ep_obs2, ep_done):
                 replay_buf.store(obs1,acts,rews,obs2,done)
 
-
-
             ep_steps = ep_rews.shape[0]
             cur_batch_steps += ep_steps
             cur_total_steps += ep_steps
@@ -116,16 +137,21 @@ def sac(
 
         q_targ = replay_rews + gamma*(1 - replay_done)*target_value_fn(replay_obs2)
         q_targ = q_targ.detach()
-        
-        q_input = torch.cat((replay_obs1, replay_acts),dim=1)
-        q_preds = torch.cat((model.q1_fn(q_input), model.q2_fn(q_input)),dim=1)
-        q_min, q_min_idx = torch.min(q_preds, dim=1)
 
-        
         noise = torch.randn(replay_batch_size, act_size)
         sample_acts, sample_logp = model.select_action(replay_obs1, noise)
+
+        q_input = torch.cat((replay_obs1, sample_acts), dim=1)
+        q_preds = torch.cat((model.q1_fn(q_input), model.q2_fn(q_input)),dim=1)
+        q_min, q_min_idx = torch.min(q_preds, dim=1)
+        
         v_targ = q_min - alpha*sample_logp
         v_targ = v_targ.detach()
+
+        sample_logp_hist.append(sample_logp)
+        q_targ_hist.append(q_targ)
+        q_preds_hist.append(q_preds)
+        q_min_hist.append(q_min)
         
         # q_fn update 
         # ========================================================================
@@ -154,7 +180,8 @@ def sac(
         for local_obs, local_vtarg in training_generator:
             # Transfer to GPU (if GPU is enabled, else this does nothing)
             local_obs, local_vtarg = (local_obs.to(device), local_vtarg.to(device))
-            
+
+
             # predict and calculate loss for the batch
             val_preds = model.value_fn(local_obs)
             val_loss =  torch.sum(torch.pow(val_preds - local_vtarg, 2))/(val_preds.shape[0])
@@ -167,7 +194,9 @@ def sac(
         
         # policy_fn update
         # ========================================================================                
-
+        val_preds_hist.append(val_preds)
+        val_targ_hist.append(v_targ)
+        
         training_data = data.TensorDataset(replay_obs1, sample_acts, sample_logp)
         training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True)
 
@@ -189,6 +218,11 @@ def sac(
                 
         # Update target value fn with polyak average
         # ========================================================================                
+        val_loss_hist.append(val_loss.item())
+        pol_loss_hist.append(pol_loss.item())
+        q1_loss_hist.append(q1_loss.item())
+        q2_loss_hist.append(q2_loss.item())
+        
         val_sd = model.value_fn.state_dict()
         tar_sd = target_value_fn.state_dict()
         for t_targ, t in zip(val_sd.values(), tar_sd.values()):
@@ -197,7 +231,7 @@ def sac(
         target_value_fn.load_state_dict(tar_sd)
 
 
-    return (model, raw_rew_hist)
+    return (model, raw_rew_hist, locals())
 
 
 def do_rollout(env, model):
@@ -223,7 +257,6 @@ def do_rollout(env, model):
         
         obs, rew, done, _ = env.step(act.numpy().reshape(-1))
         obs = torch.as_tensor(obs,dtype=dtype).detach()
-
         
         acts_list.append(torch.as_tensor(act.clone(), dtype=dtype))
         rews_list.append(rew)
@@ -235,6 +268,5 @@ def do_rollout(env, model):
     ep_rews = torch.tensor(rews_list, dtype=dtype).reshape(-1,1)
     ep_obs2 = torch.stack(obs2_list)
     ep_done = torch.stack(done_list).reshape(-1,1)
-
 
     return (ep_obs1, ep_acts, ep_rews, ep_obs2, ep_done)
