@@ -6,7 +6,6 @@ from seagul.resources import getResourcePath
 
 
 class FiveLinkWalkerEnv(mujoco_env.MujocoEnv, utils.EzPickle):
-
     def __init__(self):
         self.qpos_cur = np.zeros([1, 7])
         self.qvel_cur = np.zeros([1, 7])
@@ -20,33 +19,33 @@ class FiveLinkWalkerEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.lfoot = 0
         self.rfoot = 0
         self.evaluate = False
-                
+
         # print("Reached", id(self))
         mujoco_env.MujocoEnv.__init__(self, getResourcePath() + "/five_link.xml", 4)
         utils.EzPickle.__init__(self)
         # print("Can't reach", id(self))
 
         self.step_success = 0
-        self.spec = EnvSpec('five_link-v3') #TODO
+        self.spec = EnvSpec("five_link-v3")  # TODO
         self.spec.max_episode_steps = 1000
 
         self.rbody_xpos = 0
         self.lbody_xpos = 0
         # print("can't reach v2.0", id(self))
 
-#This function for training
+    # This function for training
     def step(self, a):
         if self.evaluate:
             return self.step_eval(a)
         else:
             return self.step_train(a)
 
-    def step_train(self,a):
+    def step_train(self, a):
         posbefore = self.sim.data.qpos[0]
         self.do_simulation(a, self.frame_skip)
         posafter, height, ang = self.sim.data.qpos[0:3]
         alive_bonus = 1.0
-        reward = ((posafter - posbefore) / self.dt)
+        reward = (posafter - posbefore) / self.dt
         # print(self.sim.data.time)
 
         reward += alive_bonus
@@ -57,15 +56,14 @@ class FiveLinkWalkerEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         ob = self._get_obs()
         return ob, reward, done, {}
 
-
-# This function for evaluating
+    # This function for evaluating
     def step_eval(self, a):
         # print("actions:", a)
         posbefore = self.sim.data.qpos[0]
         self.do_simulation(a, self.frame_skip)
         posafter, height, ang = self.sim.data.qpos[0:3]
         alive_bonus = 1.0
-        reward = ((posafter - posbefore) / self.dt)
+        reward = (posafter - posbefore) / self.dt
         # print(self.sim.data.time)
         self.fall = 0
         reward += alive_bonus
@@ -132,10 +130,7 @@ class FiveLinkWalkerEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         #     self.init_qpos + self.np_random.uniform(low=-.005, high=.005, size=self.model.nq),
         #     self.init_qvel + self.np_random.uniform(low=-.005, high=.005, size=self.model.nv)
         # )
-        self.set_state(
-            self.init_qpos,
-            self.init_qvel
-        )
+        self.set_state(self.init_qpos, self.init_qvel)
         return self._get_obs()
 
     def viewer_setup(self):

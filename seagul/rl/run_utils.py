@@ -17,7 +17,7 @@ try:
     import baselines.run
 except:
     warnings.warn("baselines install not found, only seagul loads will work", ImportWarning)
-    
+
 import gym
 import seagul.envs
 
@@ -32,6 +32,7 @@ import os
 from seagul.rl.models import PpoModel, switchedPpoModel, SwitchedPpoModelActHold
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 
 def run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/"):
 
@@ -108,13 +109,12 @@ def run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/
         )
 
 
-def run_sg(arg_dict, algo, run_name = None, run_desc = None, base_path ='/data/'):
+def run_sg(arg_dict, algo, run_name=None, run_desc=None, base_path="/data/"):
     """
     Launches seaguls ppo2 and save the results without clutter
 
     If you don't pass run_name or description this function will call input, blocking execution
     """
-
 
     if run_name is None:
         run_name = input("please enter a name for this run: ")
@@ -122,7 +122,7 @@ def run_sg(arg_dict, algo, run_name = None, run_desc = None, base_path ='/data/'
     if run_desc is None:
         run_desc = input("please enter a brief description of the run: ")
 
-    git_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    git_sha = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
 
     save_base_path = os.getcwd() + base_path
     save_dir = save_base_path + run_name + "/"
@@ -144,15 +144,19 @@ def run_sg(arg_dict, algo, run_name = None, run_desc = None, base_path ='/data/'
         json.dump(
             {
                 "args": str_dict,
-                "metadata": {"date_time": datetime_str, "total runtime": runtime_str, "description": run_desc, "git_sha": git_sha},
+                "metadata": {
+                    "date_time": datetime_str,
+                    "total runtime": runtime_str,
+                    "description": run_desc,
+                    "git_sha": git_sha,
+                },
             },
             outfile,
             indent=4,
         )
 
-
     with open(save_dir + "workspace", "wb") as outfile:
-        del var_dict['env']
+        del var_dict["env"]
         torch.save(var_dict, outfile, pickle_module=dill)
 
     with open(save_dir + "model", "wb") as outfile:
@@ -217,20 +221,20 @@ def load_model(save_path, backend="baselines"):
 
     elif backend == "seagul":
         with open(save_base_path + "/" + "info.json", "r") as infile:
-            data = json.load(infile)                           #, Loader=yaml.Loader)
-            #arg_dict = data['arg_dict']
+            data = json.load(infile)  # , Loader=yaml.Loader)
+            # arg_dict = data['arg_dict']
 
         with open(save_base_path + "/" + "model", "rb") as infile:
             model = torch.load(infile)
 
-        env_name = data['args']['env_name']
+        env_name = data["args"]["env_name"]
         env = gym.make(env_name)
 
         return model, env
 
-
     else:
         raise ValueError("unrecognized backend: ", backend)
+
 
 def load_workspace(save_path):
     if save_path[-1] == "/":
@@ -246,13 +250,13 @@ def load_workspace(save_path):
         workspace = torch.load(infile, pickle_module=dill)
 
     with open(save_base_path + "/" + "info.json", "r") as infile:
-        data = json.load(infile)                   #, Loader=yaml.Loader)
+        data = json.load(infile)  # , Loader=yaml.Loader)
 
     with open(save_base_path + "/" + "model", "rb") as infile:
         print(__name__)
         model = torch.load(infile, pickle_module=dill)
 
-    env_name = data['args']['env_name']
+    env_name = data["args"]["env_name"]
     env = gym.make(env_name)
 
     return model, env, data, workspace
@@ -279,14 +283,9 @@ if __name__ == "__main__":
     model = PpoModel(
         policy=MLP(input_size, output_size, num_layers, layer_size, activation),
         value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
-        action_var=4
+        action_var=4,
     )
 
-    arg_dict = {
-        'env_name': 'su_cartpole-v0',
-        'model': model,
-        'num_epochs': 10,
-        'action_var_schedule': [10, 0]
-    }
+    arg_dict = {"env_name": "su_cartpole-v0", "model": model, "num_epochs": 10, "action_var_schedule": [10, 0]}
 
     run_sg(arg_dict, ppo)

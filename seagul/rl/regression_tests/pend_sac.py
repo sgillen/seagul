@@ -32,7 +32,7 @@ model = SACModel(policy, value_fn, q1_fn, q2_fn, 1)
 def run_and_test(arg_dict, seed):
     t_model, rewards, var_dict = sac("Pendulum-v0", 20000, model, seed=seed, **arg_dict)
 
-    if (var_dict['early_stop']):
+    if var_dict["early_stop"]:
         print("seed", seed, "achieved 200 reward in ", len(rewards), "steps")
     #        print("Rewards were", rewards)
 
@@ -44,13 +44,11 @@ def run_and_test(arg_dict, seed):
 
 
 # Define our hyper parameters
-arg_dict = {
-    'reward_stop': -200,
-}
+arg_dict = {"reward_stop": -200}
 
 
 proc_list = []
-for seed in [0,1,2,3]:
+for seed in [0, 1, 2, 3]:
     p = Process(target=run_and_test, args=(arg_dict, seed))
     p.start()
     proc_list.append(p)

@@ -25,7 +25,7 @@ activation = nn.ReLU
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-model = PpoModel(policy, value_fn, action_var=.1, discrete=False)
+model = PpoModel(policy, value_fn, action_var=0.1, discrete=False)
 
 # Define our hyper parameters
 num_epochs = 100
@@ -45,15 +45,15 @@ eps = 0.2
 # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
 t_model, rewards, var_dict = ppo(env_name, 1e5, model, act_var_schedule=[1])
 print(rewards[-1])
-#print(rewards)
+# print(rewards)
 plt.plot(rewards)
 plt.show()
 
 
-#===========================================
+# ===========================================
 torch.set_default_dtype(torch.float32)
 
-env_name =  "Walker2DBulletEnv-v0"
+env_name = "Walker2DBulletEnv-v0"
 env = gym.make(env_name)
 
 input_size = env.observation_space.shape[0]
@@ -64,7 +64,7 @@ activation = nn.ReLU
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-model = PpoModel(policy, value_fn, action_var=.1, discrete=False)
+model = PpoModel(policy, value_fn, action_var=0.1, discrete=False)
 
 # Define our hyper parameters
 num_epochs = 100
@@ -83,6 +83,6 @@ eps = 0.2
 
 # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
 t_model, rewards, var_dict = ppo(env_name, 1e5, model, act_var_schedule=[1])
-#print(rewards)
+# print(rewards)
 plt.plot(rewards)
 plt.show()

@@ -103,7 +103,7 @@ class SUCartPoleDiscEnv(gym.Env):
         # self.state[3] = np.clip(ns[3], -self.DX_MAX, self.DX_MAX)
 
         # Should reward be something we pass in ? I do like to mess with them a lot...
-        reward = -5*np.cos(self.state[0])  -.001*(self.state[1]**2) + 50
+        reward = -5 * np.cos(self.state[0]) - 0.001 * (self.state[1] ** 2) + 50
 
         self.cur_step += 1
         if self.cur_step > self.num_steps:

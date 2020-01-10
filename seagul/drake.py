@@ -87,7 +87,6 @@ def y_float_prism(state):
     return -y5_in
 
 
-
 def x_float(state):
     # type: (List[float])->list[float]
     """ 
@@ -175,6 +174,7 @@ def x_taylor_prism(state, degree=5):
     x5_in = x4_in + _taylor_sin(state[2] + state[3] + state[5] + state[6], degree)
 
     return -x5_in
+
 
 def _taylor_sin(x, degree):
     sign = -1

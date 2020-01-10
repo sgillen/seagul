@@ -1,12 +1,12 @@
 """
 Plotting utilities
-""" 
+"""
 
 
 # Got this from stack overflow
 
 
-def add_arrow(line, position=None, direction='right', size=15, color=None):
+def add_arrow(line, position=None, direction="right", size=15, color=None):
     """
     add an arrow to a line.
 
@@ -26,14 +26,15 @@ def add_arrow(line, position=None, direction='right', size=15, color=None):
         position = xdata.mean()
     # find closest index
     start_ind = np.argmin(np.absolute(xdata - position))
-    if direction == 'right':
+    if direction == "right":
         end_ind = start_ind + 1
     else:
         end_ind = start_ind - 1
 
-    line.axes.annotate('',
+    line.axes.annotate(
+        "",
         xytext=(xdata[start_ind], ydata[start_ind]),
         xy=(xdata[end_ind], ydata[end_ind]),
         arrowprops=dict(arrowstyle="-|>", color=color),
-        size=size
+        size=size,
     )
