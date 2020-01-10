@@ -57,27 +57,18 @@ class SACModel:
         out = self.policy(state)
         means = out[:, :self.num_acts]
         logstd = torch.clamp(out[:, self.num_acts:], self.LOG_STD_MIN, self.LOG_STD_MAX)
-
-        acts = torch.tanh(means + torch.exp(logstd)*noise)*self.act_limit
-
-        std = torch.exp(logstd)
-        # logp = torch.log(1/(std*math.sqrt(2*np.pi))*torch.exp(-.5*torch.pow((acts-means)/std,2)))
-        m = torch.distributions.normal.Normal(means, std)
-        logp = m.log_prob(acts)
+        std = torch.exp(logstd)        
         
-        #spinning up says to clip this term to avoid problems with machine percision..
-        logp -= torch.sum(torch.clamp(1 - torch.pow(torch.tanh(means),2),0,1)+1e-6,dim=1).reshape(-1,1)
+        samples = (means + std*noise)
+        squashed_samples = torch.tanh(samples)
+        acts = squashed_samples*self.act_limit
+
+        #logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
+        m = torch.distributions.normal.Normal(means, std)
+        logp = m.log_prob(samples)
+        logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples,2),0,1)+1e-6),dim=1).reshape(-1,1)
+
         return acts, logp
-
-    def get_logp(self, states, actions):
-        # TODO as an optimization we can pass in the means and stds predicted
-        out = self.policy(states)
-        means = out[:,:self.num_acts]/self.act_limit
-        lgstd = torch.clamp(out[:,self.num_acts:], self.LOG_STD_MIN, self.LOG_STD_MAX)
-
-        std = torch.exp(lgstd)
-        prob = torch.log(1/(std*math.sqrt(2*np.pi))*torch.exp(-.5*torch.pow((actions-means)/std,2)))
-        return prob 
 
 
 

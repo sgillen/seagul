@@ -5,7 +5,7 @@ import tqdm
 import gym
 import pickle
 
-from seagul.rl.common import discount_cumsum
+from seagul.rl.common import discount_cumsum, update_mean, update_var
 
 
 def ppo(
@@ -244,15 +244,6 @@ def make_variance_schedule(var_schedule, model, num_steps):
       var_lookup = lambda epoch: np.interp(epoch, x_vals, var_schedule)
       return var_lookup
 
-
-def update_mean(data, cur_mean, cur_steps):
-      new_steps = data.shape[0]
-      return (torch.mean(data,0)*new_steps + cur_mean*cur_steps)/(cur_steps+new_steps)
-
-            
-def update_var(data, cur_var, cur_steps):
-      new_steps = data.shape[0]
-      return (torch.var(data,0)*new_steps + cur_var*cur_steps)/(cur_steps+new_steps)
             
 def do_rollout(env, model):
 

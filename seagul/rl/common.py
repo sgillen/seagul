@@ -13,10 +13,9 @@ def discount_cumsum(rewards, discount):
 
 class ReplayBuffer:
     """
-    A simple FIFO experience replay buffer (stolen from https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
+    A simple FIFO experience replay buffer (modifed from from https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
     """
 
-    # TODO torchify?
     def __init__(self, obs_dim, act_dim, size):
         self.obs1_buf = torch.zeros([size, obs_dim], dtype=torch.float32)
         self.obs2_buf = torch.zeros([size, obs_dim], dtype=torch.float32)
@@ -25,7 +24,7 @@ class ReplayBuffer:
         self.done_buf = torch.zeros([size,1], dtype=torch.float32)
         self.ptr, self.size, self.max_size = 0, 0, size
 
-    def store(self, obs, act, rew, next_obs, done):
+    def store(self, obs, next_obs, act, rew, done):
         self.obs1_buf[self.ptr] = obs
         self.obs2_buf[self.ptr] = next_obs
         self.acts_buf[self.ptr] = act
@@ -37,3 +36,14 @@ class ReplayBuffer:
     def sample_batch(self, batch_size=32):
         idxs = np.random.randint(0, self.size, size=batch_size)
         return self.obs1_buf[idxs],self.obs2_buf[idxs], self.acts_buf[idxs], self.rews_buf[idxs], self.done_buf[idxs]
+
+
+    
+def update_mean(data, cur_mean, cur_steps):
+      new_steps = data.shape[0]
+      return (torch.mean(data,0)*new_steps + cur_mean*cur_steps)/(cur_steps+new_steps)
+
+            
+def update_var(data, cur_var, cur_steps):
+      new_steps = data.shape[0]
+      return (torch.var(data,0)*new_steps + cur_var*cur_steps)/(cur_steps+new_steps)
