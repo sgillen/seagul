@@ -19,7 +19,6 @@ class RandModel:
     """ 
     class that just takes actions from a uniform random distribution 
     """
-
     def __init__(self, act_limit, act_size):
         self.act_limit = act_limit
         self.act_size = act_size
@@ -44,21 +43,22 @@ class SACModel:
         
         self.num_acts = int(policy.output_layer.out_features/2)
         self.act_limit = act_limit
-       
+
+    # Step is the deterministic evaluation of the policy
     def step(self, state):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
-        action, _ = self.select_action(state)
+        action, logp = self.select_action(state, torch.zeros(1,1))
         value = self.value_fn(torch.as_tensor(state))
-        logp = self.get_logp(state, action)
-
         return action, value, None , logp
 
+    # Select action is used internally and is the stochastic evaluation
     def select_action(self, state, noise):
         out = self.policy(state)
         means = out[:, :self.num_acts]
         logstd = torch.clamp(out[:, self.num_acts:], self.LOG_STD_MIN, self.LOG_STD_MAX)
         std = torch.exp(logstd)        
-        
+
+        # we can speed this up by reusing the same buffer but this is more readable
         samples = (means + std*noise)
         squashed_samples = torch.tanh(samples)
         acts = squashed_samples*self.act_limit
