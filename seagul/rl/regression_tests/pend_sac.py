@@ -26,12 +26,11 @@ policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
-
 model = SACModel(policy, value_fn, q1_fn, q2_fn, 1)
 
 
 def run_and_test(arg_dict, seed):
-    t_model, rewards, var_dict = sac("Pendulum-v0", 200 * 2048, model, seed=seed, **arg_dict)
+    t_model, rewards, var_dict = sac("Pendulum-v0", 20000, model, seed=seed, **arg_dict)
 
     if (var_dict['early_stop']):
         print("seed", seed, "achieved 200 reward in ", len(rewards), "steps")
@@ -47,21 +46,15 @@ def run_and_test(arg_dict, seed):
 # Define our hyper parameters
 arg_dict = {
     'reward_stop': -200,
-    'seed': 2,
 }
 
-model, rews, var_dict = sac(env_name, 10000, model, **arg_dict)
-print(rews)
 
-# proc_list = []
-# for seed in [0,1,2,3]:
-#     p = Process(target=run_and_test, args=(arg_dict, seed))
-#     p.start()
-#     proc_list.append(p)
+proc_list = []
+for seed in [0,1,2,3]:
+    p = Process(target=run_and_test, args=(arg_dict, seed))
+    p.start()
+    proc_list.append(p)
 
-
-# for p in proc_list:
-#     print("joining")
-#     p.join()
-
-globals().update(var_dict)
+for p in proc_list:
+    print("joining")
+    p.join()
