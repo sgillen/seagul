@@ -83,7 +83,7 @@ class SUCartPolePushEnv(gym.Env):
         # imitation learning or energy shaping controllers might try feeding in something
         # above the torque limit
         # torque = np.clip(action, -self.TORQUE_MAX, self.TORQUE_MAX)
-        torque = np.clip(action*1, -self.TORQUE_MAX, self.TORQUE_MAX)
+        torque = np.clip(action * 1, -self.TORQUE_MAX, self.TORQUE_MAX)
 
         # Add noise to the force action
         if self.torque_noise_max > 0:
@@ -104,7 +104,7 @@ class SUCartPolePushEnv(gym.Env):
             ns = rk4(self._derivs, torque, 0, self.dt, self.state)
             # ns = euler(self._derivs, torque, 0, self.dt, self.state)
 
-            self.state[0] = wrap(ns[0], -2*pi, 2*pi)
+            self.state[0] = wrap(ns[0], -2 * pi, 2 * pi)
             # self.state[0] = ns[0]
             self.state[1] = ns[1]
             # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
@@ -122,7 +122,7 @@ class SUCartPolePushEnv(gym.Env):
             done = True
         elif np.abs(self.state[1]) > self.X_MAX:
             reward -= 5
-                        
+
         return self.state, reward, done, {}
 
     # def reset_model(self):

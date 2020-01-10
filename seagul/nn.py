@@ -171,7 +171,7 @@ def policy_render_loop(policy, env, select_action):
 
     except KeyboardInterrupt:
         env.close()
-        
+
 
 class MLP(nn.Module):
     """
@@ -179,7 +179,9 @@ class MLP(nn.Module):
     Simple MLP that has a linear layer at the output
     """
 
-    def __init__(self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity):
+    def __init__(
+        self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity
+    ):
         """
          :param input_size: how many inputs
          :param output_size: how many outputs
@@ -192,7 +194,6 @@ class MLP(nn.Module):
         self.activation = activation()
         self.output_activation = output_activation()
 
-        
         self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
         self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers)])
         self.output_layer = nn.Linear(layer_size, output_size)
@@ -200,12 +201,9 @@ class MLP(nn.Module):
         self.state_means = torch.zeros(input_size)
         self.state_var = torch.ones(input_size)
 
-
-        
-
     def forward(self, data):
-        
-        data = (torch.as_tensor(data) - self.state_means)/torch.sqrt(self.state_var)
+
+        data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
 
         for layer in self.layers:
             data = self.activation(layer(data))
@@ -243,9 +241,8 @@ class CategoricalMLP(nn.Module):
         self.state_means = torch.zeros(input_size)
         self.state_var = torch.ones(input_size)
 
-
     def forward(self, data):
-        data = (data - self.state_means)/torch.sqrt(self.state_var)
+        data = (data - self.state_means) / torch.sqrt(self.state_var)
 
         for layer in self.layers:
             data = self.activation(layer(data))
@@ -302,13 +299,9 @@ class DummyNet(nn.Module):
     def net_fn(self, data):
         return torch.zeros(self.output_size)
 
-
     def forward(self, data):
-        dummy = self.layer(data)*torch.zeros(self.output_size) # so that torch sees a gradient
+        dummy = self.layer(data) * torch.zeros(self.output_size)  # so that torch sees a gradient
         return dummy + self.net_fn(data)
-
-
-
 
 
 class LinearNet(nn.Module):
@@ -329,9 +322,8 @@ class LinearNet(nn.Module):
         self.state_var = torch.ones(input_size)
 
     def forward(self, data):
-        data = (data - self.state_means)/torch.sqrt(self.state_var)
+        data = (data - self.state_means) / torch.sqrt(self.state_var)
         return self.layer(data)
-
 
 
 # Marco Molnar
@@ -375,16 +367,13 @@ def make_histories(states, history_length, sampling_sparsity=1):
     return histories
 
 
-    
 # One day this might be a unit test
 if __name__ == "__main__":
     policy = MLP(input_size=4, output_size=1, num_layers=3, layer_size=12, activation=nn.ReLU)
 
     policy.state_means = torch.ones(4)
-    policy.state_var = torch.ones(4)*4
+    policy.state_var = torch.ones(4) * 4
     print(policy(torch.randn(1, 4)))
 
     policy = LinearNet(input_size=4, output_size=1, bias=False)
     print(policy(torch.randn(1, 4)))
-
-    

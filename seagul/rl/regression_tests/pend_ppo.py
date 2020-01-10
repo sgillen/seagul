@@ -17,36 +17,37 @@ activation = nn.ReLU
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-model = PpoModel(policy, value_fn, action_var=.1, discrete=False)
+model = PpoModel(policy, value_fn, action_var=0.1, discrete=False)
 
-def run_and_test(arg_dict,seed):
+
+def run_and_test(arg_dict, seed):
     t_model, rewards, var_dict = ppo("Pendulum-v0", 200, model, seed=seed, **arg_dict)
 
     if len(rewards) >= 200:
-        print("Error: seed:" , seed, "failed")
+        print("Error: seed:", seed, "failed")
     else:
         print("seed", seed, "achieved 200 reward in ", len(rewards), "steps")
-        
+
     return
-    
+
 
 # Define our hyper parameters
 arg_dict = {
-'epoch_batch_size' : 2048,  # how many steps we want to use before we update our gradients
-'env_timesteps' : 199,  # number of steps in an episode (unless we terminate early)
-'reward_stop' : -200,
-'policy_batch_size' : 512,
-'value_batch_size' : 512,
-'v_epochs' : 10,
-'p_epochs' : 10,
-'policy_lr' : 1e-2,
-'value_lr' : 1e-2,
-'action_var_schedule' : [.707],
+    "epoch_batch_size": 2048,  # how many steps we want to use before we update our gradients
+    "env_timesteps": 199,  # number of steps in an episode (unless we terminate early)
+    "reward_stop": -200,
+    "policy_batch_size": 512,
+    "value_batch_size": 512,
+    "v_epochs": 10,
+    "p_epochs": 10,
+    "policy_lr": 1e-2,
+    "value_lr": 1e-2,
+    "action_var_schedule": [0.707],
 }
 
 
 proc_list = []
-for seed in [0,1,2,3]:
+for seed in [0, 1, 2, 3]:
     p = Process(target=run_and_test, args=(arg_dict, seed))
     p.start()
     proc_list.append(p)

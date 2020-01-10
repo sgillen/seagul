@@ -89,11 +89,11 @@ class SUCartPoleEnv(gym.Env):
             torque += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         for _ in range(5):
-            #ns = euler(self._derivs, torque, 0, self.dt, self.state)
+            # ns = euler(self._derivs, torque, 0, self.dt, self.state)
             ns = rk4(self._derivs, torque, 0, self.dt, self.state)
 
             self.state[0] = wrap(ns[0], -pi, pi)
-            #self.state[0] = ns[0]
+            # self.state[0] = ns[0]
             self.state[1] = ns[1]
             # self.state[1] = np.clip(ns[1], -self.X_MAX, self.X_MAX)
             self.state[2] = ns[2]
@@ -105,7 +105,7 @@ class SUCartPoleEnv(gym.Env):
         # Should reward be something we pass in ? I do like to mess with them a lot...
         #        reward = -np.cos(self.state[0]) + 2
 
-        reward = (-5*np.cos(self.state[0])) + 2
+        reward = (-5 * np.cos(self.state[0])) + 2
 
         self.cur_step += 1
         if self.cur_step > self.num_steps:
@@ -194,11 +194,15 @@ class SUCartPoleEnv(gym.Env):
         dqdt[1] = q[3]
 
         dqdt[2] = (
-            1/(self.L*delta)*(-u*cos(q[0]) - self.mp*self.L*q[2]**2*cos(q[0])*sin(q[0]) - (self.mc + self.mp)*self.g*sin(q[0]))
+            1
+            / (self.L * delta)
+            * (
+                -u * cos(q[0])
+                - self.mp * self.L * q[2] ** 2 * cos(q[0]) * sin(q[0])
+                - (self.mc + self.mp) * self.g * sin(q[0])
+            )
         )
 
-        dqdt[3] = (
-            1/delta*(u + self.mp*sin(q[0]*(self.L*q[2]**2 + self.g*cos(q[0]))))
-        )
+        dqdt[3] = 1 / delta * (u + self.mp * sin(q[0] * (self.L * q[2] ** 2 + self.g * cos(q[0]))))
 
         return dqdt

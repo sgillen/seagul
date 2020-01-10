@@ -1,7 +1,7 @@
 import gym
 import seagul.envs
 
-env_name = 'su_acro_drake-v0'
+env_name = "su_acro_drake-v0"
 env = gym.make(env_name)
 
 
@@ -24,17 +24,16 @@ from multiprocessing import Process
 input_size = 4
 output_size = 1
 layer_size = 12
-num_layers= 2
-activation=nn.ReLU
+num_layers = 2
+activation = nn.ReLU
 
 torch.set_default_dtype(torch.double)
 proc_list = []
 
-for seed in range(3,4):
+for seed in range(3, 4):
 
-    env_name = 'su_acro_drake-v0'
+    env_name = "su_acro_drake-v0"
     env = gym.make(env_name)
-    
 
     # # hard coded gate for debugging
     # def gate(state):
@@ -46,21 +45,17 @@ for seed in range(3,4):
     #                | ((pi < state[:,0]) & (state[:,0] < 220 * pi / 180) & (state[:,1] >= 0)))
     #         return torch.as_tensor(ret,dtype=torch.double).reshape(-1,1)
 
-
-    
     # hard coded gate for debugging
     # def gate(state):
     #     if len(state.shape) == 1:
     #         return ((140 * pi / 180 < state[0] < pi) or (pi < state[0] < 220 * pi / 180))
     #     else:
     #         ret  = ( ((140 * pi / 180 < state[:,0]) & (state[:,0] < pi)) | ((pi < state[:,0]) & (state[:,0] < 220 * pi / 180)))
-                      
+
     #         return torch.as_tensor(ret,dtype=torch.double).reshape(-1,1)
 
-
-    
     #    gate_fn.net_fn = gate
-    
+
     # def control(env,q):
     #     k = np.array([-1000, 1000, -10, -10])
     #     goal = np.copy(env.state)
@@ -68,54 +63,59 @@ for seed in range(3,4):
     #     return -k.dot(goal)
 
     def control(q):
-        k = np.array([[1316.85000612,  555.41763935,  570.32667002,  272.57631536]])
-        #k = np.array([[278.44223126, 112.29125985, 119.72457377,  56.82824017]])
-        gs = np.array([pi,0,0,0])
-        #return 0
+        k = np.array([[1316.85000612, 555.41763935, 570.32667002, 272.57631536]])
+        # k = np.array([[278.44223126, 112.29125985, 119.72457377,  56.82824017]])
+        gs = np.array([pi, 0, 0, 0])
+        # return 0
         return (-k.dot(gs - np.asarray(q))).squeeze()
 
-
-    
     model = SwitchedPpoModelActHold(
-        #policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-        policy = torch.load("policy_warm_final"),
-        value_fn = torch.load("value_warm_final"),
-        #MLP(input_size, 1, num_layers, layer_size, activation),
-        gate_fn  = torch.load("gate_fn_dr"),
+        # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
+        policy=torch.load("policy_warm_final"),
+        value_fn=torch.load("value_warm_final"),
+        # MLP(input_size, 1, num_layers, layer_size, activation),
+        gate_fn=torch.load("gate_fn_dr"),
         nominal_policy=control,
-        hold_count = 200,
+        hold_count=200,
     )
 
-    
     # model = switchedPpoModel(
     #     policy = torch.load("warm_policy_dr"),
     #     value_fn = torch.load("warm_value_dr"),
     #     gate_fn  = torch.load("gate_fn_dr"),
     #     # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
     #     # value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
-    #     # gate_fn = CategoricalMLP(input_size, 1, num_layers, layer_size, activation), 
+    #     # gate_fn = CategoricalMLP(input_size, 1, num_layers, layer_size, activation),
     #     nominal_policy=control,
     #     env=None
     # )
-        
-    arg_dict = {
-        'env_name' : env_name,
-        'model' : model,
-        'num_epochs' : 500,
-        'epoch_batch_size': 2048,
-        'action_var_schedule' : [2,2],
-        'gate_var_schedule'   : [.1,.1],
-        'gamma' : 1,
-        'seed': seed,
-    }
 
+    arg_dict = {
+        "env_name": env_name,
+        "model": model,
+        "num_epochs": 500,
+        "epoch_batch_size": 2048,
+        "action_var_schedule": [2, 2],
+        "gate_var_schedule": [0.1, 0.1],
+        "gamma": 1,
+        "seed": seed,
+    }
 
     run_name = "1000_nhb_se" + str(seed)
 
     #  import ipdb; ipdb.set_trace()
-#    run_sg(arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/drake_acro_switch4/")
+    #    run_sg(arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/drake_acro_switch4/")
 
-    p = Process(target=run_sg,   args = (arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked, this time with a shorter episode ', "/data/drake_acro_switch_final/"))
+    p = Process(
+        target=run_sg,
+        args=(
+            arg_dict,
+            ppo_switch,
+            run_name,
+            "trying to replicate earlier work that kinda of worked, this time with a shorter episode ",
+            "/data/drake_acro_switch_final/",
+        ),
+    )
     p.start()
     proc_list.append(p)
 

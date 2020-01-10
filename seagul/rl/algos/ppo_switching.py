@@ -90,7 +90,7 @@ def ppo_switch(
     env = gym.make(env_name)
 
     # car_env = env.envs[0].env.env
-    #env.num_steps = 1500  # TODO
+    # env.num_steps = 1500  # TODO
 
     if isinstance(env.action_space, gym.spaces.discrete.Discrete):
         raise NotImplementedError(
@@ -105,12 +105,11 @@ def ppo_switch(
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
-
     if action_var_schedule is not None:
         action_var_schedule = np.asarray(action_var_schedule)
         sched_length = action_var_schedule.shape[0]
-        x_vals = np.linspace(0,num_epochs,sched_length)
-        action_var_lookup = lambda epoch: np.interp(epoch,x_vals,action_var_schedule )
+        x_vals = np.linspace(0, num_epochs, sched_length)
+        action_var_lookup = lambda epoch: np.interp(epoch, x_vals, action_var_schedule)
         model.action_var = action_var_lookup(0)
 
     if gate_var_schedule is not None:
@@ -126,12 +125,10 @@ def ppo_switch(
     num_states = 0  # tracks how many states we've seen so far, so that we can update means properly
     disc_rewards_mean = torch.zeros(1)
     disc_rewards_std = torch.ones(1)
-    
 
-    
     # need a copy of the old policy for the ppo loss
     old_model = dill.loads(dill.dumps(model))
-    
+
     # intialize our optimizers
     p_optimizer = torch.optim.Adam(model.policy.parameters(), lr=policy_lr)
     v_optimizer = torch.optim.Adam(model.value_fn.parameters(), lr=value_lr)
@@ -140,7 +137,7 @@ def ppo_switch(
     p_loss_hist = []
     v_loss_hist = []
     g_loss_hist = []
-    
+
     # seed all our RNGs
     env.seed(seed)
     torch.manual_seed(seed)
@@ -190,10 +187,11 @@ def ppo_switch(
             for t in range(env.num_steps):
 
                 state_list.append(state.clone())
-                if(torch.isnan(state).any()):
+                if torch.isnan(state).any():
                     print("hellllooo")
-                    import ipdb; ipdb.set_trace()
+                    import ipdb
 
+                    ipdb.set_trace()
 
                 path, gate_out = model.select_path(state)
 
@@ -227,10 +225,10 @@ def ppo_switch(
             # -------------------------------------------------------------------------------
 
             ep_length = len(reward_list)
-            
+
             # make a tensor storing the current episodes state, actions, and rewards
 
-#            import ipdb; ipdb.set_trace()
+            #            import ipdb; ipdb.set_trace()
             ep_state_tensor = torch.stack(state_list).reshape(-1, env.observation_space.shape[0])
             ep_action_tensor = torch.stack(action_list).reshape(-1, action_size)
             ep_disc_rewards = torch.as_tensor(discount_cumsum(reward_list, gamma)).reshape(-1, 1)
@@ -247,19 +245,27 @@ def ppo_switch(
             action_tensor = torch.cat((action_tensor, ep_action_tensor[:-1]))
 
             disc_rewards_tensor = torch.cat((disc_rewards_tensor, ep_disc_rewards[:-1]))
-            disc_rewards_mean = (disc_rewards_tensor.mean()*ep_length + disc_rewards_mean*num_states)/(ep_length + num_states)
-            disc_rewards_std  = (disc_rewards_tensor.std()*ep_length + disc_rewards_std*num_states)/(ep_length + num_states)
-            disc_rewards_tensor = (disc_rewards_tensor - disc_rewards_mean)/(disc_rewards_std + 1e-5)
+            disc_rewards_mean = (disc_rewards_tensor.mean() * ep_length + disc_rewards_mean * num_states) / (
+                ep_length + num_states
+            )
+            disc_rewards_std = (disc_rewards_tensor.std() * ep_length + disc_rewards_std * num_states) / (
+                ep_length + num_states
+            )
+            disc_rewards_tensor = (disc_rewards_tensor - disc_rewards_mean) / (disc_rewards_std + 1e-5)
 
-            state_mean = (state_tensor.mean()*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
-            state_var =  (state_tensor.std()*state_tensor.shape[0] + state_var*num_states)/(state_tensor.shape[0] + num_states)
-                          
-            #model.policy.state_means = state_mean
-            #model.policy.state_var = state_var
+            state_mean = (state_tensor.mean() * state_tensor.shape[0] + state_mean * num_states) / (
+                state_tensor.shape[0] + num_states
+            )
+            state_var = (state_tensor.std() * state_tensor.shape[0] + state_var * num_states) / (
+                state_tensor.shape[0] + num_states
+            )
 
-            #model.value_fn.state_means = state_mean
-            #model.value_fn.state_var = state_var
-        
+            # model.policy.state_means = state_mean
+            # model.policy.state_var = state_var
+
+            # model.value_fn.state_means = state_mean
+            # model.value_fn.state_var = state_var
+
             num_states += ep_length
 
             adv_tensor = torch.cat((adv_tensor, ep_adv))
@@ -273,8 +279,12 @@ def ppo_switch(
             # -------------------------------------------------------------------------------
             if batch_steps > epoch_batch_size:
 
-                state_mean = (torch.mean(state_tensor, 0)*state_tensor.shape[0] + state_mean*num_states)/(state_tensor.shape[0] + num_states)
-                state_var = torch.var(state_tensor, 0)*state_tensor.shape[0] + state_var*num_states/(state_tensor.shape[0] + num_states)
+                state_mean = (torch.mean(state_tensor, 0) * state_tensor.shape[0] + state_mean * num_states) / (
+                    state_tensor.shape[0] + num_states
+                )
+                state_var = torch.var(state_tensor, 0) * state_tensor.shape[0] + state_var * num_states / (
+                    state_tensor.shape[0] + num_states
+                )
 
                 model.policy.state_means = state_mean
                 model.policy.state_var = state_var
@@ -292,8 +302,7 @@ def ppo_switch(
                         p_adv_list.append(adv.clone())
 
                 old_model = dill.loads(dill.dumps(model))
-                                    
-                        
+
                 if len(p_state_list):
                     p_state_tensor = torch.stack(p_state_list).reshape(-1, env.observation_space.shape[0])
                     p_action_tensor = torch.stack(p_action_list).reshape(-1, action_size)
@@ -310,7 +319,7 @@ def ppo_switch(
                     for p_epoch in range(p_epochs):
                         for (local_states, local_actions, local_adv) in training_generator:
                             # Transfer to GPU (if GPU is enabled, else this does nothing)
-#                            import ipdb; ipdb.set_trace()
+                            #                            import ipdb; ipdb.set_trace()
                             local_states, local_actions, local_adv = (
                                 local_states.to(device),
                                 local_actions.to(device),
@@ -318,9 +327,7 @@ def ppo_switch(
                             )
 
                             # predict and calculate loss for the batch
-                            logp = model.get_action_logp(local_states, local_actions.squeeze()).reshape(
-                                -1, action_size
-                            )
+                            logp = model.get_action_logp(local_states, local_actions.squeeze()).reshape(-1, action_size)
                             old_logp = old_model.get_action_logp(local_states, local_actions.squeeze()).reshape(
                                 -1, action_size
                             )
@@ -330,9 +337,10 @@ def ppo_switch(
                                 / r.shape[0]
                             )
 
-                            if(torch.isnan(p_loss)):
-                                import ipdb; ipdb.set_trace()
+                            if torch.isnan(p_loss):
+                                import ipdb
 
+                                ipdb.set_trace()
 
                             # do the normal pytorch update
                             p_loss.backward(retain_graph=True)
@@ -364,7 +372,6 @@ def ppo_switch(
                             v_optimizer.step()
 
                     old_model = dill.loads(dill.dumps(model))
-
 
                     # update gating function
                     # ----------------------------------------------------------------------
@@ -417,6 +424,7 @@ def ppo_switch(
 
     return (model, avg_reward_hist, locals())
 
+
 batch_steps = 0  # tracks steps taken in current batch
 
 # ============================================================================================
@@ -429,22 +437,24 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     from seagul.sims.cartpole import LQRControl
+
     torch.set_default_dtype(torch.double)
 
     policy = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
     value_fn = MLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
-    #gate_fn = CategoricalMLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
+    # gate_fn = CategoricalMLP(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
     gate_fn = DummyNet(input_size=4, output_size=1, layer_size=12, num_layers=2, activation=nn.ReLU)
 
     def gate(state):
         if len(state.shape) == 1:
-            return (((140 * pi / 180 < state[0] < pi) and state[1] <= 0) or (
-                    (pi < state[0] < 220 * pi / 180) and state[1] >= 0))
+            return ((140 * pi / 180 < state[0] < pi) and state[1] <= 0) or (
+                (pi < state[0] < 220 * pi / 180) and state[1] >= 0
+            )
         else:
-            ret  = ((((140 * pi / 180 < state[:,0]) & (state[:,0] < pi)) & (state[:,1] <= 0))
-                   | ((pi < state[:,0]) & (state[:,0] < 220 * pi / 180) & (state[:,1] >= 0)))
-            return torch.as_tensor(ret,dtype=torch.double).reshape(-1,1)
-
+            ret = (((140 * pi / 180 < state[:, 0]) & (state[:, 0] < pi)) & (state[:, 1] <= 0)) | (
+                (pi < state[:, 0]) & (state[:, 0] < 220 * pi / 180) & (state[:, 1] >= 0)
+            )
+            return torch.as_tensor(ret, dtype=torch.double).reshape(-1, 1)
 
     gate_fn.net_fn = gate
 
@@ -454,9 +464,7 @@ if __name__ == "__main__":
     model = switchedPpoModel(policy, LQRControl, value_fn, gate_fn, env=env)
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
-    t_model, rewards, arg_dict = ppo_switch(
-        env_name, 500, model, action_var_schedule=[10,0], gate_var_schedule=[1,0]
-    )
+    t_model, rewards, arg_dict = ppo_switch(env_name, 500, model, action_var_schedule=[10, 0], gate_var_schedule=[1, 0])
 
     plt.plot(rewards)
     print(rewards)

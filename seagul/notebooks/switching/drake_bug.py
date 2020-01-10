@@ -1,9 +1,10 @@
-#import torch
+# import torch
 import tensorflow
-from pydrake.examples.acrobot import (AcrobotPlant)
+from pydrake.examples.acrobot import AcrobotPlant
 
-import sys; print(sys.executable)
+import sys
+
+print(sys.executable)
 
 
 acrobot = AcrobotPlant()
-

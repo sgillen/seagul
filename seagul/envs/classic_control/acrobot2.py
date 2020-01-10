@@ -8,13 +8,13 @@ from gym.utils import seeding
 from seagul.integration import euler
 
 __copyright__ = "Copyright 2013, RLPy http://acl.mit.edu/RLPy"
-__credits__ = ["Alborz Geramifard", "Robert H. Klein", "Christoph Dann",
-               "William Dabney", "Jonathan P. How"]
+__credits__ = ["Alborz Geramifard", "Robert H. Klein", "Christoph Dann", "William Dabney", "Jonathan P. How"]
 __license__ = "BSD 3-Clause"
 __author__ = "Christoph Dann <cdann@cdann.de>"
 
 # SOURCE:
 # https://github.com/rlpy/rlpy/blob/master/rlpy/Domains/Acrobot.py
+
 
 class AcrobotEnv2(core.Env):
 
@@ -57,34 +57,30 @@ class AcrobotEnv2(core.Env):
         see the AcrobotLegacy class.
     """
 
-    metadata = {
-        'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second' : 15
-    }
+    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 15}
 
-    dt = .2
+    dt = 0.2
 
-    LINK_LENGTH_1 = 1.  # [m]
-    LINK_LENGTH_2 = 2.  # [m]
-    LINK_MASS_1 = 1.  #: [kg] mass of link 1
-    LINK_MASS_2 = 1.  #: [kg] mass of link 2
+    LINK_LENGTH_1 = 1.0  # [m]
+    LINK_LENGTH_2 = 2.0  # [m]
+    LINK_MASS_1 = 1.0  #: [kg] mass of link 1
+    LINK_MASS_2 = 1.0  #: [kg] mass of link 2
     LINK_COM_POS_1 = 0.5  #: [m] position of the center of mass of link 1
     LINK_COM_POS_2 = 1  #: [m] position of the center of mass of link 2
-    LINK_MOI = .083  #: moments of inertia for both links
+    LINK_MOI = 0.083  #: moments of inertia for both links
 
     MAX_VEL_1 = 4 * np.pi
     MAX_VEL_2 = 9 * np.pi
 
-    AVAIL_TORQUE = [-1., 0., +1]
+    AVAIL_TORQUE = [-1.0, 0.0, +1]
 
-    torque_noise_max = 0.
+    torque_noise_max = 0.0
 
     #: use dynamics equations from the nips paper or the book
     book_or_nips = "nips"
     action_arrow = None
     domain_fig = None
     actions_num = 3
-
 
     def __init__(self):
         self.viewer = None
@@ -109,7 +105,7 @@ class AcrobotEnv2(core.Env):
 
     def step(self, a):
 
-        torque = np.clip(a, -200, 200) 
+        torque = np.clip(a, -200, 200)
         torque = a
         # Add noise to the force action
         if self.torque_noise_max > 0:
@@ -117,40 +113,40 @@ class AcrobotEnv2(core.Env):
 
         # Now, augment the state with our force action so it can be passed to
         # _dsdt
-        
 
-        
-        #ns = euler(self._dsdt, s_augmented, [0, self.dt])
+        # ns = euler(self._dsdt, s_augmented, [0, self.dt])
 
         # only care about final timestep of integration returned by integrator
         for i in range(1):
             s = self.state
             s_augmented = np.append(s, torque)
-            
+
             ns = rk4(self._dsdt, s_augmented, [0, self.dt])
             ns = ns[-1]
-        
+
             ns = ns[:4]  # omit action
             # ODEINT IS TOO SLOW!
             # ns_continuous = integrate.odeint(self._dsdt, self.s_continuous, [0, self.dt])
             # self.s_continuous = ns_continuous[-1] # We only care about the state
             # at the ''final timestep'', self.dt
-            
-            ns[0] = wrap(ns[0], 0, 2*pi)
+
+            ns[0] = wrap(ns[0], 0, 2 * pi)
             ns[1] = wrap(ns[1], -pi, pi)
             ns[2] = bound(ns[2], -self.MAX_VEL_1, self.MAX_VEL_1)
             ns[3] = bound(ns[3], -self.MAX_VEL_2, self.MAX_VEL_2)
 
             self.state = ns
 
-        self.cur_step +=(200/5)
+        self.cur_step += 200 / 5
 
         if self.cur_step >= self.num_steps:
             terminal = True
         else:
             terminal = False
-        
-        reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))# - .01*torque.item()**2 - np.abs(.1*ns[2]) - np.abs(.05*ns[3])
+
+        reward = -(
+            np.cos(ns[0]) + np.cos(ns[0] + ns[1])
+        )  # - .01*torque.item()**2 - np.abs(.1*ns[2]) - np.abs(.05*ns[3])
 
         return (self._get_ob(), reward, terminal, {})
 
@@ -160,7 +156,7 @@ class AcrobotEnv2(core.Env):
 
     def _terminal(self):
         s = self.state
-        return bool(-np.cos(s[0]) - np.cos(s[1] + s[0]) > 1.)
+        return bool(-np.cos(s[0]) - np.cos(s[1] + s[0]) > 1.0)
 
     def _dsdt(self, s_augmented, t):
         m1 = self.LINK_MASS_1
@@ -177,65 +173,67 @@ class AcrobotEnv2(core.Env):
         theta2 = s[1]
         dtheta1 = s[2]
         dtheta2 = s[3]
-        d1 = m1 * lc1 ** 2 + m2 * \
-            (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
+        d1 = m1 * lc1 ** 2 + m2 * (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
         d2 = m2 * (lc2 ** 2 + l1 * lc2 * np.cos(theta2)) + I2
-        phi2 = m2 * lc2 * g * np.cos(theta1 + theta2 - np.pi / 2.)
-        phi1 = - m2 * l1 * lc2 * dtheta2 ** 2 * np.sin(theta2) \
-               - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2)  \
-            + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2) + phi2
+        phi2 = m2 * lc2 * g * np.cos(theta1 + theta2 - np.pi / 2.0)
+        phi1 = (
+            -m2 * l1 * lc2 * dtheta2 ** 2 * np.sin(theta2)
+            - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2)
+            + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2)
+            + phi2
+        )
         if self.book_or_nips == "nips":
             # the following line is consistent with the description in the
             # paper
-            ddtheta2 = (a + d2 / d1 * phi1 - phi2) / \
-                (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+            ddtheta2 = (a + d2 / d1 * phi1 - phi2) / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
         else:
             # the following line is consistent with the java implementation and the
             # book
-            ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * np.sin(theta2) - phi2) \
-                / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+            ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * np.sin(theta2) - phi2) / (
+                m2 * lc2 ** 2 + I2 - d2 ** 2 / d1
+            )
         ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
-        return (dtheta1, dtheta2, ddtheta1, ddtheta2, 0.)
+        return (dtheta1, dtheta2, ddtheta1, ddtheta2, 0.0)
 
-    def render(self, mode='human'):
+    def render(self, mode="human"):
         from gym.envs.classic_control import rendering
 
         s = self.state
 
         if self.viewer is None:
-            self.viewer = rendering.Viewer(500,500)
+            self.viewer = rendering.Viewer(500, 500)
             bound = self.LINK_LENGTH_1 + self.LINK_LENGTH_2 + 0.2  # 2.2 for default
-            self.viewer.set_bounds(-bound,bound,-bound,bound)
+            self.viewer.set_bounds(-bound, bound, -bound, bound)
 
-        if s is None: return None
+        if s is None:
+            return None
 
-        p1 = [-self.LINK_LENGTH_1 *
-              np.cos(s[0]), self.LINK_LENGTH_1 * np.sin(s[0])]
+        p1 = [-self.LINK_LENGTH_1 * np.cos(s[0]), self.LINK_LENGTH_1 * np.sin(s[0])]
 
-        p2 = [p1[0] - self.LINK_LENGTH_2 * np.cos(s[0] + s[1]),
-              p1[1] + self.LINK_LENGTH_2 * np.sin(s[0] + s[1])]
+        p2 = [p1[0] - self.LINK_LENGTH_2 * np.cos(s[0] + s[1]), p1[1] + self.LINK_LENGTH_2 * np.sin(s[0] + s[1])]
 
-        xys = np.array([[0,0], p1, p2])[:,::-1]
-        thetas = [s[0]-np.pi/2, s[0]+s[1]-np.pi/2]
+        xys = np.array([[0, 0], p1, p2])[:, ::-1]
+        thetas = [s[0] - np.pi / 2, s[0] + s[1] - np.pi / 2]
         link_lengths = [self.LINK_LENGTH_1, self.LINK_LENGTH_2]
 
         self.viewer.draw_line((-2.2, 1), (2.2, 1))
-        for ((x,y),th,llen) in zip(xys, thetas, link_lengths):
-            l,r,t,b = 0, llen, .1, -.1
-            jtransform = rendering.Transform(rotation=th, translation=(x,y))
-            link = self.viewer.draw_polygon([(l,b), (l,t), (r,t), (r,b)])
+        for ((x, y), th, llen) in zip(xys, thetas, link_lengths):
+            l, r, t, b = 0, llen, 0.1, -0.1
+            jtransform = rendering.Transform(rotation=th, translation=(x, y))
+            link = self.viewer.draw_polygon([(l, b), (l, t), (r, t), (r, b)])
             link.add_attr(jtransform)
-            link.set_color(0,.8, .8)
-            circ = self.viewer.draw_circle(.1)
-            circ.set_color(.8, .8, 0)
+            link.set_color(0, 0.8, 0.8)
+            circ = self.viewer.draw_circle(0.1)
+            circ.set_color(0.8, 0.8, 0)
             circ.add_attr(jtransform)
 
-        return self.viewer.render(return_rgb_array = mode=='rgb_array')
+        return self.viewer.render(return_rgb_array=mode == "rgb_array")
 
     def close(self):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
+
 
 def wrap(x, m, M):
     """
@@ -252,6 +250,7 @@ def wrap(x, m, M):
     while x < m:
         x = x + diff
     return x
+
 
 def bound(x, m, M=None):
     """
@@ -270,10 +269,9 @@ def euler(derivs, s0, t):
     """
     Single step of an euler integtation, exactly the same parameters and usage as rk4 above
     """
-#    import pdb; pdb.set_trace()
+    #    import pdb; pdb.set_trace()
 
     return s0 + t[1] * np.array(derivs(s0, t[0] + t[1]))
-
 
 
 def rk4(derivs, y0, t, *args, **kwargs):
@@ -322,7 +320,6 @@ def rk4(derivs, y0, t, *args, **kwargs):
         yout = np.zeros((len(t), Ny), np.float_)
 
     yout[0] = y0
-
 
     for i in np.arange(len(t) - 1):
 

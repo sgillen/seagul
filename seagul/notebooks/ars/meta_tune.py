@@ -35,7 +35,7 @@ def train_ppo(config, env_name):
 
 config = ppo.DEFAULT_CONFIG.copy()
 config["num_workers"] = 15
-config["num_gpus"] = tune.grid_search([0,1])
+config["num_gpus"] = tune.grid_search([0, 1])
 
 config["eager"] = False
 config["model"]["fcnet_hiddens"] = [64, 64]
@@ -43,8 +43,8 @@ config["lr"] = 5e-5
 config["kl_coeff"] = 1.0
 config["num_sgd_iter"] = 20
 config["batch_mode"] = "complete_episodes"
-config['vf_clip_param'] = 100.0
-config['observation_filter'] = 'MeanStdFilter'
+config["vf_clip_param"] = 100.0
+config["observation_filter"] = "MeanStdFilter"
 config["sgd_minibatch_size"] = 2048
 config["train_batch_size"] = 20480
 
@@ -54,11 +54,5 @@ ray.init()
 config["env"] = "Walker2DBulletEnv-v0"
 
 analysis = tune.run(
-    "PPO",
-    config=config,
-    stop={"timesteps_total": 32e6},
-    local_dir="./data/batch_grid2/",
-    checkpoint_at_end=True,
+    "PPO", config=config, stop={"timesteps_total": 32e6}, local_dir="./data/batch_grid2/", checkpoint_at_end=True
 )
-
-

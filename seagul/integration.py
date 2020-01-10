@@ -15,16 +15,14 @@ def wrap(x, m, M):
     For example, m = -180, M = 180 (degrees), x = 360 --> returns 0.
     """
 
-
-#    return x
-    #x = (x + np.pi) % (2 * np.pi) - np.pi
-
+    #    return x
+    # x = (x + np.pi) % (2 * np.pi) - np.pi
 
     diff = M - m
     while x > M:
-       x = x - diff
+        x = x - diff
     while x < m:
-       x = x + diff
+        x = x + diff
     return x
 
 
