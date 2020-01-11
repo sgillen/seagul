@@ -6,7 +6,7 @@ import gym
 
 import matplotlib.pyplot as plt
 
-from seagul.rl.models import PpoModel
+from seagul.rl.models import PPOModel
 
 
 torch.set_default_dtype(torch.double)
@@ -25,7 +25,7 @@ activation = nn.ReLU
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-model = PpoModel(policy, value_fn, action_var=0.1, discrete=False)
+model = PPOModel(policy, value_fn, action_var=0.1, discrete=False)
 
 # Define our hyper parameters
 num_epochs = 100
@@ -64,7 +64,7 @@ activation = nn.ReLU
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-model = PpoModel(policy, value_fn, action_var=0.1, discrete=False)
+model = PPOModel(policy, value_fn, action_var=0.1, discrete=False)
 
 # Define our hyper parameters
 num_epochs = 100

@@ -9,30 +9,28 @@ from seagul.rl.common import ReplayBuffer
 from seagul.rl.models import RandModel
 
 
-def sac(
-    env_name,
-    total_steps,
-    model,
-    env_steps = 0,
-    min_steps_per_update = 1,
-    iters_per_update = 100,
-    replay_batch_size=64,
-    seed=0,
-    gamma=0.95,
-    polyak=0.995,
-    alpha=0.2,
-    pol_batch_size=64,
-    val_batch_size=64,
-    q_batch_size=64,
-    pol_lr=1e-3,
-    val_lr=1e-3,
-    q_lr=1e-3,
-    exploration_steps=100,
-    replay_buf_size=int(50000),
-    use_gpu=False,
-    reward_stop=None,
+def sym_sac(
+        env_name,
+        total_steps,
+        model,
+        min_steps_per_update=1,
+        iters_per_update=100,
+        replay_batch_size=64,
+        seed=0,
+        gamma=0.95,
+        polyak=0.995,
+        alpha=0.2,
+        pol_batch_size=64,
+        val_batch_size=64,
+        q_batch_size=64,
+        pol_lr=1e-3,
+        val_lr=1e-3,
+        q_lr=1e-3,
+        exploration_steps=100,
+        replay_buf_size=int(50000),
+        use_gpu=False,
+        reward_stop=None,
 ):
-
     """
     Implements soft actor critic
 
@@ -41,7 +39,6 @@ def sac(
         total_steps: number of timesteps to run the PPO for
         model: model from seagul.rl.models. Contains policy, value fn, q1_fn, q2_fn
         min_steps_per_update: minimun number of steps to take before running updates, will finish episodes before updating
-        env_steps: number of steps the environment takes before finishing, if the environment emits a done signal before this we consider it a failure.
         iters_per_update: how many update steps to make every time we update
         replay_batch_size: how big a batch to pull from the replay buffer for each update
         seed: random seed for all rngs
@@ -126,7 +123,7 @@ def sac(
     early_stop = False
 
     while cur_total_steps < exploration_steps:
-        ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
+        ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model)
 
         # can def be made more efficient if found to be a bottleneck
         for obs1, obs2, acts, rews, done in zip(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done):
@@ -150,7 +147,7 @@ def sac(
         # ========================================================================
         while cur_batch_steps < min_steps_per_update:
 
-            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, model, env_steps)
+            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, model)
 
             # can def be made more efficient if found to be a bottleneck
             for obs1, obs2, acts, rews, done in zip(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done):
@@ -163,7 +160,7 @@ def sac(
         raw_rew_hist.append(torch.sum(ep_rews))
         progress_bar.update(cur_batch_steps)
 
-        for _ in range(ep_steps):
+        for _ in range(iters_per_update):
             # compute targets for Q and V
             # ========================================================================
             replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)
@@ -185,7 +182,7 @@ def sac(
             # q_fn update
             # ========================================================================
             training_data = data.TensorDataset(replay_obs1, replay_acts, q_targ)
-            training_generator = data.DataLoader(training_data, batch_size=q_batch_size, shuffle=False)
+            training_generator = data.DataLoader(training_data, batch_size=q_batch_size, shuffle=True)
 
             for local_obs, local_acts, local_qtarg in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -198,18 +195,20 @@ def sac(
                 q_in = torch.cat((local_obs, local_acts), dim=1)
                 q1_preds = model.q1_fn(q_in)
                 q2_preds = model.q2_fn(q_in)
-                q1_loss = torch.pow(q1_preds - local_qtarg, 2).mean()
-                q2_loss = torch.pow(q2_preds - local_qtarg, 2).mean()
-                q_loss = q1_loss + q2_loss
+                q1_loss = torch.sum(torch.pow(q1_preds - local_qtarg, 2)) / replay_batch_size
+                q2_loss = torch.sum(torch.pow(q2_preds - local_qtarg, 2)) / replay_batch_size
 
-                q1_opt.zero_grad(); q2_opt.zero_grad()
-                q_loss.backward()
-                q1_opt.step(); q2_opt.step()
+                q1_opt.zero_grad()
+                q2_opt.zero_grad()
+                q1_loss.backward()
+                q2_loss.backward()
+                q1_opt.step()
+                q2_opt.step()
 
             # val_fn update
             # ========================================================================
             training_data = data.TensorDataset(replay_obs1, v_targ)
-            training_generator = data.DataLoader(training_data, batch_size=q_batch_size, shuffle=False)
+            training_generator = data.DataLoader(training_data, batch_size=q_batch_size, shuffle=True)
 
             for local_obs, local_vtarg in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -227,7 +226,7 @@ def sac(
             # policy_fn update
             # ========================================================================
             training_data = data.TensorDataset(replay_obs1)
-            training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=False)
+            training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True)
 
             for local_obs in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -261,8 +260,7 @@ def sac(
     return (model, raw_rew_hist, locals())
 
 
-def do_rollout(env, model, num_steps):
-
+def do_rollout(env, model):
     acts_list = []
     obs1_list = []
     obs2_list = []
@@ -273,7 +271,6 @@ def do_rollout(env, model, num_steps):
     act_size = env.action_space.shape[0]
     obs = env.reset()
     done = False
-    cur_step = 0
 
     while not done:
         obs = torch.as_tensor(obs, dtype=dtype).detach()
@@ -289,14 +286,8 @@ def do_rollout(env, model, num_steps):
         acts_list.append(torch.as_tensor(act.clone(), dtype=dtype))
         rews_list.append(torch.as_tensor(rew, dtype=dtype))
         obs2_list.append(obs.clone())
-
-
-        if cur_step < num_steps:
-            done_list.append(torch.as_tensor(done))
-        else:
-            done_list.append(torch.as_tensor(False))
-
-        cur_step+=1
+        #        done_list.append(torch.as_tensor(done))
+        done_list.append(torch.as_tensor(False))
 
     ep_obs1 = torch.stack(obs1_list)
     ep_acts = torch.stack(acts_list)

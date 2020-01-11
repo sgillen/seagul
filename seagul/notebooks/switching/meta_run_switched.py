@@ -7,7 +7,7 @@ env = gym.make(env_name)
 
 from seagul.rl.run_utils import run_sg, run_and_save_bs
 from seagul.rl.algos import ppo, ppo_switch
-from seagul.rl.models import PpoModel, switchedPpoModel, SwitchedPpoModelActHold
+from seagul.rl.models import PPOModel, SwitchedPPOModel, SwitchedPPOModelActHold
 from seagul.nn import MLP, CategoricalMLP, DummyNet
 
 
@@ -69,7 +69,7 @@ for seed in range(3, 4):
         # return 0
         return (-k.dot(gs - np.asarray(q))).squeeze()
 
-    model = SwitchedPpoModelActHold(
+    model = SwitchedPPOModelActHold(
         # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
         policy=torch.load("policy_warm_final"),
         value_fn=torch.load("value_warm_final"),
@@ -79,7 +79,7 @@ for seed in range(3, 4):
         hold_count=200,
     )
 
-    # model = switchedPpoModel(
+    # model = SwitchedPPOModel(
     #     policy = torch.load("warm_policy_dr"),
     #     value_fn = torch.load("warm_value_dr"),
     #     gate_fn  = torch.load("gate_fn_dr"),

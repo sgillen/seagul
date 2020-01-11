@@ -35,10 +35,11 @@ def ppo(
         env_name: name of the openAI gym environment to solve
         total_steps: number of timesteps to run the PPO for
         model: model from seagul.rl.models. Contains policy and value fn
+        act_var_schedule: schedule to set the variance of the policy. Will linearly interpolate values
         epoch_batch_size: number of environment steps to take per batch, total steps will be num_epochs*epoch_batch_size
         seed: seed for all the rngs
         gamma: discount applied to future rewards, usually close to 1
-        lam: lambda for the Advantage estimmation, usually close to 1
+        lam: lambda for the Advantage estimation, usually close to 1
         eps: epsilon for the clipping, usually .1 or .2
         pol_batch_size: batch size for policy updates
         val_batch_size: batch size for value function updates
@@ -55,21 +56,23 @@ def ppo(
         var_dict: dictionary with all locals, for logging/debugging purposes
 
     Example:
-        import torch.nn as nn
-        from seagul.rl.algos.ppo import ppo
-        from seagul.nn import MLP, CategoricalMLP
+        from seagul.rl.algos import ppo
+        from seagul.nn import MLP
+        from seagul.rl.models import PPOModel
         import torch
 
-        torch.set_default_dtype(torch.double)
+        torch.set_default_dtype(torch.double)# TODO need to update everything to support arbitrary dtypes
 
-        input_size = 4; output_size = 1; layer_size = 64; num_layers = 3
-        activation = nn.ReLU
+        input_size = 3
+        output_size = 1
+        layer_size = 64
+        num_layers = 2
 
-        policy = MLP(input_size, output_size, num_layers, layer_size, activation)
-        value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+        policy = MLP(input_size, output_size, num_layers, layer_size)
+        value_fn = MLP(input_size, 1, num_layers, layer_size)
+        model = PPOModel(policy, value_fn)
 
-        model = PpoModel(policy, value_fn, action_var=4, discrete=False)
-        t_model, rewards, var_dict = ppo("su_acro_drake-v0", 100, model, action_var_schedule=[3,2,1,0])
+        model, rews, var_dict = ppo("Pendulum-v0", 10000, model)
 
     """
 
@@ -126,7 +129,7 @@ def ppo(
         cur_batch_steps = 0
 
         # Bail out if we have met out reward threshold
-        if len(raw_rew_hist) > 2:
+        if len(raw_rew_hist) > 2 and reward_stop:
             if raw_rew_hist[-1] >= reward_stop and raw_rew_hist[-2] >= reward_stop:
                 early_stop = True
                 break
@@ -250,11 +253,12 @@ def do_rollout(env, model):
     rew_list = []
     num_steps = 0
 
+    dtype = torch.float32
     obs = env.reset()
     done = False
 
     while not done:
-        obs = torch.as_tensor(obs).detach()
+        obs = torch.as_tensor(obs,dtype=dtype).detach()
         obs_list.append(obs.clone())
 
         act, logprob = model.select_action(obs)

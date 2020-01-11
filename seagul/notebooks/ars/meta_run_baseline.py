@@ -16,7 +16,7 @@ env = gym.make(env_name)
 from seagul.rl.run_utils import run_and_save_bs
 
 # from seagul.rl.algos import ppo, ppo_switch
-# from seagul.rl.models import PpoModel, switchedPpoModel
+# from seagul.rl.models import PPOModel, SwitchedPPOModel
 # from seagul.nn import MLP, CategoricalMLP
 
 

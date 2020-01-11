@@ -13,7 +13,7 @@ import torch.nn as nn
 
 from seagul.rl.run_utils import run_sg
 from seagul.rl.algos import ppo, ppo_sym
-from seagul.rl.models import PpoModel, PpoModelActHold
+from seagul.rl.models import PPOModel, PPOModelActHold
 from seagul.nn import MLP, CategoricalMLP
 
 input_size = env.observation_space.shape[0]
@@ -29,14 +29,14 @@ for seed in [4, 5, 6, 7]:
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 
-    # model = PpoModelActHold(
+    # model = PPOModelActHold(
     #     policy=policy,
     #     value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
     #     discrete=False,
     #     hold_count = 200
     # )
 
-    model = PpoModel(
+    model = PPOModel(
         policy=policy, value_fn=MLP(input_size, output_size, num_layers, layer_size, activation), discrete=False
     )
 
@@ -73,14 +73,14 @@ for p in proc_list:
 
 #     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 
-#     # model = PpoModelActHold(
+#     # model = PPOModelActHold(
 #     #     policy=policy,
 #     #     value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
 #     #     discrete=False,
 #     #     hold_count = 200
 #     # )
 
-#     model = PpoModel(
+#     model = PPOModel(
 #         policy=policy,
 #         value_fn=MLP(input_size, output_size, num_layers, layer_size, activation),
 #         discrete=False,

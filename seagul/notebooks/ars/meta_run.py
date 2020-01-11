@@ -24,7 +24,7 @@ activation = nn.ReLU
 
 from seagul.rl.run_utils import run_sg, run_and_save_bs
 from seagul.rl.algos import ppo, ppo_switch
-from seagul.rl.models import PpoModel, switchedPpoModel, PpoModelActHold
+from seagul.rl.models import PPOModel, SwitchedPPOModel, PPOModelActHold
 from seagul.nn import MLP, CategoricalMLP
 
 torch.set_default_dtype(torch.double)
@@ -35,14 +35,14 @@ for seed in [0]:
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 
-    # model = PpoModelActHold(
+    # model = PPOModelActHold(
     #     policy=policy,
     #     value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
     #     discrete=False,
     #     hold_count = 200
     # )
 
-    model = PpoModel(policy=policy, value_fn=MLP(input_size, 1, num_layers, layer_size, activation), discrete=False)
+    model = PPOModel(policy=policy, value_fn=MLP(input_size, 1, num_layers, layer_size, activation), discrete=False)
 
     arg_dict = {
         "env_name": env_name,

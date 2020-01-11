@@ -1,6 +1,6 @@
 import gym
 
-from seagul.rl.models import PpoModel
+from seagul.rl.models import PPOModel
 from seagul.rl.common import discount_cumsum
 
 import numpy as np
@@ -74,7 +74,7 @@ def ppo(
         policy = MLP(input_size, output_size, num_layers, layer_size, activation)
         value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 
-        model = PpoModel(policy, value_fn, action_var=4, discrete=False)
+        model = PPOModel(policy, value_fn, action_var=4, discrete=False)
         t_model, rewards, var_dict = ppo("su_acro_drake-v0", 100, model, action_var_schedule=[3,2,1,0])
     """
 
@@ -337,7 +337,7 @@ if __name__ == "__main__":
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PpoModel(policy, value_fn, action_var=0.1, discrete=True)
+    model = PPOModel(policy, value_fn, action_var=0.1, discrete=True)
 
     # Define our hyper parameters
     num_epochs = 100

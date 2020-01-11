@@ -21,15 +21,14 @@ except:
 import gym
 import seagul.envs
 
+import torch
+
 import dill
 import subprocess
 
-import torch
 
-import time, datetime, json, yaml
+import time, datetime, json
 import os
-
-from seagul.rl.models import PpoModel, switchedPpoModel, SwitchedPpoModelActHold
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -126,8 +125,7 @@ def run_sg(arg_dict, algo, run_name=None, run_desc=None, base_path="/data/"):
 
     save_base_path = os.getcwd() + base_path
     save_dir = save_base_path + run_name + "/"
-    save_path = save_dir + "saved_model"
-
+    
     start_time = time.time()
     t_model, rewards, var_dict = algo(**arg_dict)
     runtime = time.time() - start_time
@@ -264,7 +262,7 @@ def load_workspace(save_path):
 
 if __name__ == "__main__":
     from seagul.rl.run_utils import run_sg
-    from seagul.rl.models import PpoModel
+    from seagul.rl.models import PPOModel
     from seagul.nn import MLP
     from seagul.rl.algos.ppo import ppo
 
@@ -280,7 +278,7 @@ if __name__ == "__main__":
 
     torch.set_default_dtype(torch.double)
 
-    model = PpoModel(
+    model = PPOModel(
         policy=MLP(input_size, output_size, num_layers, layer_size, activation),
         value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
         action_var=4,
