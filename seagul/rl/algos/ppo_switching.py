@@ -5,7 +5,7 @@ import seagul.envs
 import pybullet_envs
 
 from seagul.rl.common import discount_cumsum
-from seagul.rl.models import switchedPpoModel
+from seagul.rl.models import SwitchedPPOModel
 
 import numpy as np
 from tqdm import trange
@@ -461,7 +461,7 @@ if __name__ == "__main__":
     env_name = "su_cartpole_push-v0"
     env = gym.make(env_name)
 
-    model = switchedPpoModel(policy, LQRControl, value_fn, gate_fn, env=env)
+    model = SwitchedPPOModel(policy, LQRControl, value_fn, gate_fn, env=env)
 
     # env2, t_policy, t_val, rewards = ppo('InvertedPendulum-v2', 100, policy, value_fn)
     t_model, rewards, arg_dict = ppo_switch(env_name, 500, model, action_var_schedule=[10, 0], gate_var_schedule=[1, 0])

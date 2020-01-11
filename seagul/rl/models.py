@@ -71,7 +71,7 @@ class SACModel:
         return acts, logp
 
 
-class PpoModel:
+class PPOModel:
     """
     Model for use with seagul's ppo algorithm
     """
@@ -103,7 +103,7 @@ class PpoModel:
         return self._get_logp(self.policy, states, actions, self.action_var)
 
 
-class PpoModelActHold:
+class PPOModelActHold:
     """
     also for use with PPO, this will "hold" each action made by the agent for hold_count time steps
     useful to downsample how often your agent takes an action without needing to do the same for your
@@ -153,7 +153,7 @@ class PpoModelActHold:
         return self._get_logp(self.policy, states, actions, self.action_var)
 
 
-class switchedPpoModel:
+class SwitchedPPOModel:
     def __init__(self, policy, nominal_policy, value_fn, gate_fn, env, action_var=None, gate_var=None, discrete=False):
         self.policy = policy
         self.nominal_policy = nominal_policy
@@ -218,7 +218,7 @@ class switchedPpoModel:
     #             return 1
 
 
-class SwitchedPpoModelActHold:
+class SwitchedPPOModelActHold:
     """
     also for use with PPO, this will "hold" each action made by the agent for hold_count time steps
     useful to downsample how often your agent takes an action without needing to do the same for your

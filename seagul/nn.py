@@ -276,7 +276,7 @@ class DummyNet(nn.Module):
         env_name = "su_cartpole_push-v0"
         env = gym.make(env_name)
 
-        model = switchedPpoModel(policy, LQRControl, value_fn, gate_fn, env=env)
+        model = SwitchedPPOModel(policy, LQRControl, value_fn, gate_fn, env=env)
 
         t_model, rewards, arg_dict = ppo_switch(
             env_name, 500, model,  epoch_batch_size=10, action_var_schedule=[10,0], gate_var_schedule=[1,0]

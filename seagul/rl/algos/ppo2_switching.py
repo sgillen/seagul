@@ -72,7 +72,7 @@ def ppo_switch(
         policy = MLP(input_size, output_size, num_layers, layer_size, activation)
         value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 
-        model = PpoModel(policy, value_fn, action_var=4, discrete=False)
+        model = PPOModel(policy, value_fn, action_var=4, discrete=False)
         t_model, rewards, var_dict = ppo("su_acro_drake-v0", 100, model, action_var_schedule=[3,2,1,0])
     """
 

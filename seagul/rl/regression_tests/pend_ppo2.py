@@ -3,7 +3,7 @@ from seagul.rl.algos.ppo2 import ppo
 from seagul.nn import MLP, CategoricalMLP
 import torch
 import matplotlib.pyplot as plt
-from seagul.rl.models import PpoModel
+from seagul.rl.models import PPOModel
 from multiprocessing import Process
 
 torch.set_default_dtype(torch.double)
@@ -16,7 +16,7 @@ activation = nn.ReLU
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-model = PpoModel(policy, value_fn, action_var=0.1, discrete=False)
+model = PPOModel(policy, value_fn, action_var=0.1, discrete=False)
 
 
 def run_and_test(arg_dict, seed):
