@@ -1,9 +1,5 @@
 import gym
 
-# It looks like these aren't used anywhere, but these imports a necessary to register environments with gym
-import seagul.envs
-import pybullet_envs
-
 from seagul.rl.common import discount_cumsum
 from seagul.rl.models import SwitchedPPOModel
 
