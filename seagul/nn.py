@@ -89,7 +89,7 @@ def fit_model(
             # predict and calculate loss for the batch
             action_preds = model(local_states)
             loss = loss_fn(action_preds, local_actions)
-            epoch_loss += loss  # only used for metrics
+            epoch_loss += loss.detach()  # only used for metrics
 
             # do the normal pytorch update
             optimizer.zero_grad()
@@ -97,7 +97,7 @@ def fit_model(
             optimizer.step()
 
         # after each epoch append the average loss
-        loss_hist.append(epoch_loss.detach().numpy() / len(state_train))
+        loss_hist.append(epoch_loss.numpy() / len(state_train))
 
     return loss_hist
 
