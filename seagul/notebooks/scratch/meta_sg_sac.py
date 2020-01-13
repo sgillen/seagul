@@ -5,6 +5,7 @@ import torch.nn as nn
 
 from seagul.rl.run_utils import run_sg
 from seagul.rl.algos import sac
+from seagil.rl.algos.sac_sym import sac_sym
 from seagul.nn import MLP
 from seagul.rl.models import SACModel
 

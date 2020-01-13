@@ -1,39 +1,39 @@
 # Mirroring functions for  HumanoidBulletEnv-v0 and Walker2DBulletEnv-v0
 # Thomas Ibbetson
 
-import tensorflow as tf
+import torch
 
 # "more" comes from here:https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/robot_locomotors.py
 def mirror_more(more):
     #    z,sin_target,cos_target,vx,vy,vz,roll,pitch = more  # This line requires an iteration over more, when more is a tf.Tensor with eager=False that is not allowed
     #    return [z, -sin_target, cos_target, vx, -vy, vz, -roll, -pitch]
 
-    mask = tf.constant([1, -1, -1, 1, -1, 1, -1, -1], dtype=more.dtype)
-    return tf.multiply(mask, more)
+    mask = torch.tensor([1, -1, -1, 1, -1, 1, -1, -1], dtype=more.dtype)
+    return mask*more
 
 
 def mirror_walker_obs(obs):
     m_more = mirror_more(obs[:, 0:8])
-    m_feet_contact = tf.concat([obs[:, 21], obs[:, 20]], axis=0)
-    m_feet_contact = tf.reshape(m_feet_contact, (-1, 2))
+    m_feet_contact = torch.cat([obs[:, 21], obs[:, 20]], dim=0)
+    m_feet_contact = m_feet_contact.reshape(-1, 2)
     m_rgr = obs[:, 8:14]
     m_grg = obs[:, 14:20]
-    return tf.concat([m_more, m_grg, m_rgr, m_feet_contact], axis=1)
+    return torch.cat([m_more, m_grg, m_rgr, m_feet_contact], dim=1)
 
 
 def mirror_walker_act(act):
-    m_act = tf.concat([act[:, 3:6], act[:, 0:3]], axis=1)
+    m_act = torch.cat([act[:, 3:6], act[:, 0:3]], dim=1)
     return m_act
 
 
 def mirror_human_obs(obs):
     m_more = mirror_more(obs[:, 0:8])
-    m_feet_contact = tf.concat([obs[:, 43], obs[:, 42]], axis=0)
-    m_feet_contact = tf.reshape(m_feet_contact, (-1, 2))
+    m_feet_contact = torch.cat([obs[:, 43], obs[:, 42]], dim=0)
+    m_feet_contact = m_feet_contact.reshape(-1,2)
 
     # all joints have [pos, velocity], so abs = 4 entries for 2 joints
     # abs   [ twist left, arch back ]  *relative to main torso, negate twist, arch stays same
-    m_abd = tf.concat([-obs[:, 8:10], obs[:, 10:12]], axis=1)
+    m_abd = torch.cat([-obs[:, 8:10], obs[:, 10:12]], dim=1)
     # center hip  [  roll left ]       *relative to abs, negate
     m_hip_c = -obs[:, 12:14]
     # right hip   [ slide left,twist left,swing back ]    *relative to hip center
@@ -53,10 +53,10 @@ def mirror_human_obs(obs):
     # left shldr  [ pull in, rotate backward ]            *relative to main torso
     # swap them, negate rotation.
     shld_r = obs[:, 30:34]
-    m_shld_l = tf.concat([shld_r[:, 0:2], -shld_r[:, 2:4]], axis=1)
+    m_shld_l = torch.cat([shld_r[:, 0:2], -shld_r[:, 2:4]], dim=1)
 
     shld_l = obs[:, 34:38]
-    m_shld_r = tf.concat([shld_l[:, 0:2], -shld_l[:, 2:4]], axis=1)
+    m_shld_r = torch.cat([shld_l[:, 0:2], -shld_l[:, 2:4]], dim=1)
 
     # right elbow [ bend in ]                             *relative to right shoulder
     # left elbow  [ bend in ]                             *relative to left should
@@ -66,7 +66,7 @@ def mirror_human_obs(obs):
     elb_l = obs[:, 40:42]
     m_elb_r = elb_l
 
-    m_obs = tf.concat(
+    m_obs = torch.cat(
         [
             m_more,
             m_abd,
@@ -81,7 +81,7 @@ def mirror_human_obs(obs):
             m_elb_l,
             m_feet_contact,
         ],
-        axis=1,
+        dim=1,
     )
     return m_obs
 
@@ -89,7 +89,7 @@ def mirror_human_obs(obs):
 def mirror_human_act(act):
     # import ipdb; ipdb.set_trace()
     # abs   [ twist left, arch back ]  *relative to main torso, negate twist, arch stays same
-    m_abd = tf.concat([-act[:, 0:1], act[:, 1:2]], axis=1)
+    m_abd = torch.cat([-act[:, 0:1], act[:, 1:2]], dim=0)
     # center hip  [  roll left ]       *relative to abs, negate
     m_hip_c = -act[:, 2:3]
     # right hip   [ slide left,twist left,swing back ]    *relative to hip center
@@ -110,12 +110,12 @@ def mirror_human_act(act):
     # left shldr  [ pull in, rotate backward ]            *relative to main torso
     # swap them, negate rotation.
     shld_r = act[:, 11:13]
-    m_shld_l = tf.concat([shld_r[:, 0], -shld_r[:, 1]], axis=0)
-    m_shld_l = tf.reshape(m_shld_l, (-1, 2))
+    m_shld_l = torch.cat([shld_r[:, 0], -shld_r[:, 1]], dim=0)
+    m_shld_l = m_shld_l.reshape(-1, 2)
 
     shld_l = act[:, 13:15]
-    m_shld_r = tf.concat([shld_l[:, 0], -shld_l[:, 1]], axis=0)
-    m_shld_r = tf.reshape(m_shld_r, (-1, 2))
+    m_shld_r = torch.cat([shld_l[:, 0], -shld_l[:, 1]], dim=0)
+    m_shld_r = m_shld_r.reshape(-1, 2)
     # right elbow [ bend in ]                             *relative to right shoulder
     # left elbow  [ bend in ]                             *relative to left should
     # just swap them
@@ -124,8 +124,8 @@ def mirror_human_act(act):
     elb_l = act[:, 16:17]
     m_elb_r = elb_l
 
-    m_act = tf.concat(
-        [m_abd, m_hip_c, m_hip_r, m_knee_r, m_hip_l, m_knee_l, m_shld_r, m_elb_r, m_shld_l, m_elb_l], axis=1
+    m_act = torch.cat(
+        [m_abd, m_hip_c, m_hip_r, m_knee_r, m_hip_l, m_knee_l, m_shld_r, m_elb_r, m_shld_l, m_elb_l], dim=0
     )
     return m_act
 

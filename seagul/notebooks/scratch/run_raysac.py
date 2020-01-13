@@ -1,5 +1,5 @@
 from seagul.rl.algos import sac, ppo
-from seagul.rl.algos.ray_sac import ray_sac
+from seagul.rl.algos.sac_ray import ray_sac
 from seagul.nn import MLP
 from seagul.rl.models import SACModel, PPOModel
 
