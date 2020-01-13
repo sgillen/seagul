@@ -9,7 +9,7 @@ from seagul.rl.common import ReplayBuffer, update_mean, update_var
 from seagul.rl.models import RandModel
 
 
-def sac(
+def sac_sym(
     env_name,
     total_steps,
     model,
@@ -131,11 +131,12 @@ def sac(
         # can def be made more efficient if found to be a bottleneck
         for obs1, obs2, acts, rews, done in zip(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done):
             replay_buf.store(obs1, obs2, acts, rews, done)
+            replay_buf.store(mirror_obs(obs1), mirror_obs(obs2), mirror_act(acts), rews, done)
 
-        ep_steps = ep_rews.shape[0]
+        ep_steps = ep_rews.shape[0]*2
         cur_total_steps += ep_steps
 
-    #progress_bar.update(cur_total_steps)
+   # progress_bar.update(cur_total_steps)
 
     while cur_total_steps < total_steps:
         cur_batch_steps = 0
@@ -155,8 +156,9 @@ def sac(
             # can def be made more efficient if found to be a bottleneck
             for obs1, obs2, acts, rews, done in zip(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done):
                 replay_buf.store(obs1, obs2, acts, rews, done)
+                replay_buf.store(mirror_obs(obs1), mirror_obs(obs2), mirror_act(acts), rews, done)
 
-            ep_steps = ep_rews.shape[0]
+            ep_steps = ep_rews.shape[0]*2
             cur_batch_steps += ep_steps
             cur_total_steps += ep_steps
 
@@ -250,17 +252,17 @@ def sac(
             pol_loss_hist.append(pol_loss.item())
             q1_loss_hist.append(q1_loss.item())
             q2_loss_hist.append(q2_loss.item())
+
             #
             # model.policy.state_means = update_mean(replay_obs1, model.policy.state_means, cur_total_steps)
-            # model.policy.state_var  =  update_var(replay_obs1, model.policy.state_var, cur_total_steps)
+            # model.policy.state_var = update_var(replay_obs1, model.policy.state_var, cur_total_steps)
             # model.value_fn.state_means = model.policy.state_means
-            # model.policy.state_var = model.policy.state_var
+            # model.value_fn.state_var = model.policy.state_var
             #
             # model.q1_fn.state_means = update_mean(torch.cat((replay_obs1, replay_acts.detach()), dim=1), model.q1_fn.state_means, cur_total_steps)
             # model.q1_fn.state_var = update_var(torch.cat((replay_obs1, replay_acts.detach()), dim=1), model.q1_fn.state_var, cur_total_steps)
             # model.q2_fn.state_means = model.q1_fn.state_means
             # model.q2_fn.state_var = model.q1_fn.state_var
-
 
             val_sd = model.value_fn.state_dict()
             tar_sd = target_value_fn.state_dict()
@@ -270,6 +272,16 @@ def sac(
             target_value_fn.load_state_dict(tar_sd)
 
     return (model, raw_rew_hist, locals())
+
+
+# hard coded for Pendulum-v0
+def mirror_obs(obs):
+    mask = torch.tensor([1, -1, -1], dtype=obs.dtype)
+    return mask * obs
+
+def mirror_act(act):
+    mask = torch.tensor([-1], dtype=act.dtype)
+    return mask * act
 
 
 def do_rollout(env, model, num_steps):
