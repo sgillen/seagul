@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils import data
-import tqdm
+import tqdm.auto as tqdm
 import gym
 import dill
 
@@ -21,14 +21,10 @@ def sac(
     gamma=0.95,
     polyak=0.995,
     alpha=0.2,
-    pol_batch_size=64,
-    val_batch_size=64,
-    q_batch_size=64,
-    pol_lr=1e-3,
-    val_lr=1e-3,
-    q_lr=1e-3,
+    sgd_batch_size=64,
+    sgd_lr=1e-3,
     exploration_steps=100,
-    replay_buf_size=int(50000),
+    replay_buf_size=int(100000),
     use_gpu=False,
     reward_stop=None,
 ):
@@ -48,10 +44,8 @@ def sac(
         gamma: discount applied to future rewards, usually close to 1
         polyak: term determining how fast the target network is copied from the value function
         alpha: weighting term for the entropy. 0 corresponds to no penalty for deterministic policy
-        pol_batch_size: minibatch size for policy updates
-        val_batch_size: minibatch size for value fn updates
-        q_batch_size: minibatch size for q fn updates
-        pol_lr: initial learning rate for policy optimizer
+        sgd_batch_size: minibatch size for policy updates
+        sgd_lr: initial learning rate for policy optimizer
         val_lr: initial learning rate for value optimizer
         q_lr: initial learning rate for q fn optimizer
         exploration_steps: initial number of random actions to take, aids exploration
@@ -100,10 +94,10 @@ def sac(
     replay_buf = ReplayBuffer(obs_size, act_size, replay_buf_size)
     target_value_fn = dill.loads(dill.dumps(model.value_fn))
 
-    pol_opt = torch.optim.Adam(model.policy.parameters(), lr=pol_lr)
-    val_opt = torch.optim.Adam(model.value_fn.parameters(), lr=val_lr)
-    q1_opt = torch.optim.Adam(model.q1_fn.parameters(), lr=q_lr)
-    q2_opt = torch.optim.Adam(model.q2_fn.parameters(), lr=q_lr)
+    pol_opt = torch.optim.Adam(model.policy.parameters(), lr=sgd_lr)
+    val_opt = torch.optim.Adam(model.value_fn.parameters(), lr=sgd_lr)
+    q1_opt = torch.optim.Adam(model.q1_fn.parameters(), lr=sgd_lr)
+    q2_opt = torch.optim.Adam(model.q2_fn.parameters(), lr=sgd_lr)
 
     # seed all our RNGs
     env.seed(seed)
@@ -120,9 +114,9 @@ def sac(
     q1_loss_hist = []
     q2_loss_hist = []
 
-    #progress_bar = tqdm.tqdm(total=total_steps)
+    progress_bar = tqdm.tqdm(total=total_steps)
     cur_total_steps = 0
-    #progress_bar.update(0)
+    progress_bar.update(0)
     early_stop = False
 
     while cur_total_steps < exploration_steps:
@@ -135,7 +129,7 @@ def sac(
         ep_steps = ep_rews.shape[0]
         cur_total_steps += ep_steps
 
-    #progress_bar.update(cur_total_steps)
+    progress_bar.update(cur_total_steps)
 
     while cur_total_steps < total_steps:
         cur_batch_steps = 0
@@ -161,9 +155,9 @@ def sac(
             cur_total_steps += ep_steps
 
         raw_rew_hist.append(torch.sum(ep_rews))
-        #progress_bar.update(cur_batch_steps)
+        progress_bar.update(cur_batch_steps)
 
-        for _ in range(ep_steps):
+        for _ in range(min(ep_steps, min_steps_per_update)):
             # compute targets for Q and V
             # ========================================================================
             replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)
@@ -174,7 +168,14 @@ def sac(
             noise = torch.randn(replay_batch_size, act_size)
             sample_acts, sample_logp = model.select_action(replay_obs1, noise)
 
+
             q_in = torch.cat((replay_obs1, sample_acts), dim=1)
+            q_in = q_in.to(device)
+            #print(q_in.device)
+            #a = model.q1_fn(q_in)
+            #b = model.q2_fn(q_in)
+            
+            
             q_preds = torch.cat((model.q1_fn(q_in), model.q2_fn(q_in)), dim=1)
             q_min, q_min_idx = torch.min(q_preds, dim=1)
             q_min = q_min.reshape(-1, 1)
@@ -185,7 +186,7 @@ def sac(
             # q_fn update
             # ========================================================================
             training_data = data.TensorDataset(replay_obs1, replay_acts, q_targ)
-            training_generator = data.DataLoader(training_data, batch_size=q_batch_size, shuffle=False)
+            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=False)
 
             for local_obs, local_acts, local_qtarg in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -209,7 +210,7 @@ def sac(
             # val_fn update
             # ========================================================================
             training_data = data.TensorDataset(replay_obs1, v_targ)
-            training_generator = data.DataLoader(training_data, batch_size=q_batch_size, shuffle=False)
+            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=False)
 
             for local_obs, local_vtarg in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -227,13 +228,13 @@ def sac(
             # policy_fn update
             # ========================================================================
             training_data = data.TensorDataset(replay_obs1)
-            training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=False)
+            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=False)
 
             for local_obs in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
                 local_obs = local_obs[0].to(device)
 
-                noise = torch.randn(pol_batch_size, act_size)
+                noise = torch.randn(local_obs.shape[0], act_size)
                 local_acts, local_logp = model.select_action(local_obs, noise)
 
                 q_in = torch.cat((local_obs, local_acts), dim=1)

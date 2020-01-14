@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils import data
-import tqdm
+import tqdm.auto as tqdm
 import gym
 import dill
 
@@ -89,7 +89,6 @@ def ray_sac(
         model, rews, var_dict = sac("Pendulum-v0", 10000, model)
     """
 
-    ray.init()
     env = gym.make(env_name)
     if isinstance(env.action_space, gym.spaces.Box):
         act_size = env.action_space.shape[0]
@@ -167,10 +166,10 @@ def ray_sac(
             cur_batch_steps += ep_steps
             cur_total_steps += ep_steps
 
-        raw_rew_hist.append(torch.sum(results[-1][-2])) # sample from the last returned episode to report
+        raw_rew_hist.append(torch.sum(results[0][-2])) # sample from the last returned episode to report
         progress_bar.update(cur_batch_steps)
 
-        for _ in range(ep_steps):
+        for _ in range(int(ep_steps/num_envs)):
             # compute targets for Q and V
             # ========================================================================
             replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)

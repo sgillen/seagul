@@ -180,7 +180,7 @@ class MLP(nn.Module):
     """
 
     def __init__(
-        self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity
+            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, device="cpu"
     ):
         """
          :param input_size: how many inputs
@@ -198,12 +198,12 @@ class MLP(nn.Module):
         self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers)])
         self.output_layer = nn.Linear(layer_size, output_size)
 
-        self.state_means = torch.zeros(input_size)
-        self.state_var = torch.ones(input_size)
+        self.state_means = torch.zeros(input_size,device=device)
+        self.state_var = torch.ones(input_size,device=device)
 
     def forward(self, data):
 
-        data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
+        #data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
 
         for layer in self.layers:
             data = self.activation(layer(data))
