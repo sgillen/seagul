@@ -157,7 +157,7 @@ def sac(
         raw_rew_hist.append(torch.sum(ep_rews))
         progress_bar.update(cur_batch_steps)
 
-        for _ in range(min(ep_steps, min_steps_per_update)):
+        for _ in range(ep_steps):
             # compute targets for Q and V
             # ========================================================================
             replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)
