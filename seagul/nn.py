@@ -211,6 +211,108 @@ class MLP(nn.Module):
         return self.output_activation(self.output_layer(data))
 
 
+
+def gaus(x, mu, sig):
+    '''
+    Implementation of gaussian function.
+    Input: 
+        - x: tensor of size input_size x number of hidden neurons
+        - mu: tensor of size of hidden neurons (mu = expected values/centers)
+        - sig: tensor of size of hidden neurons (sigma^2 = variances)
+    Output: 
+        - tensor of size input_size x number of hidden neurons
+    '''
+    out = torch.tensor(np.zeros((len(x), len(mu))).tolist())
+    for i_x in range(len(x)):
+        for i_neuron in range(len(mu)):
+            out[i_x,i_neuron] = 1./(torch.sqrt(torch.tensor(2.*np.pi))*sig[i_neuron]) * torch.exp(-torch.pow((x[i_x,i_neuron]-mu[i_neuron])/sig[i_neuron],2)/2)
+    return out
+
+class gaussian(nn.Module):
+    '''
+    Implementation of gaussian activation function.
+    Shape:
+        - Input: (N, *) where * means, any number of additional
+          dimensions
+        - Output: (N, *), same shape as the input
+    Parameters:
+        - mu - trainable parameter (expected value)
+        - sig - trainable parameter (sigma^2 = variance)
+    '''
+    def __init__(self, hidden_size, mu = None, sig = None):
+        '''
+        Initialization.
+        INPUT:
+            - in_features: shape of the input
+            - mu, sig: trainable parameter
+        '''
+        super(gaussian,self).__init__()
+        self.bias = False
+        # initialize mu and sig
+        if mu == None:
+            self.mu = nn.Parameter(torch.randn(hidden_size))
+        else:
+            self.mu = nn.Parameter(torch.tensor(mu)) 
+
+        if sig == None:
+            self.sig = nn.Parameter(torch.ones(hidden_size))
+        else:
+            self.sig = nn.Parameter(torch.tensor(sig)) 
+            
+        self.mu.requiresGrad = True # set requiresGrad to true!
+        self.sig.requiresGrad = True # set requiresGrad to true!
+
+    def forward(self, x):
+        '''
+        Forward pass of the function.
+        Applies the function to the input elementwise.
+        '''
+        return gaus(x, self.mu, self.sig)
+
+
+class RBF(nn.Module):
+    """
+    Policy designed to be used with seaguls rl module.
+    Simple RBF that has one hidden layer with gaussian activation functions at the hidden layer,
+    Possible trainable parameter are 
+        - weights from input to hidden layer
+        - weights from hidden to output layer
+        - biases at hidden layer (deactivated)
+        - biases at output layer
+        - centers of the gaussian activation functions (not implemented yet)
+        - variances of the gaussian activation function (not implemented yet)
+    """
+
+    def __init__(self, input_size, output_size, layer_size, activation=gaussian, output_activation=nn.Identity):
+        """
+         :param input_size: how many inputs
+         :param output_size: how many outputs
+         :param layer_size: how big each hidden layer should be
+         :param activation: which activation function to use
+         """
+        super(RBF, self).__init__()
+        self.layer_size = layer_size
+        self.activation = activation(layer_size)
+        self.output_activation = output_activation()
+
+        self.hidden_layer = nn.Linear(input_size, layer_size)
+        self.output_layer = nn.Linear(layer_size, output_size)
+
+        self.state_means = torch.zeros(input_size)
+        self.state_var = torch.ones(input_size)
+        
+
+    def forward(self, data):
+        
+        data = (torch.as_tensor(data) - self.state_means)/torch.sqrt(self.state_var)
+
+        self.hidden_layer.bias = None
+        data = self.activation(self.hidden_layer(data))
+
+        return self.output_activation(self.output_layer(data))
+
+
+
 class CategoricalMLP(nn.Module):
     """
     Policy designed to be used with seaguls rl module.
