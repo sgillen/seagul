@@ -15,9 +15,9 @@ config["kl_coeff"] = 1.0
 config["num_sgd_iter"] = 20
 config["batch_mode"] = "truncate_episodes"
 config['observation_filter'] = 'MeanStdFilter'
-config["sgd_minibatch_size"] = 32768
+config["sgd_minibatch_size"] = 512
 #config["train_batch_size"] = tune.sample_from(lambda spec: spec.config.sgd_minibatch_size*32)
-config["train_batch_size"] = 327680
+config["train_batch_size"] = 512*32
 config["vf_clip_param"] = 30
 config["seed"] = tune.grid_search([0,1,2,3]) #
 #env_name = "Walker2d-v3"
@@ -37,7 +37,7 @@ analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
     stop={"timesteps_total": 6e7},
-    local_dir="./data/bullet_walker/",
+    local_dir="./data/bullet_walker2/",
     checkpoint_at_end=True,
 )
 
