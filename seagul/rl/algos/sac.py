@@ -121,11 +121,8 @@ def sac(
 
     while cur_total_steps < exploration_steps:
         ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
-
-        # can def be made more efficient if found to be a bottleneck
-        for obs1, obs2, acts, rews, done in zip(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done):
-            replay_buf.store(obs1, obs2, acts, rews, done)
-
+        replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+        
         ep_steps = ep_rews.shape[0]
         cur_total_steps += ep_steps
 
@@ -145,10 +142,7 @@ def sac(
         while cur_batch_steps < min_steps_per_update:
 
             ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, model, env_steps)
-
-            # can def be made more efficient if found to be a bottleneck
-            for obs1, obs2, acts, rews, done in zip(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done):
-                replay_buf.store(obs1, obs2, acts, rews, done)
+            replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
             ep_steps = ep_rews.shape[0]
             cur_batch_steps += ep_steps
@@ -311,7 +305,7 @@ def do_rollout(env, model, num_steps):
         cur_step+=1
 
     ep_obs1 = torch.stack(obs1_list)
-    ep_acts = torch.stack(acts_list)
+    ep_acts = torch.stack(acts_list).reshape(-1,act_size)
     ep_rews = torch.stack(rews_list).reshape(-1, 1)
     ep_obs2 = torch.stack(obs2_list)
     ep_done = torch.stack(done_list).reshape(-1, 1)
