@@ -30,7 +30,7 @@ register(id="su_acro_drake-v0", entry_point="seagul.envs.drake:DrakeAcroEnv")
 # Also go ahead and try to register environments for rllib as well
 try:
     # Ray requires it's own registry, can't rely on the normal mechanisms that gym uses
-
+    
     #    from seagul.envs.mujoco.five_link import FiveLinkWalkerEnv
     import gym
     import pybullet_envs
@@ -40,24 +40,23 @@ try:
     #   def five_link_creator(env_config):
     #       return FiveLinkWalkerEnv()
 
+    #TODO I'm sure we can find a way to register all envs currently in the registry automatically...
     def bullet_walker_creator(env_config):
-        #    return Walker2DBulletEnv()
         return gym.make("Walker2DBulletEnv-v0")
 
+    def bullet_cheetah_creator(env_config):
+        return gym.make("HalfCheetahBulletEnv-v0")
+
     def bullet_humanoid_creator(env_config):
-        # return HumanoidBulletEnv()
         return gym.make("HumanoidBulletEnv-v0")
 
     def sym_pendulum_creator(env_config):
-        # return HumanoidBulletEnv()
         return gym.make("sym_pendulum-v0")
 
     def dt_pendulum_creator(env_config):
-        # return HumanoidBulletEnv()
         return gym.make("dt_pendulum-v0")
 
     def sg_pendulum_creator(env_config):
-        # return HumanoidBulletEnv()
         return gym.make("sg_cartpole-v0")
 
     def humanoid_long_creator(env_config):
@@ -66,6 +65,7 @@ try:
     #  register_env("five_link-v3", five_link_creator)
     register_env("Walker2DBulletEnv-v0", bullet_walker_creator)
     register_env("HumanoidBulletEnv-v0", bullet_humanoid_creator)
+    register_env("HalfCheetahBulletEnv-v0", bullet_humanoid_creator)
     register_env("sym_pendulum-v0", sym_pendulum_creator)
     register_env("dt_pendulum-v0", dt_pendulum_creator)
     register_env("sg_cartpole-v0", sg_pendulum_creator)
