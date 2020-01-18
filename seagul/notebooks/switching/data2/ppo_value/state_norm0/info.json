@@ -1,0 +1,19 @@
+{
+    "args": {
+        "env_name": "su_acro_drake-v0",
+        "model": "<seagul.rl.models.PPOModel object at 0x7f6ca0f2fef0>",
+        "act_var_schedule": "[0.1]",
+        "seed": "0",
+        "total_steps": "500000.0",
+        "epoch_batch_size": "2048",
+        "gamma": "1",
+        "pol_epochs": "10",
+        "val_epochs": "10"
+    },
+    "metadata": {
+        "date_time": "2020-01-17_11:18:59.681201",
+        "total runtime": "0:08:33.215201",
+        "description": "ppo2 drake acrobot with",
+        "git_sha": "732e4bf29142d3663b0b0c42f0bec8404b8d5525"
+    }
+}
