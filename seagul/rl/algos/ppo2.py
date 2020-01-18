@@ -61,8 +61,6 @@ def ppo(
         from seagul.rl.models import PPOModel
         import torch
 
-        torch.set_default_dtype(torch.double)# TODO need to update everything to support arbitrary dtypes
-
         input_size = 3
         output_size = 1
         layer_size = 64
@@ -253,7 +251,7 @@ def do_rollout(env, model):
     rew_list = []
     num_steps = 0
 
-    dtype = torch.float32
+    dtype = torch.get_default_dtype()
     obs = env.reset()
     done = False
 
