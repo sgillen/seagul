@@ -68,7 +68,7 @@ class DrakeAcroEnv(core.Env):
 
         acrobot = builder.AddSystem(RigidBodyPlant(tree))
 
-        saturation = builder.AddSystem(Saturation(min_value=[-50], max_value=[50]))
+        saturation = builder.AddSystem(Saturation(min_value=[-5], max_value=[5]))
         builder.Connect(saturation.get_output_port(0), acrobot.get_input_port(0))
 
         wrapangles = WrapToSystem(4)
@@ -93,7 +93,7 @@ class DrakeAcroEnv(core.Env):
         simulator = Simulator(diagram)
         # simulator.set_target_realtime_rate(1.0)
         simulator.set_publish_every_time_step(True)
-        simulator.get_integrator().set_fixed_step_mode(True)
+#        simulator.get_integrator().set_fixed_step_mode(True)
         simulator.get_integrator().set_maximum_step_size(self.dt)
         # simulator.get_integrator().set_target_accuracy(.001)
         context = simulator.get_mutable_context()
@@ -134,6 +134,7 @@ class DrakeAcroEnv(core.Env):
     def step(self, a):
         global g_action
         g_action = a
+        
 
         self.t += self.dt * self.act_hold
 
@@ -148,6 +149,7 @@ class DrakeAcroEnv(core.Env):
         if self.t > self.max_t:
             done = True
 
+            
         # print("function", time.time() - f_start)
         return (ns, reward, done, {})
 
