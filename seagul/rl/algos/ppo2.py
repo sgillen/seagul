@@ -138,6 +138,9 @@ def ppo(
 
             ep_obs, ep_act, ep_rew, ep_steps = do_rollout(env, model)
 
+            raw_rew_hist.append(sum(ep_rew))
+            ep_rew = (ep_rew - ep_rew.mean()) / (ep_rew.std() + 1e-6)
+
             batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
             batch_act = torch.cat((batch_act, ep_act[:-1]))
 
@@ -145,6 +148,7 @@ def ppo(
                 ep_rew, gamma
             )  # [:-1] because we appended the value function to the end as an extra reward
             batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
+
 
             # calculate this episodes advantages
             last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
@@ -159,8 +163,6 @@ def ppo(
 
             cur_batch_steps += ep_steps
             cur_total_steps += ep_steps
-
-        raw_rew_hist.append(sum(ep_rew))
 
         # make sure our advantages are zero mean and unit variance
         adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
