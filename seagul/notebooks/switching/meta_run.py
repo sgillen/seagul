@@ -9,7 +9,6 @@ env_name = "su_acro_drake-v0"
 
 env = gym.make(env_name)
 
-
 import torch
 import torch.nn as nn
 
@@ -28,7 +27,7 @@ from seagul.nn import MLP, CategoricalMLP
 
 proc_list = []
 
-torch.set_default_dtype(torch.double)
+#torch.set_default_dtype(torch.double)
 seed = 0
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
@@ -37,7 +36,7 @@ model = PPOModelActHold(
     policy=policy,
     value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
     discrete=False,
-        hold_count = 20
+    hold_count = 200
 )
 
 #    model = PPOModel(policy=policy, value_fn=MLP(input_size, 1, num_layers, layer_size, activation), discrete=False)
@@ -57,7 +56,7 @@ arg_dict = {
 }
 
 
-run_sg(arg_dict, ppo, None, 'run with 100 epochs, with torch.double', "/data2/drake_double/")
+run_sg(arg_dict, ppo, None, 'back to 200 ah', "/data2/dynamic_step/")
 
     # p = Process(
     #     target=run_sg,
