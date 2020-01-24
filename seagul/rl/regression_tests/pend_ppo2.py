@@ -48,13 +48,13 @@ arg_dict = {
 }
 
 
-proc_list = []
-for seed in [0, 1, 2, 3]:
-    p = Process(target=run_and_test, args=(arg_dict, seed))
-    p.start()
-    proc_list.append(p)
+# proc_list = []
+# for seed in [0, 1, 2, 3]:
+#     p = Process(target=run_and_test, args=(arg_dict, seed))
+#     p.start()
+#     proc_list.append(p)
 
 
-for p in proc_list:
-    print("joining")
-    p.join()
+# for p in proc_list:
+#     print("joining")
+#     p.join()

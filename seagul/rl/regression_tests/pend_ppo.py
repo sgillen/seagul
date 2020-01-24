@@ -1,6 +1,6 @@
 import torch.nn as nn
 from seagul.rl.algos.ppo import ppo
-from seagul.nn import MLP, CategoricalMLP
+from seagul.nn import MLP, CategoricalMLP, RBF
 import torch
 import matplotlib.pyplot as plt
 from seagul.rl.models import PPOModel
@@ -15,8 +15,10 @@ layer_size = 64
 num_layers = 2
 activation = nn.ReLU
 
-policy = MLP(input_size, output_size, num_layers, layer_size, activation)
-value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+# policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+# value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+policy = RBF(input_size, output_size, layer_size)
+value_fn = RBF(input_size, 1, layer_size)
 model = PPOModel(policy, value_fn, action_var=0.1, discrete=False)
 
 
@@ -46,16 +48,16 @@ arg_dict = {
 }
 
 
-proc_list = []
-for seed in [0, 1, 2, 3]:
-    p = Process(target=run_and_test, args=(arg_dict, seed))
-    p.start()
-    proc_list.append(p)
+# proc_list = []
+# for seed in [0, 1, 2, 3]:
+#     p = Process(target=run_and_test, args=(arg_dict, seed))
+#     p.start()
+#     proc_list.append(p)
 
 
-for p in proc_list:
-    print("joining")
-    p.join()
+# for p in proc_list:
+#     print("joining")
+#     p.join()
 
 
 t_model, rewards, var_dict = ppo("Pendulum-v0", 200, model, **arg_dict)
