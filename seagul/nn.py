@@ -9,7 +9,6 @@ from tqdm import trange
 Utility functions for seagul, all vaguely related to neural networks
 """
 
-
 def fit_model(
     model,
     state_train,
@@ -222,10 +221,14 @@ def gaus(x, mu, sig):
     Output: 
         - tensor of size input_size x number of hidden neurons
     '''
-    out = torch.tensor(np.zeros((len(x), len(mu))).tolist())
-    for i_x in range(len(x)):
-        for i_neuron in range(len(mu)):
-            out[i_x,i_neuron] = 1./(torch.sqrt(torch.tensor(2.*np.pi))*sig[i_neuron]) * torch.exp(-torch.pow((x[i_x,i_neuron]-mu[i_neuron])/sig[i_neuron],2)/2)
+    # if(len(x.shape) == 1): # no batching 
+    #     x = torch.unsqueeze(x, 0)
+    # out = torch.tensor(np.zeros((len(x), len(mu))).tolist())
+    # factor = 1./(torch.sqrt(torch.tensor(2.*np.pi))*sig)
+    # out = 1./factor *  torch.exp(-torch.pow((x-mu)/sig,2)/2)
+    out = 1./(torch.sqrt(torch.tensor(2.*np.pi))*sig) *  torch.exp(-torch.pow((x-mu)/sig,2)/2)
+    # for i_x in range(len(x)):
+    #     out[i_x] = 1./factor * torch.exp(-torch.pow((x[i_x]-mu)/sig,2)/2)
     return out
 
 class gaussian(nn.Module):
@@ -251,11 +254,13 @@ class gaussian(nn.Module):
         # initialize mu and sig
         if mu == None:
             self.mu = nn.Parameter(torch.randn(hidden_size))
+            # self.mu = torch.randn(hidden_size)
         else:
             self.mu = nn.Parameter(torch.tensor(mu)) 
 
         if sig == None:
             self.sig = nn.Parameter(torch.ones(hidden_size))
+            # self.sig = torch.ones(hidden_size)
         else:
             self.sig = nn.Parameter(torch.tensor(sig)) 
             
@@ -275,9 +280,9 @@ class RBF(nn.Module):
     Policy designed to be used with seaguls rl module.
     Simple RBF that has one hidden layer with gaussian activation functions at the hidden layer,
     Possible trainable parameter are 
-        - weights from input to hidden layer
+        - weights from input to hidden layer (if input_weights = True)
         - weights from hidden to output layer
-        - biases at hidden layer (deactivated)
+        - biases at hidden layer (if input_bias = True)
         - biases at output layer
         - centers of the gaussian activation functions (not implemented yet)
         - variances of the gaussian activation function (not implemented yet)
@@ -296,6 +301,14 @@ class RBF(nn.Module):
         self.output_activation = output_activation()
 
         self.hidden_layer = nn.Linear(input_size, layer_size)
+        input_weights = True
+        if(input_weights == False):
+            self.hidden_layer.weight = nn.Parameter(torch.ones(layer_size,input_size))
+            for p in self.hidden_layer.parameters():
+                p.requires_grad = False
+        input_bias = False
+        if(input_bias == False):
+            self.hidden_layer.bias = None
         self.output_layer = nn.Linear(layer_size, output_size)
 
         self.state_means = torch.zeros(input_size)
@@ -306,7 +319,6 @@ class RBF(nn.Module):
         
         data = (torch.as_tensor(data) - self.state_means)/torch.sqrt(self.state_var)
 
-        self.hidden_layer.bias = None
         data = self.activation(self.hidden_layer(data))
 
         return self.output_activation(self.output_layer(data))
