@@ -11,6 +11,9 @@ from ray.rllib.models.tf.misc import normc_initializer
 from ray.rllib.agents.dqn.distributional_q_model import DistributionalQModel
 from ray.rllib.utils import try_import_tf
 from ray.rllib.models.tf.visionnet_v2 import VisionNetwork as MyVisionNetwork
+import datetime
+import gym
+
 
 class RBFLayer(Layer):
     def __init__(self, units, **kwargs):
@@ -18,15 +21,16 @@ class RBFLayer(Layer):
         self.units = units
     def build(self, input_shape):
         initializer_gaus = RandomNormal(mean=0.0, stddev=1.0, seed=None)
+        self.use_weights = True
         self.mu = self.add_weight(name='mu',
-                                #   shape=(int(input_shape[1]), self.units),
-                                  shape=(self.units, input_shape[1]),
+                                  shape=(self.units, input_shape[1]), # centers have the same dimension as the input data (x number of neurons)
                                   initializer=initializer_gaus,
+                                  dtype="float32",
                                   trainable=True)
-        self.sigma = self.add_weight(name='sigma',
-                                #   shape=(int(input_shape[1]), self.units),
+        self.beta = self.add_weight(name='beta',
                                   shape=(self.units,),
                                   initializer='ones',
+                                  dtype="float32",
                                   trainable=True)
         self.input_weights = self.add_weight(name='input_weights',
                                   shape = (self.units,),
@@ -35,13 +39,27 @@ class RBFLayer(Layer):
         super(RBFLayer, self).build(input_shape)
 
     def call(self, inputs):
-        # diff = K.expand_dims(inputs) - self.mu
-        # l2 = K.sum(K.pow(diff,2), axis=1)
-        # res = K.exp(-1 * self.sigma * l2)
-        # return res
-        C = K.expand_dims(self.mu)
-        H = K.transpose(C-K.transpose(inputs))
-        return self.input_weights * K.exp(-self.sigma * K.sum(H**2, axis=1))
+        inputs = tf.dtypes.cast(inputs, tf.float32)
+        # import ipdb; ipdb.set_trace()
+        mu_new = K.expand_dims(self.mu) # necessary if more than one input at a time 
+        dist = K.sum((K.transpose(mu_new-K.transpose(inputs)))**2, axis=1) # 2 norm 
+        rbf_normalization = K.expand_dims(K.sum(K.exp(-dist), axis=1)) # sum_i(exp(-(x-c_i)^2))
+        rbf = K.exp(-self.beta * dist) # radial basis function (simplified gaussian with beta as width of RBF)
+        if self.use_weights == True:
+            return self.input_weights * rbf/rbf_normalization
+        else:
+            return rbf/rbf_normalization
+
+    def call(self, inputs):
+        inputs = tf.dtypes.cast(inputs, tf.float32)
+        dist = K.sum((self.mu - inputs)**2, axis=1) # distance of centers to inputs norm2
+        rbf_normalization = K.sum(K.exp(-dist)) # sum_i(exp(-(x-c_i)^2))
+        rbf = K.exp(-self.beta * dist) # radial basis function (simplified gaussian with beta as width of RBF)
+        if self.use_weights == True:
+            return K.expand_dims(self.input_weights * rbf/rbf_normalization, axis=0) # expand_dims -> axis = 0 ?
+        else:
+            return K.expand_dims(rbf/rbf_normalization, axis = 0) # normalized rbf
+
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.units)
@@ -50,21 +68,24 @@ class RBFModel(TFModelV2):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
         super(RBFModel, self).__init__(obs_space, action_space, num_outputs, model_config, name)
         self.inputs = tf.keras.layers.Input(
-            shape=obs_space.shape, name="observations")
-        hidden_layer = RBFLayer(
+            shape=obs_space.shape, name="observations",
+            dtype=tf.float32)
+        self.hidden_layer = RBFLayer(
             256)(self.inputs)
-        output_layer = tf.keras.layers.Dense(
+        self.output_layer = tf.keras.layers.Dense(
             num_outputs,
             name="my_output_layer",
-            activation=tf.nn.relu,
-            kernel_initializer='random_uniform')(hidden_layer)
-        value_layer = tf.keras.layers.Dense(
+            activation=None,
+            use_bias = True,
+            kernel_initializer='random_uniform')(self.hidden_layer)
+        self.value_layer = tf.keras.layers.Dense(
             1,
             name="my_value_layer",
-            activation=tf.nn.relu,
-            kernel_initializer='random_uniform')(hidden_layer)
+            activation=None,
+            use_bias = True,
+            kernel_initializer='random_uniform')(self.hidden_layer)
         self.base_model = tf.keras.Model(
-            self.inputs, [output_layer, value_layer])
+            self.inputs, [self.output_layer, self.value_layer])
         self.register_variables(self.base_model.variables)
 
     def forward(self, input_dict, state, seq_lens):
@@ -108,27 +129,13 @@ class MyKerasModel(TFModelV2):
     def value_function(self):
         return tf.reshape(self._value_out, [-1])
 
-ModelCatalog.register_custom_model("rbf_model", RBFModel)
-ModelCatalog.register_custom_model("my_keras_model", MyKerasModel)
+input = tf.constant([[3,4,5], [7,8,9]])
+env = gym.make('Pendulum-v0')
+my_model = RBFModel(env.observation_space, env.action_space, 1, env.spec.id, env.spec.id)
+model_out_1, state = my_model.forward({"obs": input}, input, 2)
 
-# ray.init(local_mode=True) # local mode for debugging
-ray.init()
-tune.run(
-    "SAC",
-    stop={"episode_reward_mean": -200},
-    config={
-        "model": {
-            "custom_model": "my_keras_model", # tune.grid_search(["rbf_model", "my_keras_model"]),
-            "custom_options": {},  # extra options to pass to your model
-        },
-        "env": "Pendulum-v0",
-        "num_gpus": 0,
-        "num_workers": 1,
-        "lr": 0.001, # tune.grid_search([0.01, 0.001, 0.0001]),
-        "eager": True,
-        "sample_batch_size": 1,
-        "train_batch_size": 256,
-        "timesteps_per_iteration": 1000,
-        "evaluation_interval": 1
-    },
-)
+
+env = gym.make('Pendulum-v0')
+my_model = MyKerasModel(env.observation_space, env.action_space, 1, env.spec.id, env.spec.id)
+model_out_2, state = my_model.forward({"obs": input}, input, 2)
+x =1
