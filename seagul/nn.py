@@ -202,7 +202,7 @@ class MLP(nn.Module):
 
     def forward(self, data):
 
-        #data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
+#        data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
 
         for layer in self.layers:
             data = self.activation(layer(data))

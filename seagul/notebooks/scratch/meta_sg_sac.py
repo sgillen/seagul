@@ -1,20 +1,18 @@
-# Do this first because otherwise drake can break
 import gym
 import torch
 import torch.nn as nn
 
 from seagul.rl.run_utils import run_sg
 from seagul.rl.algos import sac
-from seagil.rl.algos.sac_sym import sac_sym
 from seagul.nn import MLP
 from seagul.rl.models import SACModel
 
-env_name = "Pendulum-v0"
+env_name = "Walker2d-v2"
 env = gym.make(env_name)
 
 input_size = env.observation_space.shape[0]
 output_size = env.action_space.shape[0]
-layer_size = 32
+layer_size = 128
 num_layers = 2
 activation = nn.ReLU
 
@@ -31,15 +29,17 @@ model = SACModel(policy, value_fn, q1_fn, q2_fn, 1)
 
 
 arg_dict = {
-    'total_steps': 10000,
+    'total_steps': 1.2e4,
     'model' : model,
     'env_name': env_name,
-    'reward_stop': -200,
     'seed': 2,
+    'env_steps' : 1000,
+    'iters_per_update' : 3000,
+    'min_steps_per_update': 1000,
+    'reward_stop' : 3000, 
+    'exploration_steps' : 10000,
+    'replay_batch_size' : 100, 
+    'use_gpu':False,
 }
 
-run_sg(arg_dict, sac, "sac_test", "testing sac saving", "/data/test/")
-
-
-
-
+run_sg(arg_dict, sac, "/sac_walker0", "trying to get walker to work at all", "/sac_walker")

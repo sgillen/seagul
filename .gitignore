@@ -125,3 +125,7 @@ dmypy.jso
 **/tensorboard_logs/
 **None*png*
 *.mat
+
+#slurm logs
+slurm-*.out
+*~

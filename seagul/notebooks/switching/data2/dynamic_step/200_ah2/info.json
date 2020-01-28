@@ -1,0 +1,19 @@
+{
+    "args": {
+        "env_name": "su_acro_drake-v0",
+        "model": "<seagul.rl.models.PPOModelActHold object at 0x7f397d021f60>",
+        "act_var_schedule": "[2]",
+        "seed": "0",
+        "total_steps": "1228800",
+        "epoch_batch_size": "2048",
+        "gamma": "1",
+        "pol_epochs": "10",
+        "val_epochs": "10"
+    },
+    "metadata": {
+        "date_time": "2020-01-21_13:48:32.553543",
+        "total runtime": "0:16:12.164425",
+        "description": "back to 200 ah",
+        "git_sha": "d463185c677d4cb7b7f5635493e40b397cb149c6"
+    }
+}

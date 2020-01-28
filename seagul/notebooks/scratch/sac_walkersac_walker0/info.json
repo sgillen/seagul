@@ -1,0 +1,21 @@
+{
+    "args": {
+        "total_steps": "20000.0",
+        "model": "<seagul.rl.models.SACModel object at 0x7f7a377bd080>",
+        "env_name": "Walker2d-v2",
+        "seed": "2",
+        "env_steps": "1000",
+        "iters_per_update": "3000",
+        "min_steps_per_update": "1000",
+        "reward_stop": "3000",
+        "exploration_steps": "10000",
+        "replay_batch_size": "100",
+        "use_gpu": "False"
+    },
+    "metadata": {
+        "date_time": "2020-01-14_15:28:51.918025",
+        "total runtime": "0:01:07.893998",
+        "description": "trying to get walker to work at all",
+        "git_sha": "52655e493835b0f59943b52f4340779042a66df7"
+    }
+}
