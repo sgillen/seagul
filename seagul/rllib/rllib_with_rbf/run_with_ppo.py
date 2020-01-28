@@ -13,10 +13,10 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.models.tf.visionnet_v2 import VisionNetwork as MyVisionNetwork
 import datetime
 
-from custom_rbf_layer_model_v2 import RBFModel, MyKerasModel
+from custom_rbf_layer_model_v2 import RBFModel1, MyKerasModel1
 
-ModelCatalog.register_custom_model("rbf_model", RBFModel)
-ModelCatalog.register_custom_model("my_keras_model", MyKerasModel)
+ModelCatalog.register_custom_model("rbf_model", RBFModel1)
+ModelCatalog.register_custom_model("my_keras_model", MyKerasModel1)
 
 log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
@@ -32,10 +32,22 @@ tune.run(
             "custom_options": {},  # extra options to pass to your model
         },
         "env": "Pendulum-v0",
-        "lr": 0.001, # tune.grid_search([0.01, 0.001, 0.0001]),
-        "sample_batch_size": 1,
-        "train_batch_size": 256,
-        "use_gae": True,
-        "batch_mode": "complete_episodes"
+        "train_batch_size": 2048,
+        "vf_clip_param": 10.0,
+        "num_workers": 0,
+        "num_envs_per_worker": 10,
+        "lambda": 0.1,
+        "gamma": 0.95,
+        "lr": 0.0003,
+        "sgd_minibatch_size": 64,
+        "num_sgd_iter": 10,
+        "batch_mode": "complete_episodes",
+        "observation_filter": "MeanStdFilter"
+
+        # "lr": 0.001, # tune.grid_search([0.01, 0.001, 0.0001]),
+        # "sample_batch_size": 1,
+        # "train_batch_size": 256,
+        # "use_gae": True,
+        # "batch_mode": "complete_episodes"
     },
 )

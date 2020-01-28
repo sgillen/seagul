@@ -26,21 +26,44 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram
 ray.init()
 tune.run(
     "SAC",
-    stop={"episode_reward_mean": -200},
+    stop={"episode_reward_mean": -150},
     config={
         "model": {
             "custom_model": tune.grid_search(["rbf_model_1", "rbf_model_2"]),
             "custom_options": {},  # extra options to pass to your model
         },
+        # "lr": 0.01, #tune.grid_search([0.1, 0.01]),
+        # "eager": False,
         "env": "Pendulum-v0",
-        "num_gpus": 0,
-        "num_workers": 3, # tune.grid_search([0,1,3]),
-        "lr": 0.001, #tune.grid_search([0.1, 0.01]),
-        "eager": False,
+        "horizon": 200,
+        "soft_horizon": False,
+        # Q_model:
+        #   hidden_activation: relu
+        #   hidden_layer_sizes: [256, 256]
+        # policy_model:
+        #   hidden_activation: relu
+        #   hidden_layer_sizes: [256, 256]
+        "tau": 0.005,
+        "target_entropy": "auto",
+        "no_done_at_end": True,
+        "n_step": 1,
         "sample_batch_size": 1,
+        "prioritized_replay": False,
         "train_batch_size": 256,
-        "timesteps_per_iteration": 1000
-        # "evaluation_interval": 1,
-        # "exploration_enabled": False
+        "target_network_update_freq": 1,
+        "timesteps_per_iteration": 1000,
+        "learning_starts": 256,
+        "exploration_enabled": True,
+        "optimization": {
+            "actor_learning_rate": 0.0003,
+            "critic_learning_rate": 0.0003,
+            "entropy_learning_rate": 0.0003,
+        },
+        "num_workers": 0,
+        "num_gpus": 0,
+        "clip_actions": False,
+        # "normalize_actions": True,
+        "evaluation_interval": 1,
+        "metrics_smoothing_episodes": 5
     },
 )
