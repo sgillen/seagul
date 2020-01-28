@@ -54,7 +54,7 @@ class SGCartPoleEnv(gym.Env):
         self.DX_MAX = 500.0
 
         self.state_noise_max = 0
-        self.init_state_noise_max = 0.1
+        self.init_state_noise_max = .1
         high = np.array([2 * pi, self.X_MAX, self.DTHETA_MAX, self.DX_MAX])
         low = -high
         self.observation_space = gym.spaces.Box(low=low, high=high,dtype=np.float32)
