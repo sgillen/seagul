@@ -29,10 +29,12 @@ ray.init()
 tune.run(
     "SAC",
     stop={"episode_reward_mean": -150},
+    checkpoint_freq=10000,
+    max_failures=5,
     checkpoint_at_end=True,
     config={
         "model": {
-            "custom_model": tune.grid_search(["rbf_model_2", "my_keras_model_2"]), # tune.grid_search(["rbf_model_1", "rbf_model_2"]),
+            "custom_model": "rbf_model_2", # tune.grid_search(["rbf_model_2", "my_keras_model_2"]), # tune.grid_search(["rbf_model_1", "rbf_model_2"]),
             "custom_options": {},  # extra options to pass to your model
         },
         # "lr": 0.01, #tune.grid_search([0.1, 0.01]),
