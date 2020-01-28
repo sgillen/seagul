@@ -86,7 +86,7 @@ def ppo_switch(
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
     actvar_lookup = make_variance_schedule(act_var_schedule, model, total_steps)
-    gatevar_lookup = make_variance_schedule(gae_var_schedule, model, total_steps)
+    gatevar_lookup = make_variance_schedule(gate_var_schedule, model, total_steps)
 
     model.action_var = actvar_lookup(0)
     model.gate_var = gatevar_lookup(0)
@@ -321,11 +321,12 @@ def do_rollout(env, model):
     gate_list = []
     num_steps = 0
 
+    dtype = torch.float32
     obs = env.reset()
     done = False
 
     while not done:
-        obs = torch.as_tensor(obs).detach()
+        obs = torch.as_tensor(obs, dtype=dtype).detach()
         obs_list.append(obs.clone())
 
         path, gate_out = model.select_path(obs)
