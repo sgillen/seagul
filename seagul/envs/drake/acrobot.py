@@ -56,7 +56,7 @@ class DrakeAcroEnv(core.Env):
 
         #        import ipdb; ipdb.set_trace()
 
-        max_torque = 25
+        max_torque = 700
         high = np.array([2 * pi, pi, 10, 30])
         low = np.array([0, -pi, -10, -30])
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
@@ -119,7 +119,7 @@ class DrakeAcroEnv(core.Env):
         self.context = self.simulator.get_mutable_context()
 
         init_state = InitialState().CopyToVector()
-        if init_vec:
+        if init_vec is not None:
             init_state[0] = init_vec[0]
             init_state[1] = init_vec[1]
             init_state[2] = init_vec[2]

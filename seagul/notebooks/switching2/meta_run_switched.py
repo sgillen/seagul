@@ -30,7 +30,7 @@ activation = nn.ReLU
 #torch.set_default_dtype(torch.double)
 proc_list = []
 
-for seed in [0]:
+for seed in [1,2,3]:
 
     env_name = "su_acro_drake-v0"
     env = gym.make(env_name)
@@ -71,10 +71,10 @@ for seed in [0]:
 
     model = SwitchedPPOModelActHold(
         # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-        policy=torch.load("ppo2_warm_pol"),
-        value_fn=torch.load("ppo2_warm_val"),
+        policy=torch.load("warm/ppo2_warm_pol"),
+        value_fn=torch.load("warm/ppo2_warm_val"),
         # MLP(input_size, 1, num_layers, layer_size, activation),
-        gate_fn=torch.load("gate_fn_ppo2"),
+        gate_fn=torch.load("warm/gate_fn_ppo2_nz128"),
         nominal_policy=control,
         hold_count=200,
     )
@@ -102,27 +102,27 @@ for seed in [0]:
         "reward_stop" : 1500,
     }
 
-    run_name = "1000_ppo2" + str(seed)
+    run_name = "25_ppo2" + str(seed)
 
     #  import ipdb; ipdb.set_trace()
-    run_sg(arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/data1/switch4/")
+    # run_sg(arg_dict, ppo_switch, run_name, 'reasonable torque limits, and a new but cheaty warm start', "/data/switch4/")
 
-#     p = Process(
-#         target=run_sg,
-#         args=(
-#             arg_dict,
-#             ppo_switch,
-#             run_name,
-#             "trying to replicate earlier results that use ppo with ppo2",
-#             "/data/data2/drake_ppo2/",
-#         ),
-#     )
-#     p.start()
-#     proc_list.append(p)
+    p = Process(
+        target=run_sg,
+        args=(
+            arg_dict,
+            ppo_switch,
+            run_name,
+            "trying to replicate earlier results that use ppo with ppo2",
+            "/data/data2/drake_ppo2/",
+        ),
+    )
+    p.start()
+    proc_list.append(p)
 
-# for p in proc_list:
-#     print("joining")
-#     p.join()
+for p in proc_list:
+    print("joining")
+    p.join()
 
 
 print("finished run ", run_name)
