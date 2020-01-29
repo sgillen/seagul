@@ -151,7 +151,7 @@ def sac(
         raw_rew_hist.append(torch.sum(ep_rews))
         progress_bar.update(cur_batch_steps)
 
-        for _ in range(ep_steps):
+        for _ in range(int(ep_steps)):
             # compute targets for Q and V
             # ========================================================================
             replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)
@@ -162,7 +162,7 @@ def sac(
             noise = torch.randn(replay_batch_size, act_size)
             sample_acts, sample_logp = model.select_action(replay_obs1, noise)
 
-
+#            import ipdb; ipdb.set_trace()
             q_in = torch.cat((replay_obs1, sample_acts), dim=1)
             q_in = q_in.to(device)
             #print(q_in.device)

@@ -36,7 +36,7 @@ model = PPOModelActHold(
     policy=policy,
     value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
     discrete=False,
-    hold_count = 1
+    hold_count = 20
 )
 
 #model = PPOModel(policy=policy, value_fn=MLP(input_size, 1, num_layers, layer_size, activation), discrete=False)
@@ -45,9 +45,9 @@ model = PPOModelActHold(
 arg_dict = {
     "env_name": env_name,
     "model": model,
-    "act_var_schedule": [.1],
+    "act_var_schedule": [5],
     "seed": seed,  # int((time.time() % 1)*1e8),
-    "total_steps" : 200*2048,
+    "total_steps" : 100*2048,
     "epoch_batch_size": 2048,
     "reward_stop" : 900,
     "gamma": 1,
@@ -56,7 +56,7 @@ arg_dict = {
 }
 
 
-run_sg(arg_dict, ppo, None, 'lets see if we can learn to balance', "/data/data2/10_sat/")
+run_sg(arg_dict, ppo, None, '25 sat, higher action variance', "/data/25_sat/")
 
     # p = Process(
     #     target=run_sg,
