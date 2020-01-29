@@ -62,6 +62,9 @@ try:
     def humanoid_long_creator(env_config):
         return gym.make("humanoid_long-v1")
 
+    def lorenz_creator(env_config):
+        return gym.make("lorenz-v0")
+
     #  register_env("five_link-v3", five_link_creator)
     register_env("Walker2DBulletEnv-v0", bullet_walker_creator)
     register_env("HumanoidBulletEnv-v0", bullet_humanoid_creator)
@@ -70,6 +73,7 @@ try:
     register_env("dt_pendulum-v0", dt_pendulum_creator)
     register_env("sg_cartpole-v0", sg_pendulum_creator)
     register_env("humanoid_long-v1", humanoid_long_creator)
+    register_env("lorenz-v0", lorenz_creator)
 
 except:
     import warnings
