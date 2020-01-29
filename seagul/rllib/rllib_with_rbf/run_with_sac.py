@@ -13,11 +13,13 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.models.tf.visionnet_v2 import VisionNetwork as MyVisionNetwork
 import datetime
 
-from custom_rbf_layer_model_v2 import RBFModel1, RBFModel2, MyKerasModel
+from custom_rbf_layer_model_v2 import RBFModel1, RBFModel2
+from custom_keras_model_v2 import MyKerasModel1, MyKerasModel2
 
 ModelCatalog.register_custom_model("rbf_model_1", RBFModel1)
 ModelCatalog.register_custom_model("rbf_model_2", RBFModel2)
-ModelCatalog.register_custom_model("my_keras_model", MyKerasModel)
+ModelCatalog.register_custom_model("my_keras_model_1", MyKerasModel1)
+ModelCatalog.register_custom_model("my_keras_model_2", MyKerasModel2)
 
 log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
@@ -27,9 +29,10 @@ ray.init()
 tune.run(
     "SAC",
     stop={"episode_reward_mean": -150},
+    checkpoint_at_end=True,
     config={
         "model": {
-            "custom_model": tune.grid_search(["rbf_model_1", "rbf_model_2"]),
+            "custom_model": tune.grid_search(["rbf_model_2", "my_keras_model_2"]), # tune.grid_search(["rbf_model_1", "rbf_model_2"]),
             "custom_options": {},  # extra options to pass to your model
         },
         # "lr": 0.01, #tune.grid_search([0.1, 0.01]),
@@ -64,6 +67,7 @@ tune.run(
         "clip_actions": False,
         # "normalize_actions": True,
         "evaluation_interval": 1,
-        "metrics_smoothing_episodes": 5
+        "metrics_smoothing_episodes": 5,
+        # "checkpoint_at_end": True
     },
 )
