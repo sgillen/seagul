@@ -15,8 +15,6 @@ class LorenzEnv(gym.Env):
 
 
     Attributes:
-
-
     """
 
     def __init__(self, num_steps=100, dt=0.01):
