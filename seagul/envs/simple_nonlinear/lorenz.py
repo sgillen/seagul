@@ -50,6 +50,8 @@ class LorenzEnv(gym.Env):
         self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float64)
         self.u_noise_max = 0.0
 
+
+        self.reward_state = 1
         self.seed()
         self.state = self.reset()
 
@@ -70,7 +72,7 @@ class LorenzEnv(gym.Env):
         done = False
 
         # Algorithms aware of the action space won't need their inputs clipped but better to do it here than not
-        action = np.clip(action, -self.action_max, self.action_max)
+        #action = np.clip(action, -self.action_max, self.action_max)
 
         # Add noise to the force action (if noise is zero this will do nothing)
         if self.u_noise_max > 0:
@@ -80,16 +82,36 @@ class LorenzEnv(gym.Env):
         self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
 
         # Should reward be something we pass in ? I do like to mess with them a lot...
-        if 0 < self.state[0] < 20 and 0 < self.state[1] < 30 and 0 < self.state[2] < 50:
-            reward = 1.0
-        else:
-            reward = -1.0
+        # if 0 < self.state[0] < 20 and 0 < self.state[1] < 30 and 0 < self.state[2] < 50:
+        #     reward = 1.0
+        # else:
+        #     reward = -1.0
 
+
+        #        reward = -(.01*self.state[0]**2 + .01*self.state[1]**2 + .01*self.state[2]**2)
+
+
+
+        if self.reward_state == 1:
+            if 0 < self.state[0] < 20 and 0 < self.state[1] < 30:
+                reward = 1.0
+                self.reward_state = 0;
+            else:
+                reward = -1.0
+
+        elif self.reward_state == 0:
+            if 0 < self.state[0] < -20 and 0 < self.state[1] < -30:
+                reward = 1.0
+                self.reward_state = 1;
+            else:
+                reward = -1.0
+
+        
         self.cur_step += 1
         if self.cur_step > self.num_steps:
             done = True
-        elif (np.abs(self.state) > self.state_max).any():
-            done = True
+       # elif (np.abs(self.state) > self.state_max).any():
+       #m     done = True
 
         return self.state, reward, done, {}
 

@@ -62,7 +62,7 @@ class SGCartPoleEnv(gym.Env):
         self.TORQUE_MAX = 5.0
         self.torque_noise_max = 0.0
         self.action_space = gym.spaces.Box(-self.TORQUE_MAX, self.TORQUE_MAX, shape=(1,), dtype=np.float32)
-
+b
         self.viewer = None
 
         self.seed()
