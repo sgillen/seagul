@@ -76,7 +76,7 @@ for seed in [1,2,3]:
         # MLP(input_size, 1, num_layers, layer_size, activation),
         gate_fn=torch.load("warm/gate_fn_ppo2_nz128"),
         nominal_policy=control,
-        hold_count=200,
+        hold_count=20,
     )
 
     # model = SwitchedPPOModel(
@@ -114,7 +114,7 @@ for seed in [1,2,3]:
             ppo_switch,
             run_name,
             "trying to replicate earlier results that use ppo with ppo2",
-            "/data/data2/drake_ppo2/",
+            "/data/drake_ppo2/",
         ),
     )
     p.start()
