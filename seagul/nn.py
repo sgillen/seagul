@@ -174,7 +174,7 @@ def policy_render_loop(policy, env, select_action):
 
 class MLP(nn.Module):
     """
-    Policy designed to be used with seaguls rl module.
+    Policy debetaned to be used with seaguls rl module.
     Simple MLP that has a linear layer at the output
     """
 
@@ -211,25 +211,31 @@ class MLP(nn.Module):
 
 
 
-def gaus(x, mu, sig):
+def gaus(x, mu, beta):
     '''
     Implementation of gaussian function.
     Input: 
         - x: tensor of size input_size x number of hidden neurons
         - mu: tensor of size of hidden neurons (mu = expected values/centers)
-        - sig: tensor of size of hidden neurons (sigma^2 = variances)
+        - beta: tensor of size of hidden neurons (betama^2 = variances)
     Output: 
         - tensor of size input_size x number of hidden neurons
     '''
     # if(len(x.shape) == 1): # no batching 
     #     x = torch.unsqueeze(x, 0)
     # out = torch.tensor(np.zeros((len(x), len(mu))).tolist())
-    # factor = 1./(torch.sqrt(torch.tensor(2.*np.pi))*sig)
-    # out = 1./factor *  torch.exp(-torch.pow((x-mu)/sig,2)/2)
-    out = 1./(torch.sqrt(torch.tensor(2.*np.pi))*sig) *  torch.exp(-torch.pow((x-mu)/sig,2)/2)
+    # factor = 1./(torch.sqrt(torch.tensor(2.*np.pi))*beta)
+    # out = 1./factor *  torch.exp(-torch.pow((x-mu)/beta,2)/2)
+    if(len(x.shape) == 1):
+        x = x.unsqueeze(0)
+    x = x.unsqueeze(1)
+    dist = torch.sum(torch.pow(x-mu,2), axis=2)
+    out = torch.exp(-beta * dist)
+    # out = torch.exp(-beta * torch.pow(x-mu,2))
+    # out = 1./(torch.sqrt(torch.tensor(2.*np.pi))*beta) *  torch.exp(-torch.pow((x-mu)/beta,2)/2)
     # for i_x in range(len(x)):
-    #     out[i_x] = 1./factor * torch.exp(-torch.pow((x[i_x]-mu)/sig,2)/2)
-    return out
+    #     out[i_x] = 1./factor * torch.exp(-torch.pow((x[i_x]-mu)/beta,2)/2)
+    return torch.div(out, torch.unsqueeze(torch.sum(out,axis=1),1)) # normalization ! (out/sum(out))
 
 class gaussian(nn.Module):
     '''
@@ -240,52 +246,51 @@ class gaussian(nn.Module):
         - Output: (N, *), same shape as the input
     Parameters:
         - mu - trainable parameter (expected value)
-        - sig - trainable parameter (sigma^2 = variance)
+        - beta - trainable parameter (breadth of gaussian)
     '''
-    def __init__(self, hidden_size, mu = None, sig = None):
+    def __init__(self, layer_size, input_size, mu = None, beta = None):
         '''
         Initialization.
         INPUT:
             - in_features: shape of the input
-            - mu, sig: trainable parameter
+            - mu, beta: trainable parameter
         '''
         super(gaussian,self).__init__()
         self.bias = False
-        # initialize mu and sig
+        # initialize mu and beta
         if mu == None:
-            self.mu = nn.Parameter(torch.randn(hidden_size))
+            self.mu = nn.Parameter(torch.randn(1, layer_size, input_size))
             # self.mu = torch.randn(hidden_size)
         else:
             self.mu = nn.Parameter(torch.tensor(mu)) 
 
-        if sig == None:
-            self.sig = nn.Parameter(torch.ones(hidden_size))
-            # self.sig = torch.ones(hidden_size)
+        if beta == None:
+            self.beta = nn.Parameter(torch.ones(layer_size))
+            # self.beta = torch.ones(hidden_size)
         else:
-            self.sig = nn.Parameter(torch.tensor(sig)) 
+            self.beta = nn.Parameter(torch.tensor(beta)) 
             
         self.mu.requiresGrad = True # set requiresGrad to true!
-        self.sig.requiresGrad = True # set requiresGrad to true!
+        self.beta.requiresGrad = True # set requiresGrad to true!
 
     def forward(self, x):
         '''
         Forward pass of the function.
         Applies the function to the input elementwise.
         '''
-        return gaus(x, self.mu, self.sig)
+        return gaus(x, self.mu, self.beta)
 
 
 class RBF(nn.Module):
     """
-    Policy designed to be used with seaguls rl module.
+    Policy debetaned to be used with seaguls rl module.
     Simple RBF that has one hidden layer with gaussian activation functions at the hidden layer,
     Possible trainable parameter are 
-        - weights from input to hidden layer (if input_weights = True)
         - weights from hidden to output layer
         - biases at hidden layer (if input_bias = True)
         - biases at output layer
-        - centers of the gaussian activation functions (not implemented yet)
-        - variances of the gaussian activation function (not implemented yet)
+        - centers of the gaussian activation functions
+        - breadths of the gaussian activation function
     """
 
     def __init__(self, input_size, output_size, layer_size, activation=gaussian, output_activation=nn.Identity):
@@ -297,18 +302,10 @@ class RBF(nn.Module):
          """
         super(RBF, self).__init__()
         self.layer_size = layer_size
-        self.activation = activation(layer_size)
+        self.input_size = input_size
+        self.activation = activation(layer_size, input_size)
         self.output_activation = output_activation()
-
-        self.hidden_layer = nn.Linear(input_size, layer_size)
-        input_weights = True
-        if(input_weights == False):
-            self.hidden_layer.weight = nn.Parameter(torch.ones(layer_size,input_size))
-            for p in self.hidden_layer.parameters():
-                p.requires_grad = False
-        input_bias = False
-        if(input_bias == False):
-            self.hidden_layer.bias = None
+        self.hidden_layer = nn.Identity()
         self.output_layer = nn.Linear(layer_size, output_size)
 
         self.state_means = torch.zeros(input_size)
@@ -317,8 +314,9 @@ class RBF(nn.Module):
 
     def forward(self, data):
         
-        data = (torch.as_tensor(data) - self.state_means)/torch.sqrt(self.state_var)
+        # data = (torch.as_tensor(data) - self.state_means)/torch.sqrt(self.state_var)
 
+        # TODO custom layer instead of just activation?
         data = self.activation(self.hidden_layer(data))
 
         return self.output_activation(self.output_layer(data))
@@ -327,7 +325,7 @@ class RBF(nn.Module):
 
 class CategoricalMLP(nn.Module):
     """
-    Policy designed to be used with seaguls rl module.
+    Policy debetaned to be used with seaguls rl module.
     Simple MLP that will output class label probs
     """
 
@@ -348,7 +346,7 @@ class CategoricalMLP(nn.Module):
         self.output_layer = nn.Linear(layer_size, output_size)
 
         if output_size == 1:
-            self.output_norm = nn.Sigmoid()
+            self.output_norm = nn.betamoid()
         else:
             self.output_norm = nn.Softmax(dim=-1)
 
