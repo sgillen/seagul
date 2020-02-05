@@ -1,7 +1,9 @@
 import torch.nn as nn
 from seagul.rl.algos.sac import sac
-from seagul.nn import MLP
+from seagul.nn import MLP, RBF
+import torch
 from seagul.rl.models import SACModel
+import time
 from multiprocessing import Process, Manager
 import sys
 
@@ -18,17 +20,24 @@ from seagul.rl.algos import sac
 t_model, rewards, var_dict = sac(**arg_dict)  # Should get to -200 reward
 
 """
+start_time = time.time()
 
 input_size = 3
 output_size = 1
-layer_size = 64
+layer_size = 128
 num_layers = 2
 activation = nn.ReLU
 
-policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
-value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
-q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
+# policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
+# value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+# q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
+# q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
+
+policy = RBF(input_size, output_size * 2, layer_size)
+value_fn = RBF(input_size, 1, layer_size)
+q1_fn = RBF(input_size + output_size, 1, layer_size)
+q2_fn = RBF(input_size + output_size, 1, layer_size)
+
 model = SACModel(policy, value_fn, q1_fn, q2_fn, 1)
 
 def run_and_test(arg_dict, retval):
@@ -75,3 +84,4 @@ if __name__ == "__main__" :
 
     #sys.stdout = orig
     print(ret_dict)
+print("--- %s seconds ---" % (time.time() - start_time))
