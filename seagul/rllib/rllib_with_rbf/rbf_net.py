@@ -12,43 +12,59 @@ from ray.rllib.agents.dqn.distributional_q_model import DistributionalQModel
 from ray.rllib.utils import try_import_tf
 from ray.rllib.models.tf.visionnet_v2 import VisionNetwork as MyVisionNetwork
 import datetime
-import gym
+
 
 
 class RBFLayer1(Layer):
     def __init__(self, units, **kwargs):
         super(RBFLayer1, self).__init__(**kwargs)
         self.units = units
+        ###### adjust: #############
+        self.normalization = True
+        self.same_smooth_fac = True
+        ############################
     def build(self, input_shape):
         initializer_gaus = RandomNormal(mean=0.0, stddev=1.0, seed=None)
-        self.use_weights = True
         self.mu = self.add_weight(name='mu',
-                                  shape=(self.units, input_shape[1]), # centers have the same dimension as the input data (x number of neurons)
+                                  shape=(input_shape[1], self.units, 1), # centers have the same dimension as the input data (x number of neurons)
                                   initializer=initializer_gaus,
                                   dtype="float32",
                                   trainable=True)
-        self.beta = self.add_weight(name='beta',
-                                  shape=(self.units,),
+        if self.same_smooth_fac:
+            self.beta = self.add_weight(name='beta',
+                                  shape=(self.units,1),
                                   initializer='ones',
                                   dtype="float32",
                                   trainable=False)
-        self.input_weights = self.add_weight(name='input_weights',
-                                  shape = (self.units,),
-                                  initializer = initializer_gaus,
-                                  trainable = True)
+        else:
+            self.beta = self.add_weight(name='beta',
+                                  shape=(self.units,1),
+                                  initializer=initializer_gaus, # initializer='ones', # 
+                                  dtype="float32",
+                                  trainable=True)
+        
+        # self.input_weights = self.add_weight(name='input_weights',
+        #                           shape = (self.units,),
+        #                           initializer = initializer_gaus,
+        #                           trainable = True)
         super(RBFLayer1, self).build(input_shape)
 
     def call(self, inputs):
+        # TODO: implement mahalanobis distance to compare results
         inputs = tf.dtypes.cast(inputs, tf.float32)
         # import ipdb; ipdb.set_trace()
-        mu_new = K.expand_dims(self.mu) # necessary if more than one input at a time 
-        dist = K.sum((K.transpose(mu_new-K.transpose(inputs)))**2, axis=1) # 2 norm 
-        rbf_normalization = K.expand_dims(K.sum(K.exp(-dist), axis=1)) # sum_i(exp(-(x-c_i)^2))
-        rbf = K.exp(-self.beta * dist) # radial basis function (simplified gaussian with beta as width of RBF)
-        if self.use_weights == True:
-            return self.input_weights * rbf/rbf_normalization
+        inputs = K.transpose(K.expand_dims(inputs,1))
+        # with norm:
+        # rho = K.exp(- self.beta * K.pow(tf.norm(inputs - self.mu, ord = 'euclidean', axis = 0),2))
+        # same as with norm but less comp cost:
+        if self.same_smooth_fac:
+            rho = K.exp(- self.beta * K.pow(K.sum(inputs - self.mu, axis = 0),2))
         else:
-            return rbf/rbf_normalization
+            rho = K.exp(- tf.math.abs(self.beta) * K.pow(K.sum(inputs - self.mu, axis = 0),2)) # beta has to be positive
+        if self.normalization:
+            return K.transpose(rho / K.sum(rho, axis = 0))
+        else:
+            return K.transpose(rho)
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.units)
@@ -61,7 +77,7 @@ class RBFModel1(TFModelV2):
             shape=obs_space.shape, name="observations",
             dtype=tf.float32)
         hidden_layer = RBFLayer1(
-            256)(self.inputs)
+            64)(self.inputs)
         output_layer = tf.keras.layers.Dense(
             num_outputs,
             name="my_output_layer",

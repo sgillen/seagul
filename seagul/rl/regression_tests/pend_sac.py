@@ -1,15 +1,9 @@
 import torch.nn as nn
 from seagul.rl.algos.sac import sac
-<<<<<<< HEAD
 from seagul.nn import MLP, RBF
 import torch
 from seagul.rl.models import SACModel
-from multiprocessing import Process
 import time
-start_time = time.time()
-=======
-from seagul.nn import MLP
-from seagul.rl.models import SACModel
 from multiprocessing import Process, Manager
 import sys
 
@@ -26,11 +20,11 @@ from seagul.rl.algos import sac
 t_model, rewards, var_dict = sac(**arg_dict)  # Should get to -200 reward
 
 """
->>>>>>> 2edbab6eef86e092b47ad4167faaa07f3369a83f
+start_time = time.time()
 
 input_size = 3
 output_size = 1
-layer_size = 64
+layer_size = 128
 num_layers = 2
 activation = nn.ReLU
 
@@ -90,3 +84,4 @@ if __name__ == "__main__" :
 
     #sys.stdout = orig
     print(ret_dict)
+print("--- %s seconds ---" % (time.time() - start_time))

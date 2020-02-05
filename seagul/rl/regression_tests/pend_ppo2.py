@@ -1,6 +1,6 @@
 import torch.nn as nn
 from seagul.rl.algos.ppo2 import ppo
-from seagul.nn import MLP
+from seagul.nn import MLP, RBF
 import torch
 from seagul.rl.models import PPOModel
 from multiprocessing import Process, Manager
@@ -28,8 +28,12 @@ layer_size = 64
 num_layers = 2
 activation = nn.ReLU
 
-policy = MLP(input_size, output_size, num_layers, layer_size, activation)
-value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+# policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+# value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+
+policy = RBF(input_size, output_size, layer_size)
+value_fn = RBF(input_size, 1, layer_size)
+
 model = PPOModel(policy, value_fn, action_var=0.1, discrete=False)
 
 def run_and_test(arg_dict, retval):
@@ -64,19 +68,20 @@ arg_dict = {
 
 if __name__ == "__main__":
 
-    proc_list = []
-    manager = Manager()
-    ret_dict = manager.dict()
-
+    # proc_list = []
+    # manager = Manager()
+    # ret_dict = manager.dict()
+    ret_dict = {}
     for seed in [0, 1, 2, 3]:
         arg_dict["seed"] = seed
-        p = Process(target=run_and_test, args=(arg_dict,ret_dict))
-        p.start()
-        proc_list.append(p)
+        run_and_test(arg_dict,ret_dict)
+        # p = Process(target=run_and_test, args=(arg_dict,ret_dict))
+        # p.start()
+        # proc_list.append(p)
 
 
-    for p in proc_list:
-        print("joining")
-        p.join()
+    # for p in proc_list:
+    #     print("joining")
+    #     p.join()
 
 print(ret_dict)
