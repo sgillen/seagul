@@ -20,7 +20,7 @@
         "critic_learning_rate": 0.0003,
         "entropy_learning_rate": 0.0003
     },
-    "num_workers": 1,
+    "num_workers": 20,
     "num_gpus": 0,
     "clip_actions": false,
     "evaluation_interval": 1,

@@ -23,12 +23,12 @@ ModelCatalog.register_custom_model("mlp_2_64", MyKerasModel2)
 
 #---- set parameters: --------------------
 algorithm = "PPO" # "SAC"
-environment = "HumanoidBulletEnv-v0"  # "Pendulum-v0"  #  "Walker2DBulletEnv-v0"   "HalfCheetahBulletEnv-v0" 
+environment = "HumanoidBulletEnv-v0"  #   "Walker2DBulletEnv-v0"  #  "Pendulum-v0"   "HalfCheetahBulletEnv-v0" 
 model = "mlp_2_64"
 comments = "" # "mlp with two hidden layers with 64 neurons each"  # "rbf with new normalization code and different learning rates" # "rbf with old code (wrong for normalization) without input weights"
 output_dir = "./data/"
 #-----------------------------------------
-config = json.load(open("./params/" + algorithm + "_" + environment + ".json"))
+config = json.load(open("./params/" + algorithm + "_" + environment + ".json")) # 
 config['env'] = environment
 config['model']['custom_model'] = model
 #---- tune hyperparameters: --------------
