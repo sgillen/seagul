@@ -22,13 +22,31 @@ ModelCatalog.register_custom_model("mlp_2_64", MyKerasModel2)
 
 
 #---- set parameters: --------------------
-algorithm = "PPO" # "SAC"
-environment = "HumanoidBulletEnv-v0"  #   "Walker2DBulletEnv-v0"  #  "Pendulum-v0"   "HalfCheetahBulletEnv-v0" 
+algos = {
+    "0": "A2C",
+    "1": "A3C",
+    "2": "APEX",
+    "3": "APPO",
+    "4": "DDPG",
+    "5": "IMPALA",
+    "6": "PG",
+    "7": "PPO",
+    "8": "SAC",
+    "9": "TD3"
+}
+envs = {
+    "0": "HumanoidBulletEnv-v0",
+    "1": "Walker2DBulletEnv-v0",
+    "2": "Pendulum-v0",
+    "3": "HalfCheetahBulletEnv-v0"
+}
+algorithm = algos["8"]
+environment = envs["3"]
 model = "mlp_2_64"
 comments = "" # "mlp with two hidden layers with 64 neurons each"  # "rbf with new normalization code and different learning rates" # "rbf with old code (wrong for normalization) without input weights"
 output_dir = "./data/"
 #-----------------------------------------
-config = json.load(open("./params/" + algorithm + "_" + environment + ".json")) # 
+config = json.load(open("./params/" + environment + "/" + algorithm + ".json")) # 
 config['env'] = environment
 config['model']['custom_model'] = model
 #---- tune hyperparameters: --------------
@@ -46,14 +64,19 @@ def trial_str_creator(trial):
     trialname = algorithm + "_" + environment + "_" + model 
     # info_to_file(trialname + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + trial.trial_id)
     return trialname
-
+stop = {
+    "HumanoidBulletEnv-v0": 6000,
+    "Walker2DBulletEnv-v0": 2000, # ?? 
+    "Pendulum-v0" : 150,
+    "HalfCheetahBulletEnv-v0": 9000 # found 2000, 9000
+}
 ray.init()
 analysis = tune.run(
     algorithm,
     local_dir=output_dir,
     # name="test",
     # trial_name_creator=trial_str_creator,
-    stop={"episode_reward_mean": 6000},
+    stop={"episode_reward_mean": stop[environment]},
     checkpoint_freq=1,
     max_failures=5,
     checkpoint_at_end=True,
