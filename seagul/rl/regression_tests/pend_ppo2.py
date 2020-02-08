@@ -34,6 +34,7 @@ model = PPOModel(policy, value_fn, action_var=0.1, discrete=False)
 
 def run_and_test(arg_dict, retval):
 
+    torch.set_num_threads(1)
     t_model, rewards, var_dict = ppo(**arg_dict)
 
     seed = arg_dict["seed"]
@@ -43,7 +44,7 @@ def run_and_test(arg_dict, retval):
 
     else:
         print("Error: seed:", seed, "failed")
-        print("Rewards were", rewards)
+        print("Rewards were", rewards[-1])
         retval[seed] = False
 
 # Define our hyper parameters
@@ -58,8 +59,9 @@ arg_dict = {
     "val_epochs": 10,
     "pol_epochs": 10,
     "pol_lr": 1e-2,
-    "val_lr": 1e-2,
+    "val_lr": 1e-3,
     "act_var_schedule": [0.707],
+    "eps" : float('inf'),
 }
 
 if __name__ == "__main__":
@@ -74,9 +76,7 @@ if __name__ == "__main__":
         p.start()
         proc_list.append(p)
 
-
     for p in proc_list:
-        print("joining")
         p.join()
 
 print(ret_dict)

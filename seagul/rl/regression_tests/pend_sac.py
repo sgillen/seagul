@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from seagul.rl.algos.sac import sac
 from seagul.nn import MLP
@@ -32,6 +33,7 @@ q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 model = SACModel(policy, value_fn, q1_fn, q2_fn, 1)
 
 def run_and_test(arg_dict, retval):
+    torch.set_num_threads(1)
 
     t_model, rewards, var_dict = sac(**arg_dict)
 

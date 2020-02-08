@@ -9,7 +9,7 @@ import numpy as np
 from numpy import pi
 import math
 
-from underactuated import FindResource, PlanarRigidBodyVisualizer, SliderSystem
+from underactuated import FindResource
 
 from pydrake.all import (
     DiagramBuilder,
@@ -29,7 +29,6 @@ from pydrake.examples.acrobot import AcrobotInput, AcrobotPlant, AcrobotState
 
 import matplotlib.pyplot as plt
 from IPython.display import HTML
-
 
 g_action = 0
 
@@ -52,13 +51,13 @@ def InitialState():
 
 
 class DrakeAcroEnv(core.Env):
-    def __init__(self):
+    def __init__(self, max_torque=25, init_state_weights=np.array([1, 1, 1, 1])):
 
         #        import ipdb; ipdb.set_trace()
 
-        max_torque = 700
+        self.init_state_weights = init_state_weights
         high = np.array([2 * pi, pi, 10, 30])
-        low = np.array([0, -pi, -10, -30])
+        low = np.array([0, -pi, -25, -50])
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([-max_torque]), high=np.array([max_torque]), dtype=np.float32)
         self.seed()
@@ -119,6 +118,12 @@ class DrakeAcroEnv(core.Env):
         self.context = self.simulator.get_mutable_context()
 
         init_state = InitialState().CopyToVector()
+
+        noise = np.random.random(4)
+
+        
+        init_state += noise*self.init_state_weights
+
         if init_vec is not None:
             init_state[0] = init_vec[0]
             init_state[1] = init_vec[1]
@@ -143,6 +148,11 @@ class DrakeAcroEnv(core.Env):
         ns = self.state_logger.data()[:, -1]
 
         reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+        #reward = -((ns[0] - np.pi)**2) - (ns[1])**2
+
+
+        reward -= (abs(ns[2]) > self.observation_space.high[2])
+        reward -= (abs(ns[3]) > self.observation_space.high[3]) 
 
         done = False
         if self.t > self.max_t:
@@ -157,7 +167,7 @@ class DrakeAcroEnv(core.Env):
     def init_integrator(self):
         # simulator.set_target_realtime_rate(1.0)
         self.simulator.set_publish_every_time_step(False)
-        self.simulator.get_integrator().set_fixed_step_mode(False)
+        self.simulator.get_integrator().set_fixed_step_mode(True)
         self.simulator.get_integrator().set_maximum_step_size(self.dt)
         self.simulator.get_integrator().set_target_accuracy(.01)
             

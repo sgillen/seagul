@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from seagul.integration import euler,rk4
 
-
-class LorenzEnv(gym.Env):
+class LinearEnv(gym.Env):
     """
     Environment for the lorenz system
 
@@ -18,7 +17,7 @@ class LorenzEnv(gym.Env):
     Attributes:
     """
 
-    def __init__(self, num_steps=1000, dt=0.01):
+    def __init__(self, num_steps=50, dt=0.01):
 
         # Lorenz system constants
         self.s = 10
@@ -26,7 +25,7 @@ class LorenzEnv(gym.Env):
         self.r = 28
 
         # Intial state that we will reset to
-        self.init_state = np.array([0, 1, 1.05])
+        self.init_state = np.array([1, 1, 1])
 
         # Simulation/integration parameters
         self.dt = dt
@@ -36,19 +35,23 @@ class LorenzEnv(gym.Env):
         self.integrator = rk4
 
         # Observation (state) paramaters
+        # x_max = float('inf')
+        # y_max = float('inf')
+        # z_max = float('inf')
+
         x_max = 100
         y_max = 100
         z_max = 100
-        self.state_max = np.array([x_max, y_max, z_max,1])
-        self.observation_space = gym.spaces.Box(low=-self.state_max, high=self.state_max, dtype=np.float64)
+        self.state_max = np.array([x_max, y_max, z_max, 1])
+        self.observation_space = gym.spaces.Box(low=-(self.state_max+50), high=self.state_max+50, dtype=np.float32)
         self.state_noise_max = 5.0
 
         # Action (Control) parameters
-        ux_max = 100
-        uy_max = 100
-        uz_max = 100
-        self.action_max = np.array([ux_max, uy_max, uz_max])
-        self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float64)
+        ux_max = 25
+        uy_max = 25
+        uz_max = 25
+        self.action_max = np.array([ux_max, uy_max])
+        self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float32)
         self.u_noise_max = 0.0
 
         self.reward_state = 1
@@ -63,24 +66,13 @@ class LorenzEnv(gym.Env):
         self.state = self.init_state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
         self.cur_step = 0
         aug_state = np.concatenate((self.state, np.array(self.reward_state).reshape(-1)))
-
     
         return aug_state
-
-    def _get_ob(self):
-        return self.state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
 
     def step(self, action):
         done = False
 
-        # Algorithms aware of the action space won't need their inputs clipped but better to do it here than not
-        #action = np.clip(action, -self.action_max, self.action_max)
-
-        # Add noise to the force action (if noise is zero this will do nothing)
-        if self.u_noise_max > 0:
-            action += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
-
-        ds = self._derivs(0, self.state, action)
+        action = np.clip(action, -self.action_max, self.action_max)
 
         for _ in range(10):
             self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
@@ -92,31 +84,35 @@ class LorenzEnv(gym.Env):
         #     reward = -1.0
 
 
-        reward = -((.01*self.state[0])**2 + (.01*self.state[1])**2 + (.01*self.state[2])**2)
+        #reward = -((.01*self.state[0])**2 + (.01*self.state[1])**2 + (.01*self.state[2])**2)
 
-        # if self.reward_state == 1:
-        #     if self.state[0] > 2 and self.state[1] > 3:
-        #         reward = 5.0
-        #         self.reward_state = 0;
-        #     else:
-        #         reward = -1.0
+        if self.reward_state == 1:
+            if self.state[0] > 2 and self.state[2] > 0:
+                reward = 5.0
+                self.reward_state = -1;
+            else:
+                reward = -1.0
 
-        # elif self.reward_state == 0:
-        #     if self.state[0] < -2 and self.state[1] < -3:
-        #         reward = 5.0
-        #         self.reward_state = 1;
-        #     else:
-        #         reward = -1.0
+        elif self.reward_state == -1:
+            if self.state[0] < -2 and self.state[2] < 0:
+                reward = 5.0
+                self.reward_state = 1;
+            else:
+                reward = -1.0
 
         
         self.cur_step += 1
         if self.cur_step > self.num_steps:
             done = True
-            # elif (np.abs(self.state) > self.state_max).any():
-            #m     done = True
-
+        
         
         aug_state = np.concatenate((self.state, np.array(self.reward_state).reshape(-1)))
+
+        if (np.abs(aug_state) > self.state_max).any():
+            reward -= 1000
+            done = True
+
+        
         return aug_state , reward, done, {}
 
     def render(self, mode="human"):
@@ -124,19 +120,19 @@ class LorenzEnv(gym.Env):
 
     def _derivs(self, t, q, u):
         """
-        Implements the dynamics for the lorenz system
+        Implements the dynamics for the system
 
         Args:
             t: float with the current time (not actually used but most ODE solvers want to pass this in anyway)
             q: numpy array of state variables [x,y,z]
-            numpy array with the derivatives of the current state variable [thetadot, xdot, theta2dot, x2dot]
 
         Returns:
-            dqdt: numpy array with the derivatives of the current state variable [thetadot, xdot, theta2dot, x2dot]
+            dqdt: numpy array with the derivatives of the current state variable
         """
 
-        xdot = self.s * (q[1] - q[0]) - u[0]
-        ydot = self.r * q[0] - q[1] - q[0] * q[2] - u[1]
-        zdot = q[0] * q[1] - self.b * q[2] - u[2]
+        xdot = u[0]
+        ydot = u[1]
+        zdot = q[0]
 
         return np.array([xdot, ydot, zdot])
+
