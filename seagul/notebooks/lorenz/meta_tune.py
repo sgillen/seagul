@@ -4,7 +4,7 @@ import ray.rllib.agents.ppo as ppo
 import seagul.envs
 
 config = ppo.DEFAULT_CONFIG.copy()
-config["num_workers"] = 8
+config["num_workers"] = 10
 config["lambda"] = 0.2
 config["gamma"] = 0.95
 config["num_gpus"] = 0
@@ -17,18 +17,19 @@ config["batch_mode"] = "truncate_episodes"
 config["observation_filter"] = "MeanStdFilter"
 config["sgd_minibatch_size"] = 512
 # config["train_batch_size"] = tune.sample_from(lambda spec: spec.config.sgd_minibatch_size*32)
-config["train_batch_size"] = 2048
+config["train_batch_size"] = 1024*10
 config["vf_clip_param"] = 10
 config["seed"] = tune.grid_search([2, 3, 4, 5])  #
-env_name = "lorenz-v0"
+env_name = "linear_z-v0"
 config["env"] = env_name
+config["model"]["fcnet_hiddens"] = [64, 64]
 # import pprint
 # pprint.pprint(config)
 
 analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
-    stop={"timesteps_total": 5e5},
-    local_dir="./data/bench_model/",
+    stop={"timesteps_total": 5e6},
+    local_dir="./data/tune/",
     checkpoint_at_end=True,
 )

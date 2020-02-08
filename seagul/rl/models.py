@@ -279,8 +279,6 @@ class SwitchedPPOModel:
     #             return 0
     #         else:
     #             return 1
-
-
 class SwitchedPPOModelActHold:
     """
     also for use with PPO, this will "hold" each action made by the agent for hold_count time steps

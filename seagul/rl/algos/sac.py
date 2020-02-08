@@ -10,25 +10,24 @@ from seagul.rl.models import RandModel
 
 
 def sac(
-    env_name,
-    total_steps,
-    model,
-    env_steps = 0,
-    min_steps_per_update = 1,
-    iters_per_update = 100,
-    replay_batch_size=64,
-    seed=0,
-    gamma=0.95,
-    polyak=0.995,
-    alpha=0.2,
-    sgd_batch_size=64,
-    sgd_lr=1e-3,
-    exploration_steps=100,
-    replay_buf_size=int(100000),
-    use_gpu=False,
-    reward_stop=None,
+        env_name,
+        total_steps,
+        model,
+        env_steps=0,
+        min_steps_per_update=1,
+        iters_per_update=100,
+        replay_batch_size=64,
+        seed=0,
+        gamma=0.95,
+        polyak=0.995,
+        alpha=0.2,
+        sgd_batch_size=64,
+        sgd_lr=1e-3,
+        exploration_steps=100,
+        replay_buf_size=int(100000),
+        use_gpu=False,
+        reward_stop=None,
 ):
-
     """
     Implements soft actor critic
 
@@ -122,7 +121,7 @@ def sac(
     while cur_total_steps < exploration_steps:
         ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
         replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
-        
+
         ep_steps = ep_rews.shape[0]
         cur_total_steps += ep_steps
 
@@ -140,7 +139,6 @@ def sac(
         # collect data with the current policy
         # ========================================================================
         while cur_batch_steps < min_steps_per_update:
-
             ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, model, env_steps)
             replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
@@ -162,14 +160,13 @@ def sac(
             noise = torch.randn(replay_batch_size, act_size)
             sample_acts, sample_logp = model.select_action(replay_obs1, noise)
 
-#            import ipdb; ipdb.set_trace()
+            #            import ipdb; ipdb.set_trace()
             q_in = torch.cat((replay_obs1, sample_acts), dim=1)
             q_in = q_in.to(device)
-            #print(q_in.device)
-            #a = model.q1_fn(q_in)
-            #b = model.q2_fn(q_in)
-            
-            
+            # print(q_in.device)
+            # a = model.q1_fn(q_in)
+            # b = model.q2_fn(q_in)
+
             q_preds = torch.cat((model.q1_fn(q_in), model.q2_fn(q_in)), dim=1)
             q_min, q_min_idx = torch.min(q_preds, dim=1)
             q_min = q_min.reshape(-1, 1)
@@ -180,7 +177,8 @@ def sac(
             # q_fn update
             # ========================================================================
             training_data = data.TensorDataset(replay_obs1, replay_acts, q_targ)
-            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=False)
+            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=True, num_workers=0,
+                                                 pin_memory=False)
 
             for local_obs, local_acts, local_qtarg in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -197,14 +195,17 @@ def sac(
                 q2_loss = torch.pow(q2_preds - local_qtarg, 2).mean()
                 q_loss = q1_loss + q2_loss
 
-                q1_opt.zero_grad(); q2_opt.zero_grad()
+                q1_opt.zero_grad();
+                q2_opt.zero_grad()
                 q_loss.backward()
-                q1_opt.step(); q2_opt.step()
+                q1_opt.step();
+                q2_opt.step()
 
             # val_fn update
             # ========================================================================
             training_data = data.TensorDataset(replay_obs1, v_targ)
-            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=False)
+            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=True, num_workers=0,
+                                                 pin_memory=False)
 
             for local_obs, local_vtarg in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -222,7 +223,8 @@ def sac(
             # policy_fn update
             # ========================================================================
             training_data = data.TensorDataset(replay_obs1)
-            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=False)
+            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=True, num_workers=0,
+                                                 pin_memory=False)
 
             for local_obs in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -256,7 +258,6 @@ def sac(
             # model.q2_fn.state_means = model.q1_fn.state_means
             # model.q2_fn.state_var = model.q1_fn.state_var
 
-
             val_sd = model.value_fn.state_dict()
             tar_sd = target_value_fn.state_dict()
             for layer in tar_sd:
@@ -268,7 +269,6 @@ def sac(
 
 
 def do_rollout(env, model, num_steps):
-
     acts_list = []
     obs1_list = []
     obs2_list = []
@@ -296,16 +296,15 @@ def do_rollout(env, model, num_steps):
         rews_list.append(torch.as_tensor(rew, dtype=dtype))
         obs2_list.append(obs.clone())
 
-
         if cur_step < num_steps:
             done_list.append(torch.as_tensor(done))
         else:
             done_list.append(torch.as_tensor(False))
 
-        cur_step+=1
+        cur_step += 1
 
     ep_obs1 = torch.stack(obs1_list)
-    ep_acts = torch.stack(acts_list).reshape(-1,act_size)
+    ep_acts = torch.stack(acts_list).reshape(-1, act_size)
     ep_rews = torch.stack(rews_list).reshape(-1, 1)
     ep_obs2 = torch.stack(obs2_list)
     ep_done = torch.stack(done_list).reshape(-1, 1)

@@ -114,7 +114,7 @@ dmypy.jso
 .idea
 
 #Particular to this project
-**/data
+**/data*
 **/tmp_logs
 
 #Tensorflow output files
