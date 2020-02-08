@@ -64,8 +64,7 @@ proc_list = []
 #
 
 #torch.set_default_dtype(torch.double)
-for seed in [4]:
-
+for seed in [0,1,2,3]:
     torch.set_num_threads(1)
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)

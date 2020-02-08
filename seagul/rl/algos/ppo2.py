@@ -7,6 +7,7 @@ import pickle
 
 from seagul.rl.common import discount_cumsum, update_mean, update_var
 
+
 def ppo(
     env_name,
     total_steps,
@@ -25,7 +26,6 @@ def ppo(
     val_epochs=10,
     use_gpu=False,
     reward_stop=None,
-    env_config={},
 ):
 
     """
@@ -49,7 +49,6 @@ def ppo(
         val_epochs: how many epochs to use for each value update
         use_gpu:  want to use the GPU? set to true
         reward_stop: reward value to stop if we achieve
-        env_config: arguments to pass to the environment
 
     Returns:
         model: trained model
@@ -150,6 +149,7 @@ def ppo(
             )  # [:-1] because we appended the value function to the end as an extra reward
             batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
 
+
             # calculate this episodes advantages
             last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
             # ep_rew = torch.cat((ep_rew, last_val)) # append value_fn to last reward
@@ -169,8 +169,6 @@ def ppo(
         adv_var = update_var(batch_adv, adv_var, cur_total_steps)
         batch_adv = (batch_adv - adv_mean) / (adv_var + 1e-6)
 
-        #batch_adv = (batch_adv - batch_adv.mean()) / batch_adv.std()
-
         # policy update
         # ========================================================================
         training_data = data.TensorDataset(batch_obs, batch_act, batch_adv)
@@ -187,23 +185,12 @@ def ppo(
                 )
 
                 # Compute the loss
-                logp = model.get_logp(local_obs, local_act).reshape(-1, act_size)
-                old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, act_size)
+                logp = model.get_logp(local_obs, local_act).reshape(-1, 1)
+                old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, 1)
                 r = torch.exp(logp - old_logp)
-                #clip_r = torch.clamp(r, 1-eps, 1+eps)
-                # g = torch.stack([adv * (1 + eps) if adv > 0 else adv * (1 - eps) for adv in local_adv])
-
-                #pol_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
-                # pol_loss = -torch.min(r * local_adv, g).mean()
-                pol_loss = (
-                        -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps)))) /
-                        r.shape[0]
-                )
-
-                if pol_loss > 1e3:
-                    print("ello")
-
-                # do the normal pytorch update
+                clip_r = torch.clamp(r, 1-eps, 1+eps)
+                pol_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
+                
                 pol_opt.zero_grad()
                 pol_loss.backward()
                 pol_opt.step()
@@ -269,7 +256,7 @@ def do_rollout(env, model):
     done = False
 
     while not done:
-        obs = torch.as_tensor(obs, dtype=dtype).detach()
+        obs = torch.as_tensor(obs,dtype=dtype).detach()
         obs_list.append(obs.clone())
 
         act, logprob = model.select_action(obs)
