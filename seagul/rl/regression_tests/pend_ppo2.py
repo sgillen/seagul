@@ -12,13 +12,10 @@ from multiprocessing import Process, Manager
 Basic smoke test for PPO. This file contains an arg_dict that contains hyper parameters known to work with 
 seagul's implementation of PPO. You can also run this script directly, which will check if the algorithm 
 suceeds across 4 random seeds
-
 Example:
-
 from seagul.rl.regression_tests.pend_ppo2 import arg_dict
 from seagul.rl.algos import ppo
 t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
-
 """
 
 
@@ -61,7 +58,6 @@ arg_dict = {
     "pol_lr": 1e-2,
     "val_lr": 1e-3,
     "act_var_schedule": [0.707],
-    "eps" : float('inf'),
 }
 
 if __name__ == "__main__":
