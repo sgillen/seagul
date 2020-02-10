@@ -43,7 +43,7 @@ def run_and_test(arg_dict, retval):
         retval[seed] = True
     else:
         print("Error: seed:", seed, "failed")
-        print("Rewards were", rewards)
+        print("Rewards were", rewards[-1])
         retval[seed] = False
 
 
@@ -59,20 +59,18 @@ if __name__ == "__main__" :
     #orig = sys.stdout
     #sys.stdout = open("/dev/null")
 
-#    proc_list = []
-#    manager = Manager()
-#    ret_dict = manager.dict()
-    ret_dict = {}
+    proc_list = []
+    manager = Manager()
+    ret_dict = manager.dict()
+
     for seed in [0,1,2,3]:
         arg_dict["seed"] = seed
-        run_and_test(arg_dict,ret_dict)
-#        p = Process(target=run_and_test, args=(arg_dict,ret_dict))
-#        p.start()
-#        proc_list.append(p)
+        p = Process(target=run_and_test, args=(arg_dict,ret_dict))
+        p.start()
+        proc_list.append(p)
 
-    # for p in proc_list:
-    #     print("joining")
-    #     p.join()
+    for p in proc_list:
+        p.join()
 
 
     #sys.stdout = orig

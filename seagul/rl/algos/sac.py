@@ -27,6 +27,7 @@ def sac(
         replay_buf_size=int(100000),
         use_gpu=False,
         reward_stop=None,
+        env_config = {},
 ):
     """
     Implements soft actor critic
@@ -51,7 +52,8 @@ def sac(
         replay_buf_size: how big of a replay buffer to use
         use_gpu: determines if we try to use a GPU or not
         reward_stop: reward value to bail at
-
+        env_config: dictionary containing kwargs to pass to your the environment
+    
     Returns:
         model: trained model
         avg_reward_hist: list with the average reward per episode at each epoch
@@ -62,7 +64,6 @@ def sac(
         import torch.nn as nn
         from seagul.nn import MLP
         from seagul.rl.models import SACModel
-
 
         input_size = 3
         output_size = 1
@@ -76,11 +77,10 @@ def sac(
         q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
         model = SACModel(policy, value_fn, q1_fn, q2_fn, 1)
 
-
         model, rews, var_dict = sac("Pendulum-v0", 10000, model)
     """
 
-    env = gym.make(env_name)
+    env = gym.make(env_name, **env_config)
     if isinstance(env.action_space, gym.spaces.Box):
         act_size = env.action_space.shape[0]
         act_dtype = env.action_space.sample().dtype
