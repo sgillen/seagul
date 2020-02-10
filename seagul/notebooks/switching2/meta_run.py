@@ -24,7 +24,49 @@ activation = nn.ReLU
 
 
 proc_list = []
+<<<<<<< HEAD
 
+=======
+#
+# #torch.set_default_dtype(torch.double)
+# for seed in [0, 1, 2, 3]:
+#
+#     torch.set_num_threads(1)
+#     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+#     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+#     model = PPOModelActHold(
+#         policy=policy,
+#         value_fn = value_fn,
+#         discrete=False,
+#         hold_count = 20
+#     )
+#
+#     arg_dict = {
+#         "env_name": env_name,
+#         "model": model,
+#         "act_var_schedule": [2],
+#         "seed": seed,  # int((time.time() % 1)*1e8),
+#         "total_steps" : 500*2048,
+#         "epoch_batch_size": 2048,
+#         "reward_stop" : 900,
+#         "gamma": 1,
+#         "pol_epochs": 10,
+#         "val_epochs": 10,
+#     }
+#
+#     p = Process(target=run_sg, args=(arg_dict, ppo, "warm_start_av" + str(seed), "ppo2 drake acrobot with an act hold of 20, to see if Nans go away..", "/data2/warm_start_ppo2/"))
+#     p.start()
+#     proc_list.append(p)
+#
+#
+# for p in proc_list:
+#     print("joining")
+#     p.join()
+#
+#
+
+#torch.set_default_dtype(torch.double)
+>>>>>>> 746a2e3468eaa63a8ce73d92cda876c2ad1ac5fe
 for seed in [0,1,2,3]:
     torch.set_num_threads(1)
     proc_list = []
