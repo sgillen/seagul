@@ -30,6 +30,7 @@ def ppo_switch(
     val_epochs=10,
     use_gpu=False,
     reward_stop=None,
+    env_config = {}
 ):
 
     """
@@ -52,6 +53,7 @@ def ppo_switch(
         val_epochs: how many epochs to use for each value update
         use_gpu:  want to use the GPU? set to true
         reward_stop: reward value to stop if we achieve
+        env_config: dictionary containing kwargs to pass to your the environment
 
     Returns:
         model: trained model
@@ -78,7 +80,7 @@ def ppo_switch(
 
     # init everything
     # ==============================================================================
-    env = gym.make(env_name)
+    env = gym.make(env_name, **env_config)
     if isinstance(env.action_space, gym.spaces.Box):
         act_size = env.action_space.shape[0]
         act_dtype = torch.double
