@@ -26,10 +26,7 @@ def ppo(
     val_epochs=10,
     use_gpu=False,
     reward_stop=None,
-<<<<<<< HEAD
     env_config = {}
-=======
->>>>>>> 746a2e3468eaa63a8ce73d92cda876c2ad1ac5fe
 ):
 
     """
@@ -53,10 +50,7 @@ def ppo(
         val_epochs: how many epochs to use for each value update
         use_gpu:  want to use the GPU? set to true
         reward_stop: reward value to stop if we achieve
-<<<<<<< HEAD
         env_config: dictionary containing kwargs to pass to your the environment
-=======
->>>>>>> 746a2e3468eaa63a8ce73d92cda876c2ad1ac5fe
 
     Returns:
         model: trained model
