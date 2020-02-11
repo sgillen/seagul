@@ -25,8 +25,6 @@ from seagul.rl.algos import sac
 from seagul.rl.models import SACModel, SACModelActHold
 from seagul.nn import MLP, CategoricalMLP
 
-torch.set_num_threads(1)
-
 proc_list = []
 
 #torch.set_default_dtype(torch.double)

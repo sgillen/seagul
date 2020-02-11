@@ -25,17 +25,18 @@ num_layers = 2
 activation = nn.ReLU
 proc_list = []
 
-for seed in [1, 2, 3, 4]:
+for seed in [0,1,2,3]:
     env_name = "su_acro_drake-v0"
     env = gym.make(env_name)
+
+    torch.set_num_threads(1)
 
     def control(q):
         k = np.array([[1316.85000612, 555.41763935, 570.32667002, 272.57631536]], dtype=np.float32)
         # k = np.array([[278.44223126, 112.29125985, 119.72457377,  56.82824017]])
         gs = np.array([pi, 0, 0, 0], dtype=np.float32)
-        # return 0
-        return (-k.dot(gs - np.asarray(q)))
 
+        return (-k.dot(gs - np.asarray(q)))
 
     model = SwitchedPPOModelActHold(
         # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
@@ -50,33 +51,26 @@ for seed in [1, 2, 3, 4]:
     arg_dict = {
         "env_name": env_name,
         "model": model,
-        "total_steps": 5e5,
+        "total_steps": 500*2048,
         "epoch_batch_size": 2048,
-        "act_var_schedule": [1, 1],
+        "act_var_schedule": [2, 2],
         "gate_var_schedule": [0.1, 0.1],
         "gamma": 1,
         "seed": seed,
-        "reward_stop": 1500,
+        "reward_stop" : 1500,
     }
 
-    run_name = "25_ppo2_nws" + str(seed)
+    run_name = "25_ppo2" + str(seed)
 
-    p = Process(
-        target=run_sg,
-        args=(
-            arg_dict,
-            ppo_switch,
-            run_name,
-            "now with penalties for velocity",
-            "/data/drake_ppo2/",
-        ),
+    #  import ipdb; ipdb.set_trace()
+    # run_sg(arg_dict, ppo_switch, run_name, 'reasonable torque limits, and a new but cheaty warm start', "/data/switch4/")
+
+    run_sg(
+        arg_dict,
+        ppo_switch,
+        run_name,
+        "trying to replicate earlier results that use ppo with ppo2",
+        "/data/drake_ppo22/",
     )
-    p.start()
-    proc_list.append(p)
 
-for p in proc_list:
-    print("joining")
-    p.join()
-
-
-print("finished run ", run_name)
+    print("finished run ", run_name)
