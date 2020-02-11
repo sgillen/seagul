@@ -17,46 +17,40 @@ class LinearEnv(gym.Env):
     Attributes:
     """
 
-    def __init__(self, num_steps=50, dt=0.01):
-
-        # Lorenz system constants
-        self.s = 10
-        self.b = 8 / 3
-        self.r = 28
-
-        # Intial state that we will reset to
-        self.init_state = np.array([1, 1, 1])
+    def __init__(self,
+                 num_steps=50,
+                 dt=0.01,
+                 init_state = np.array([1, 1, 1]),
+                 xyz_max = 100,
+                 u_max = 25,
+                 state_noise_max = 5.0,
+                 act_hold = 1,
+                 reward_fn = lambda s: -((.01*s[0])**2 + (.01*s[1])**2 + (.01*s[2])**2),
+    ):
+        
 
         # Simulation/integration parameters
         self.dt = dt
         self.num_steps = num_steps
+        self.reward_fn = reward_fn
+        self.init_state = init_state
+        self.act_hold = act_hold
         self.cur_step = 0
-        self.state = None
         self.integrator = rk4
 
-        # Observation (state) paramaters
-        # x_max = float('inf')
-        # y_max = float('inf')
-        # z_max = float('inf')
 
-        x_max = 100
-        y_max = 100
-        z_max = 100
-        self.state_max = np.array([x_max, y_max, z_max, 1])
+        self.state_max = np.array([xyz_max, xyz_max, xyz_max, 1])
         self.observation_space = gym.spaces.Box(low=-(self.state_max+50), high=self.state_max+50, dtype=np.float32)
         self.state_noise_max = 5.0
 
         # Action (Control) parameters
-        ux_max = 25
-        uy_max = 25
-        uz_max = 25
-        self.action_max = np.array([ux_max, uy_max])
+        self.action_max = np.array([u_max, u_max])
         self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float32)
         self.u_noise_max = 0.0
 
         self.reward_state = 1
         self.seed()
-        self.state = self.reset()
+        self.reset() #sets self.state
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -74,43 +68,12 @@ class LinearEnv(gym.Env):
 
         action = np.clip(action, -self.action_max, self.action_max)
 
-        for _ in range(10):
+        for _ in range(self.act_hold):
             self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
-
-        # Should reward be something we pass in ? I do like to mess with them a lot...
-        # if 0 < self.state[0] < 20 and 0 < self.state[1] < 30 and 0 < self.state[2] < 50:
-        #     reward = 1.0
-        # else:
-        #     reward = -1.0
-
-
-        #reward = -((.01*self.state[0])**2 + (.01*self.state[1])**2 + (.01*self.state[2])**2)
-
-        if self.reward_state == 1:
-            if self.state[0] > 2 and self.state[2] > 0:
-                reward = 5.0
-                self.reward_state = -1;
-            else:
-                reward = -1.0
-
-        elif self.reward_state == -1:
-            if self.state[0] < -2 and self.state[2] < 0:
-                reward = 5.0
-                self.reward_state = 1;
-            else:
-                reward = -1.0
-
-        
-        self.cur_step += 1
-        if self.cur_step > self.num_steps:
-            done = True
         
         
         aug_state = np.concatenate((self.state, np.array(self.reward_state).reshape(-1)))
-
-        if (np.abs(aug_state) > self.state_max).any():
-            reward -= 1000
-            done = True
+        reward = self.reward_fn(aug_state)
 
         
         return aug_state , reward, done, {}

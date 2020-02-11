@@ -27,8 +27,6 @@ class RandModel:
         return (torch.rand(self.act_size) * 2 * self.act_limit - self.act_limit, 1 / (self.act_limit * 2))
 
 
-
-
 class SACModel:
     """
     Model for use with seagul's sac algorithm
@@ -88,6 +86,7 @@ class SACModelActHold:
 
         self.num_acts = int(policy.output_layer.out_features / 2)
         self.act_limit = act_limit
+        self.cur_hold_count = 0
 
     # Step is the deterministic evaluation of the policy
     def step(self, state):
@@ -114,21 +113,19 @@ class SACModelActHold:
             logp = m.log_prob(samples)
             logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(-1, 1)
 
-            self.cur_action = action
+            self.cur_action = acts
             self.cur_logp = logp
             self.cur_hold_count += 1
 
         else:
-            action = self.cur_action
+            acts = self.cur_action
             logp = self.cur_logp
             self.cur_hold_count += 1
 
         if self.cur_hold_count > self.hold_count:
             self.cur_hold_count = 0
 
-
         return acts, logp
-
 
 
 class PPOModel:

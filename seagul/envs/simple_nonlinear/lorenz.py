@@ -10,7 +10,7 @@ import matplotlib.animation as animation
 from seagul.integration import euler,rk4
 
 
-class LorenzEnv(gym.Env):
+class LorenzEnv(gym.core.Env):
     """
     Environment for the lorenz system
 
@@ -18,15 +18,23 @@ class LorenzEnv(gym.Env):
     Attributes:
     """
 
-    def __init__(self, num_steps=1000, dt=0.01):
-
+    def __init__(self,
+                 num_steps=1000,
+                 dt = 0.01,
+                 s = 10,
+                 b = 8/3,
+                 r = 28,
+                 init_state = np.array([0, 1, 1.05]),
+                 xyz_max = 100,
+                 u_max = 100,
+                 state_noise_max = 5.0,
+    ):
+        
         # Lorenz system constants
-        self.s = 10
-        self.b = 8 / 3
-        self.r = 28
+        self.s = s; self.b = b; self.r = r
 
         # Intial state that we will reset to
-        self.init_state = np.array([0, 1, 1.05])
+        self.init_state = init_state
 
         # Simulation/integration parameters
         self.dt = dt
@@ -36,18 +44,12 @@ class LorenzEnv(gym.Env):
         self.integrator = rk4
 
         # Observation (state) paramaters
-        x_max = 100
-        y_max = 100
-        z_max = 100
-        self.state_max = np.array([x_max, y_max, z_max,1])
+        self.state_max = np.array([xyz_max, xyz_max, xyz_max,1])
         self.observation_space = gym.spaces.Box(low=-self.state_max, high=self.state_max, dtype=np.float64)
         self.state_noise_max = 5.0
 
         # Action (Control) parameters
-        ux_max = 100
-        uy_max = 100
-        uz_max = 100
-        self.action_max = np.array([ux_max, uy_max, uz_max])
+        self.action_max = np.array([u_max, u_max, u_max])
         self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float64)
         self.u_noise_max = 0.0
 
