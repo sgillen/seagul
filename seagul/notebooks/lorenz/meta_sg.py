@@ -17,16 +17,21 @@ from numpy import pi
 from multiprocessing import Process
 
 ## init policy, valuefn
-input_size = 4
-output_size = 2
-layer_size = 12
-num_layers = 2
-activation = nn.ReLU
 
 #torch.set_default_dtype(torch.double)
 proc_list = []
 
-env_name = "linear_z-v0"
+#env_name = "linear_z-v0"
+env_name = "lorenz-v0"
+env = gym.make(env_name)
+
+input_size = env.observation_space.shape[0]
+output_size = env.action_space.shape[0]
+layer_size = 12
+num_layers = 2
+activation = nn.ReLU
+
+
 
 for seed in [0,1,2,3]:
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
@@ -53,7 +58,7 @@ for seed in [0,1,2,3]:
         "val_epochs": 10,
     }
 
-    run_name = "linear1" + str(seed)
+    run_name = "lorenz_again" + str(seed)
 
     p = Process(
         target=run_sg,
@@ -62,7 +67,7 @@ for seed in [0,1,2,3]:
             ppo,
             run_name,
             "basic smoke test",
-            "/data/seagul/",
+            "/data2/seagul/",
         ),
     )
     p.start()

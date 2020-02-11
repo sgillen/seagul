@@ -7,7 +7,6 @@ import pickle
 
 from seagul.rl.common import discount_cumsum, update_mean, update_var
 
-
 def ppo(
     env_name,
     total_steps,
@@ -24,6 +23,7 @@ def ppo(
     val_lr=1e-5,
     pol_epochs=10,
     val_epochs=10,
+    target_kl = .01,
     use_gpu=False,
     reward_stop=None,
     env_config = {}
@@ -48,6 +48,7 @@ def ppo(
         val_lr: learning rate of value function pol_optimizer
         pol_epochs: how many epochs to use for each policy update
         val_epochs: how many epochs to use for each value update
+        target_kl: max KL before breaking
         use_gpu:  want to use the GPU? set to true
         reward_stop: reward value to stop if we achieve
         env_config: dictionary containing kwargs to pass to your the environment
@@ -109,10 +110,10 @@ def ppo(
     use_cuda = torch.cuda.is_available() and use_gpu
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
+    # init logging stuff
     raw_rew_hist = []
     val_loss_hist = []
     pol_loss_hist = []
-
     progress_bar = tqdm.tqdm(total=total_steps)
     cur_total_steps = 0
     progress_bar.update(0)
@@ -151,12 +152,9 @@ def ppo(
             )  # [:-1] because we appended the value function to the end as an extra reward
             batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
 
-
             # calculate this episodes advantages
             last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
-            # ep_rew = torch.cat((ep_rew, last_val)) # append value_fn to last reward
             ep_val = model.value_fn(ep_obs)
-            # ep_val = torch.cat((ep_val, last_val))
             ep_val[-1] = last_val
 
             deltas = ep_rew[:-1] + gamma * ep_val[1:] - ep_val[:-1]
@@ -192,6 +190,10 @@ def ppo(
                 r = torch.exp(logp - old_logp)
                 clip_r = torch.clamp(r, 1-eps, 1+eps)
                 pol_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
+
+                approx_kl = (logp - old_logp).mean()
+                if approx_kl > target_kl:
+                    break
                 
                 pol_opt.zero_grad()
                 pol_loss.backward()

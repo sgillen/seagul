@@ -10,6 +10,7 @@ register(id="humanoid_long-v1", entry_point="gym.envs.mujoco:HumanoidEnv")
 
 register(id="lorenz-v0", entry_point="seagul.envs.simple_nonlinear:LorenzEnv")
 register(id="linear_z-v0", entry_point="seagul.envs.simple_nonlinear:LinearEnv")
+register(id="gen_nonlin-v0", entry_point="seagul.envs.simple_nonlinear:GenEnv")
 
 
 register(id="dyn_car-v0", entry_point="seagul.envs.car:DynCarEnv")
@@ -65,10 +66,13 @@ try:
         return gym.make("humanoid_long-v1")
 
     def lorenz_creator(env_config):
-        return gym.make("lorenz-v0")
+        return gym.make("lorenz-v0", **env_config)
 
     def linear_creator(env_config):
-        return gym.make("linear_z-v0")
+        return gym.make("linear_z-v0", **env_config)
+
+    def generic_creator(env_config):
+        return gym.make("gen_nonlin-v0", **env_config)
 
     
     #  register_env("five_link-v3", five_link_creator)
@@ -81,6 +85,7 @@ try:
     register_env("humanoid_long-v1", humanoid_long_creator)
     register_env("lorenz-v0", lorenz_creator)
     register_env("linear_z-v0", linear_creator)
+    register_env("gen_nonlin-v0", generic_creator)
 
 except:
     import warnings

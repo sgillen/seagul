@@ -22,14 +22,17 @@ config["vf_clip_param"] = 10
 config["seed"] = tune.grid_search([2, 3, 4, 5])  #
 env_name = "linear_z-v0"
 config["env"] = env_name
+config["env_config"]["xyz_max"] = float("inf")
 config["model"]["fcnet_hiddens"] = [64, 64]
+
+
 # import pprint
 # pprint.pprint(config)
 
 analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
-    stop={"timesteps_total": 5e6},
+    stop={"timesteps_total": 5e4},
     local_dir="./data/tune/",
     checkpoint_at_end=True,
 )

@@ -20,17 +20,17 @@ def ppo_switch(
     lam=0.99,
     eps=0.2,
     seed=0,
-    pol_batch_size=1024,
-    val_batch_size=1024,
-    gate_batch_size=1024,
+    minibatch_size=1024,
     pol_lr=1e-4,
     val_lr=1e-5,
     gate_lr=1e-4,
     pol_epochs=10,
     val_epochs=10,
+    gate_epochs=10,
     use_gpu=False,
     reward_stop=None,
-    env_config = {}
+    target_kl=.01,
+    env_config={}
 ):
 
     """
@@ -45,14 +45,16 @@ def ppo_switch(
         gamma: discount applied to future rewards, usually close to 1
         lam: lambda for the Advantage estimmation, usually close to 1
         eps: epsilon for the clipping, usually .1 or .2
-        pol_batch_size: batch size for policy updates
-        val_batch_size: batch size for value function updates
+        minibatch_size: batch size for policy updates
         pol_lr: learning rate for policy pol_optimizer
         val_lr: learning rate of value function pol_optimizer
+        gate_lr: learning rate for the gate_fn
         pol_epochs: how many epochs to use for each policy update
         val_epochs: how many epochs to use for each value update
+        gate_epochs: how many epochs to use for each gate update
         use_gpu:  want to use the GPU? set to true
         reward_stop: reward value to stop if we achieve
+        target_kl: maximum kl between old and current policy before stopping updates
         env_config: dictionary containing kwargs to pass to your the environment
 
     Returns:
@@ -199,7 +201,7 @@ def ppo_switch(
             p_batch_adv = torch.stack(p_adv_list).reshape(-1, 1)
 
             training_data = data.TensorDataset(p_batch_obs, p_batch_act, p_batch_adv)
-            training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True)
+            training_generator = data.DataLoader(training_data, batch_size=minibatch_size, shuffle=True)
 
             # Update the policy using the PPO loss
             for pol_epoch in range(pol_epochs):
@@ -215,13 +217,12 @@ def ppo_switch(
                     logp = model.get_action_logp(local_obs, local_act).reshape(-1, 1)
                     old_logp = old_model.get_action_logp(local_obs, local_act).reshape(-1, 1)
                     r = torch.exp(logp - old_logp)
-                    pol_loss = (
-                        -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
-                        / r.shape[0]
-                    )
+                    clip_r = torch.clamp(r, 1 - eps, 1 + eps)
+                    pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean()
 
-                    if pol_loss > 1e3:
-                        print("ello")
+                    approx_kl = (logp - old_logp).mean()
+                    if approx_kl > target_kl:
+                        break
 
                     # do the normal pytorch update
                     pol_opt.zero_grad()
@@ -231,9 +232,9 @@ def ppo_switch(
         # value_fn update
         # ========================================================================
         training_data = data.TensorDataset(batch_obs, batch_discrew)
-        training_generator = data.DataLoader(training_data, batch_size=val_batch_size, shuffle=True)
+        training_generator = data.DataLoader(training_data, batch_size=minibatch_size, shuffle=True)
 
-        # Upadte value function with the standard L2 Loss
+        # Update value function with the standard L2 Loss
         for val_epoch in range(val_epochs):
             for local_obs, local_val in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -241,21 +242,21 @@ def ppo_switch(
 
                 # predict and calculate loss for the batch
                 val_preds = model.value_fn(local_obs)
-                val_loss = torch.sum(torch.pow(val_preds - local_val, 2)) / (val_preds.shape[0])
+                val_loss = ((val_preds - local_val)**2).mean()
 
-                # do the normal pytorch update
+                # backprop and update
                 val_opt.zero_grad()
                 val_loss.backward()
                 val_opt.step()
 
-        # update gating function
+        # Update gating function
         # ----------------------------------------------------------------------
-        # construct a training data generator
+        # Construct a training data generator
         training_data = data.TensorDataset(batch_obs, batch_gate, batch_adv)
-        training_generator = data.DataLoader(training_data, batch_size=gate_batch_size, shuffle=True)
+        training_generator = data.DataLoader(training_data, batch_size=minibatch_size, shuffle=True)
 
         # Update the policy using the PPO loss
-        for pol_epoch in range(pol_epochs):
+        for gate_epoch in range(gate_epochs):
             for local_obs, local_gate, local_adv in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
                 local_obs, local_gate, local_adv = (
@@ -268,9 +269,12 @@ def ppo_switch(
                 logp = model.get_path_logp(local_obs, local_gate).reshape(-1, 1)
                 old_logp = old_model.get_path_logp(local_obs, local_gate).reshape(-1, 1)
                 r = torch.exp(logp - old_logp)
-                gate_loss = (
-                    -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps)))) / r.shape[0]
-                )
+                clip_r = torch.clamp(r, 1-eps, 1+eps)
+                gate_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
+
+                approx_kl = (logp - old_logp).mean()
+                if approx_kl > target_kl:
+                    break
 
                 # do the normal pytorch update
                 gate_opt.zero_grad()
@@ -319,7 +323,6 @@ def update_var(data, cur_var, cur_steps):
 
 
 def do_rollout(env, model):
-
     act_list = []
     obs_list = []
     rew_list = []
