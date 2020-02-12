@@ -65,18 +65,42 @@ for i in range(3,7):
                                          "custom_options": {
                                              "hidden_neuons": [64, 64]}},
                                         {"custom_model": "linear"}])
+    # config['model'] = tune.grid_search([{"custom_model": "RBF", 
+    #                                      "custom_options": {
+    #                                          "normalization": False,
+    #                                          "units": 64,
+    #                                          "const_beta": False,
+    #                                          "beta_initial": "ones"}},
+    #                                     {"custom_model": "RBF", 
+    #                                      "custom_options": {
+    #                                          "normalization": True,
+    #                                          "units": 64,
+    #                                          "const_beta": True,
+    #                                          "beta_initial": "ones"}},
+    #                                     {"custom_model": "RBF", 
+    #                                      "custom_options": {
+    #                                          "normalization": True,
+    #                                          "units": 64,
+    #                                          "const_beta": False,
+    #                                          "beta_initial": "ones"}},
+    #                                     {"custom_model": "RBF", 
+    #                                      "custom_options": {
+    #                                          "normalization": False,
+    #                                          "units": 64,
+    #                                          "const_beta": True,
+    #                                          "beta_initial": "ones"}}])
     #---------------------------------------------------------------
     try:
         analysis = tune.run(
             algorithm,
             local_dir=output_dir,
             # name="test",
-            stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 1500000},
+            stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 1000000},
             checkpoint_freq=1,
             max_failures=5,
             checkpoint_at_end=True,
             config=config,
-            num_samples=4
+            num_samples=2
         )
     except Exception as e:
                 Path(output_dir + algorithm).mkdir(parents=True, exist_ok=True)
