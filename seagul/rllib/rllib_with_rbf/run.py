@@ -9,87 +9,77 @@ import os
 import time
 import random
 import string
+import seagul.envs
 from pathlib import Path
-
 # import and register custom models
-from rbf_net import RBFModel1, RBFModel2
-from mlp_net import MyKerasModel1, MyKerasModel2
-ModelCatalog.register_custom_model("rbf", RBFModel1)
-ModelCatalog.register_custom_model("rbf_2", RBFModel2)
-ModelCatalog.register_custom_model("mlp_1_256", MyKerasModel1)
-ModelCatalog.register_custom_model("mlp_2_64", MyKerasModel2)
-
-
+from rbf_net import RBFModel
+from mlp_net import MLP, Linear
+ModelCatalog.register_custom_model("RBF", RBFModel)
+ModelCatalog.register_custom_model("MLP", MLP)
+ModelCatalog.register_custom_model("linear", Linear)
 
 #---- set parameters: --------------------
 algos = {
-    "0": "A2C",
-    "1": "A3C",
-    "2": "APEX",
-    "3": "APPO",
-    "4": "DDPG",
-    "5": "IMPALA",
-    "6": "PG",
-    "7": "PPO",
-    "8": "SAC",
-    "9": "TD3"
+    "high-throughput" : {
+        0: "APEX",
+        1: "IMPALA",
+        2: "APPO"
+    },
+    "gradient-based" : {
+        0: "A3C",
+        1: "A2C",
+        2: "PG",
+        3: "PPO",
+        4: "SAC",
+        5: "DDPG",
+        6: "TD3"
+    },
+    "derivative-free" : {
+        0: "ARS",
+        1: "ES"
+    }
 }
 envs = {
-    "0": "HumanoidBulletEnv-v0",
-    "1": "Walker2DBulletEnv-v0",
-    "2": "Pendulum-v0",
-    "3": "HalfCheetahBulletEnv-v0"
-}
-algorithm = algos["8"]
-environment = envs["3"]
-model = "mlp_2_64"
-comments = "" # "mlp with two hidden layers with 64 neurons each"  # "rbf with new normalization code and different learning rates" # "rbf with old code (wrong for normalization) without input weights"
-output_dir = "./data/"
-#-----------------------------------------
-config = json.load(open("./params/" + environment + "/" + algorithm + ".json")) # 
-config['env'] = environment
-config['model']['custom_model'] = model
-#---- tune hyperparameters: --------------
-# config['lr'] = tune.grid_search([0.01,0.001, 0.0003])
-# config['lr'] = 0.01
-#-----------------------------------------
-# def info_to_file(name):
-#     my_path = output_dir + algorithm  + "/" + name + "/" 
-#     Path(my_path).mkdir(parents=True, exist_ok=True)
-#     file = open(my_path + "info.txt", "w")
-#     file.write(comments)
-#     file.close()
+    0: {"name": "HumanoidBulletEnv-v0", "stop": 6000},
+    1: {"name": "Walker2DBulletEnv-v0", "stop": 2000},
+    2: {"name": "Pendulum-v0", "stop": 150},
+    3: {"name": "HalfCheetahBulletEnv-v0", "stop": 9000}}
 
-def trial_str_creator(trial):
-    trialname = algorithm + "_" + environment + "_" + model 
-    # info_to_file(trialname + "_" + time.strftime("%Y-%m-%d_%H-%M-%S") + trial.trial_id)
-    return trialname
-stop = {
-    "HumanoidBulletEnv-v0": 6000,
-    "Walker2DBulletEnv-v0": 2000, # ?? 
-    "Pendulum-v0" : 150,
-    "HalfCheetahBulletEnv-v0": 9000 # found 2000, 9000
-}
 ray.init()
-analysis = tune.run(
-    algorithm,
-    local_dir=output_dir,
-    # name="test",
-    # trial_name_creator=trial_str_creator,
-    stop={"episode_reward_mean": stop[environment]},
-    checkpoint_freq=1,
-    max_failures=5,
-    checkpoint_at_end=True,
-    config=config,
-    trial_name_creator=trial_str_creator
-)
-
-# write comments to file
-if not (not comments): # if there are comments write to file
-    trial_names = [str(trial) for trial in analysis.trials]
-    for name in trial_names:
-        dir_name = [dI for dI in os.listdir(output_dir + "/" + algorithm  + "/") if (os.path.isdir(os.path.join(output_dir + algorithm + "/",dI)) & dI.startswith(name))]
-        file = open(output_dir + "/" + algorithm  + "/" + dir_name[0] + "/" + "info.txt", "w")
-        file.write(comments)
-        file.close()
-
+for i in range(3,7):
+    #---- adjust parameters: -------------------------------------
+    algorithm = algos["gradient-based"][i]
+    # algorithm = algos["0"]
+    environment = envs[3]["name"]
+    output_dir = "./data/"
+    config = json.load(open("./params/" + environment + "/" + algorithm + ".json")) # 
+    config['env'] = environment
+    #---- tune hyperparameters: ----------------------------------
+    config['model'] = tune.grid_search([{"custom_model": "RBF", 
+                                         "custom_options": {
+                                             "normalization": False,
+                                             "units": 64,
+                                             "const_beta": False,
+                                             "beta_initial": "ones"}},
+                                        {"custom_model": "MLP",
+                                         "custom_options": {
+                                             "hidden_neuons": [64, 64]}},
+                                        {"custom_model": "linear"}])
+    #---------------------------------------------------------------
+    try:
+        analysis = tune.run(
+            algorithm,
+            local_dir=output_dir,
+            # name="test",
+            stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 1500000},
+            checkpoint_freq=1,
+            max_failures=5,
+            checkpoint_at_end=True,
+            config=config,
+            num_samples=4
+        )
+    except Exception as e:
+                Path(output_dir + algorithm).mkdir(parents=True, exist_ok=True)
+                file = open(output_dir + algorithm  + "/" + "exception.txt", "w")
+                file.write(str(e))
+                file.close()

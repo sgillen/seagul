@@ -2,7 +2,7 @@
     "model": {
         "custom_options": {}
     },
-    "horizon": 200,
+    "horizon": 1000,
     "soft_horizon": false,
     "tau": 0.005,
     "target_entropy": "auto",
@@ -23,6 +23,7 @@
     "num_workers": 0,
     "num_gpus": 0,
     "clip_actions": false,
+    "normalize_actions": true,
     "evaluation_interval": 1,
     "metrics_smoothing_episodes": 5
 }
