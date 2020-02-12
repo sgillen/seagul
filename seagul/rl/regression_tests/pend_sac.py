@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from seagul.rl.algos.sac import sac
 from seagul.nn import MLP
@@ -32,6 +33,7 @@ q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 model = SACModel(policy, value_fn, q1_fn, q2_fn, 1)
 
 def run_and_test(arg_dict, retval):
+    torch.set_num_threads(1)
 
     t_model, rewards, var_dict = sac(**arg_dict)
 
@@ -41,7 +43,7 @@ def run_and_test(arg_dict, retval):
         retval[seed] = True
     else:
         print("Error: seed:", seed, "failed")
-        print("Rewards were", rewards)
+        print("Rewards were", rewards[-1])
         retval[seed] = False
 
 
@@ -57,20 +59,18 @@ if __name__ == "__main__" :
     #orig = sys.stdout
     #sys.stdout = open("/dev/null")
 
-#    proc_list = []
-#    manager = Manager()
-#    ret_dict = manager.dict()
-    ret_dict = {}
+    proc_list = []
+    manager = Manager()
+    ret_dict = manager.dict()
+
     for seed in [0,1,2,3]:
         arg_dict["seed"] = seed
-        run_and_test(arg_dict,ret_dict)
-#        p = Process(target=run_and_test, args=(arg_dict,ret_dict))
-#        p.start()
-#        proc_list.append(p)
+        p = Process(target=run_and_test, args=(arg_dict,ret_dict))
+        p.start()
+        proc_list.append(p)
 
-    # for p in proc_list:
-    #     print("joining")
-    #     p.join()
+    for p in proc_list:
+        p.join()
 
 
     #sys.stdout = orig
