@@ -7,27 +7,34 @@ import gym.spaces
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from seagul.integration import euler,rk4
 
 
-class LorenzEnv(gym.Env):
+class LorenzEnv(gym.core.Env):
     """
     Environment for the lorenz system
 
 
     Attributes:
-
-
     """
 
-    def __init__(self, num_steps=100, dt=0.01):
-
+    def __init__(self,
+                 num_steps=1000,
+                 dt = 0.01,
+                 s = 10,
+                 b = 8/3,
+                 r = 28,
+                 init_state = np.array([0, 1, 1.05]),
+                 xyz_max = 100,
+                 u_max = 100,
+                 state_noise_max = 5.0,
+    ):
+        
         # Lorenz system constants
-        self.s = 10
-        self.b = 8 / 3
-        self.r = 28
+        self.s = s; self.b = b; self.r = r
 
         # Intial state that we will reset to
-        self.init_state = np.array([0, 1, 1.05])
+        self.init_state = init_state
 
         # Simulation/integration parameters
         self.dt = dt
@@ -37,21 +44,16 @@ class LorenzEnv(gym.Env):
         self.integrator = rk4
 
         # Observation (state) paramaters
-        x_max = 100
-        y_max = 100
-        z_max = 100
-        self.state_max = np.array([x_max, y_max, z_max])
+        self.state_max = np.array([xyz_max, xyz_max, xyz_max,1])
         self.observation_space = gym.spaces.Box(low=-self.state_max, high=self.state_max, dtype=np.float64)
-        self.state_noise_max = 0.0
+        self.state_noise_max = 5.0
 
         # Action (Control) parameters
-        ux_max = 100
-        uy_max = 100
-        uz_max = 100
-        self.action_max = np.array([ux_max, uy_max, uz_max])
+        self.action_max = np.array([u_max, u_max, u_max])
         self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float64)
         self.u_noise_max = 0.0
 
+        self.reward_state = 1
         self.seed()
         self.state = self.reset()
 
@@ -62,8 +64,10 @@ class LorenzEnv(gym.Env):
     def reset(self):
         self.state = self.init_state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
         self.cur_step = 0
+        aug_state = np.concatenate((self.state, np.array(self.reward_state).reshape(-1)))
 
-        return self.state
+    
+        return aug_state
 
     def _get_ob(self):
         return self.state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
@@ -72,28 +76,50 @@ class LorenzEnv(gym.Env):
         done = False
 
         # Algorithms aware of the action space won't need their inputs clipped but better to do it here than not
-        action = np.clip(action, -self.action_max, self.action_max)
+        #action = np.clip(action, -self.action_max, self.action_max)
 
         # Add noise to the force action (if noise is zero this will do nothing)
         if self.u_noise_max > 0:
             action += self.np_random.uniform(-self.torque_noise_max, self.torque_noise_max)
 
         ds = self._derivs(0, self.state, action)
-        self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
+
+        for _ in range(10):
+            self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
 
         # Should reward be something we pass in ? I do like to mess with them a lot...
-        if 0 < self.state[0] < 20 and 0 < self.state[1] < 30 and 0 < self.state[2] < 50:
-            reward = 1.0
-        else:
-            reward = -1.0
+        # if 0 < self.state[0] < 20 and 0 < self.state[1] < 30 and 0 < self.state[2] < 50:
+        #     reward = 1.0
+        # else:
+        #     reward = -1.0
 
+
+        reward = -((.01*self.state[0])**2 + (.01*self.state[1])**2 + (.01*self.state[2])**2)
+
+        # if self.reward_state == 1:
+        #     if self.state[0] > 2 and self.state[1] > 3:
+        #         reward = 5.0
+        #         self.reward_state = 0;
+        #     else:
+        #         reward = -1.0
+
+        # elif self.reward_state == 0:
+        #     if self.state[0] < -2 and self.state[1] < -3:
+        #         reward = 5.0
+        #         self.reward_state = 1;
+        #     else:
+        #         reward = -1.0
+
+        
         self.cur_step += 1
         if self.cur_step > self.num_steps:
             done = True
-        elif (np.abs(self.state) > self.state_max).any():
-            done = True
+            # elif (np.abs(self.state) > self.state_max).any():
+            #m     done = True
 
-        return self.state, reward, done, {}
+        
+        aug_state = np.concatenate((self.state, np.array(self.reward_state).reshape(-1)))
+        return aug_state , reward, done, {}
 
     def render(self, mode="human"):
         raise NotImplementedError
@@ -116,46 +142,3 @@ class LorenzEnv(gym.Env):
         zdot = q[0] * q[1] - self.b * q[2] - u[2]
 
         return np.array([xdot, ydot, zdot])
-
-
-def rk4(derivs, a, t0, dt, s0):
-    """
-    Single step of an RK4 solver, designed for control applications, so it passed an action to your
-    derivs fcn
-
-    Attributes:
-        derivs: the function you are trying to integrate, should have signature:
-        function(t,s,a) -> ds/dt
-
-        a: action, should belong to the action space of your environment
-
-        t0: float, initial time, often you can just set this to zero if all that matters for your
-        derivs is the state and dt
-
-        dt: how big of a timestep to integrate
-
-        s0: initial state of your system, should belong to the envs obvervation space
-
-    Returns:
-        s[n+1]: I.E. the state of your system after integrating with action a for dt seconds
-
-    Example:
-        derivs = lambda t,q,a: (q+a)**2
-        a =  1.0
-        t0 = 0
-        dt = .1
-        s0 = 5
-        s1 = rk4(derivs, a, t0, dt, s0)
-
-    """
-
-    k1 = dt * derivs(t0, s0, a)
-    k2 = dt * derivs(t0 + dt / 2, s0 + k1 / 2, a)
-    k3 = dt * derivs(t0 + dt / 2, s0 + k2 / 2, a)
-    k4 = dt * derivs(t0 + dt, s0 + k3, a)
-
-    return s0 + 1 / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-
-
-def euler(derivs, a, t0, dt, s0):
-    return s0 + dt * derivs(t0 + dt, s0, a)
