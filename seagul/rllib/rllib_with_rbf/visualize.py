@@ -75,6 +75,7 @@ def plot_progress(output_dir, smoothing_factor):
 def render(alg, current_env, checkpoint, home_path):
     checkpoint_path = home_path + "checkpoint_" + checkpoint + "/checkpoint-" + checkpoint
     config = json.load(open(home_path + "params.json"))
+    config_bin = pkl.load(open(home_path + "params.pkl", "rb"))
     ray.shutdown()
     ray.init()
     ModelCatalog.register_custom_model("RBF", RBFModel)

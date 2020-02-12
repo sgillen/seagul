@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import visualize
 
-output_dirs = ["./HalfCheetah_test/SAC/", "./data/HalfCheetah/SAC_all/SAC_HalfCheetahBulletEnv-v0_48677418_2020-02-10_18-50-377zn3_x67/"]
+output_dirs = ["./data/PG/"]
 
 for dir in output_dirs:
     visualize.plot_progress(dir, smoothing_factor=3)

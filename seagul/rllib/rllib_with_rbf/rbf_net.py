@@ -12,6 +12,8 @@ from ray.rllib.agents.dqn.distributional_q_model import DistributionalQModel
 from ray.rllib.utils import try_import_tf
 from ray.rllib.models.tf.visionnet_v2 import VisionNetwork as MyVisionNetwork
 import datetime
+from gym import envs
+
 
 
 

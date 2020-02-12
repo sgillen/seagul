@@ -1,3 +1,3 @@
 {
-    "python.pythonPath": "/home/grabka/anaconda3/envs/cluster/bin/python"
+    "python.pythonPath": "/usr/bin/python3"
 }
