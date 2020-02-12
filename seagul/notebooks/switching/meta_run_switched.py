@@ -25,6 +25,8 @@ num_layers = 2
 activation = nn.ReLU
 proc_list = []
 
+torch.set_num_threads(1)
+
 for seed in [1, 2, 3, 4]:
     env_name = "su_acro_drake-v0"
     env = gym.make(env_name)
@@ -47,6 +49,25 @@ for seed in [1, 2, 3, 4]:
         hold_count=20,
     )
 
+    def reward_fn(ns):
+        reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+        reward -= (abs(ns[2]) > 10)
+        reward -= (abs(ns[3]) > 30)
+        return reward
+
+    env_config = {
+        "max_torque" : 25,
+        "init_state" : [0.0, 0.0, 0.0, 0.0],
+        "init_state_weights" : np.array([0, 0, 0, 0]),
+        "dt" : .01,
+        "max_t" : 5,
+        "act_hold" : 1,
+        "fixed_step" : True,
+        "int_accuracy" : .01,
+        "reward_fn" : reward_fn
+    }
+
+
     arg_dict = {
         "env_name": env_name,
         "model": model,
@@ -57,9 +78,10 @@ for seed in [1, 2, 3, 4]:
         "gamma": 1,
         "seed": seed,
         "reward_stop": 1500,
+        "env_config": env_config
     }
 
-    run_name = "25_ppo2_nws" + str(seed)
+    run_name = "25_ppo2_2ag" +  str(seed)
 
     p = Process(
         target=run_sg,

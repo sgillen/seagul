@@ -1,12 +1,9 @@
 import numpy as np
 import gym
-from numpy import cos, sin, pi
 
 from gym.utils import seeding
 import gym.spaces
 
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 from seagul.integration import euler,rk4
 
 class LinearEnv(gym.Env):
@@ -17,18 +14,18 @@ class LinearEnv(gym.Env):
     Attributes:
     """
 
-    def __init__(self,
-                 num_steps=50,
-                 dt=0.01,
-                 init_state = np.array([1, 1, 1]),
-                 xyz_max = 100,
-                 u_max = 25,
-                 state_noise_max = 5.0,
-                 act_hold = 1,
-                 reward_fn = lambda s: -((.01*s[0])**2 + (.01*s[1])**2 + (.01*s[2])**2),
+    def __init__(
+        self,
+        num_steps=50,
+        dt=0.01,
+        init_state=np.array([1, 1, 1]),
+        xyz_max=float('inf'),
+        u_max=25,
+        state_noise_max=5.0,
+        act_hold=1,
+        reward_fn=lambda s: (-((.01*s[0])**2 + (.01*s[1])**2 + (.01*s[2])**2), s)
     ):
         
-
         # Simulation/integration parameters
         self.dt = dt
         self.num_steps = num_steps
@@ -37,7 +34,6 @@ class LinearEnv(gym.Env):
         self.act_hold = act_hold
         self.cur_step = 0
         self.integrator = rk4
-
 
         self.state_max = np.array([xyz_max, xyz_max, xyz_max, 1])
         self.observation_space = gym.spaces.Box(low=-(self.state_max+50), high=self.state_max+50, dtype=np.float32)
@@ -48,9 +44,10 @@ class LinearEnv(gym.Env):
         self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float32)
         self.u_noise_max = 0.0
 
-        self.reward_state = 1
+        self.reward_state = 10
         self.seed()
-        self.reset() #sets self.state
+        self.state = None
+        self.reset()  # sets self.state
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -64,18 +61,20 @@ class LinearEnv(gym.Env):
         return aug_state
 
     def step(self, action):
-        done = False
-
         action = np.clip(action, -self.action_max, self.action_max)
 
         for _ in range(self.act_hold):
             self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
-        
-        
-        aug_state = np.concatenate((self.state, np.array(self.reward_state).reshape(-1)))
-        reward = self.reward_fn(aug_state)
 
-        
+        aug_state = np.concatenate((self.state, np.array(self.reward_state).reshape(-1)))
+        reward, aug_state = self.reward_fn(aug_state)
+        self.reward_state = aug_state[-1]
+
+        done = False
+        self.cur_step += 1
+        if self.cur_step > self.num_steps:
+            done = True
+
         return aug_state , reward, done, {}
 
     def render(self, mode="human"):

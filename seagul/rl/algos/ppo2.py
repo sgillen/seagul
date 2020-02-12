@@ -79,6 +79,8 @@ def ppo(
 
     # init everything
     # ==============================================================================
+    torch.set_num_threads(1)
+
     env = gym.make(env_name, **env_config)
     if isinstance(env.action_space, gym.spaces.Box):
         act_size = env.action_space.shape[0]
@@ -185,8 +187,8 @@ def ppo(
                 )
 
                 # Compute the loss
-                logp = model.get_logp(local_obs, local_act).reshape(-1, 1)
-                old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, 1)
+                logp = model.get_logp(local_obs, local_act).reshape(-1, act_size)
+                old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, act_size)
                 r = torch.exp(logp - old_logp)
                 clip_r = torch.clamp(r, 1-eps, 1+eps)
                 pol_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
@@ -249,7 +251,6 @@ def make_variance_schedule(var_schedule, model, num_steps):
 
 
 def do_rollout(env, model):
-
     act_list = []
     obs_list = []
     rew_list = []

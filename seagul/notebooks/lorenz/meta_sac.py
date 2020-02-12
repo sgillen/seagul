@@ -2,8 +2,8 @@ import gym
 import seagul.envs
 
 from seagul.rl.run_utils import run_sg
-from seagul.rl.algos import ppo
-from seagul.rl.models import PPOModel, PPOModelActHold
+from seagul.rl.algos import sac
+from seagul.rl.models import SACModel
 from seagul.nn import MLP
 
 import torch.nn as nn
@@ -22,19 +22,11 @@ activation = nn.ReLU
 
 for seed in [0,1,2,3]:
 
-
-
-    policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+    policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-
-    # model = PPOModelActHold(
-    #     policy=policy,
-    #     value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
-    #     discrete=False,
-    #     hold_count = 10
-    # )
-
-    model = PPOModel(policy=policy,value_fn=value_fn , discrete=False)
+    q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
+    q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
+    model = SACModel(policy=policy, value_fn=value_fn, q1_fn=q1_fn, q2_fn=q2_fn, act_limit=5)
 
 
     def reward_fn(s):
@@ -56,35 +48,33 @@ for seed in [0,1,2,3]:
 
 
     env_config = {
-        "num_steps": 50,
+        "num_steps": 500,
+        "act_hold" : 10,
         "reward_fn": reward_fn,
-        "hold_count": 10
+        "xyz_max" : float('inf')
     }
 
     arg_dict = {
         "env_name": env_name,
         "model": model,
-        "act_var_schedule": [1],
         "seed": seed,  # int((time.time() % 1)*1e8),
-        "total_steps": 5e5,
-        "epoch_batch_size": 2048,
+        "total_steps": 5e4,
         "gamma": 1,
-        "pol_epochs": 10,
-        "val_epochs": 10,
-        "env_config": env_config
+        "env_config": env_config,
+        "exploration_steps": 10000
     }
 
-    run_name = "ppo_again" + str(seed)
+    run_name = "lorenz_me" + str(seed)
 
     proc_list = []
     p = Process(
         target=run_sg,
         args=(
             arg_dict,
-            ppo,
+            sac,
             run_name,
             "",
-            "/data/seagul/moar_ppo",
+            "/data/seagul/sac",
         ),
     )
     p.start()
