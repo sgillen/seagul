@@ -79,6 +79,7 @@ def sac(
 
         model, rews, var_dict = sac("Pendulum-v0", 10000, model)
     """
+    torch.set_num_threads(1)
 
     env = gym.make(env_name, **env_config)
     if isinstance(env.action_space, gym.spaces.Box):
@@ -149,7 +150,7 @@ def sac(
         raw_rew_hist.append(torch.sum(ep_rews))
         progress_bar.update(cur_batch_steps)
 
-        for _ in range(int(ep_steps)):
+        for _ in range(min(int(ep_steps), iters_per_update)):
             # compute targets for Q and V
             # ========================================================================
             replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)
