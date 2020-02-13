@@ -51,7 +51,7 @@ envs = {
     3: {"name": "HalfCheetahBulletEnv-v0", "stop": 9000}}
 
 ray.init()
-for i in range(2,7):
+for i in range(3,5):
     #---- adjust parameters: -------------------------------------
     algorithm = algos["gradient-based"][i]
     # algorithm = algos["0"]
