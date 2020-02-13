@@ -56,7 +56,7 @@ for i in range(4,5):
     algorithm = algos["gradient-based"][i]
     # algorithm = algos["0"]
     environment = envs[3]["name"]
-    output_dir = "./data/"
+    output_dir = "./data/" + environment + "/compare_rbf/"
     config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
     config['env'] = environment
     #---- tune hyperparameters: ----------------------------------
@@ -101,7 +101,7 @@ for i in range(4,5):
             local_dir=output_dir,
             # name="test",
             stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 1000000},
-            checkpoint_freq=1,
+            checkpoint_freq=10,
             max_failures=5,
             checkpoint_at_end=True,
             config=config,
