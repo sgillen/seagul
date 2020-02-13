@@ -51,11 +51,11 @@ envs = {
     3: {"name": "HalfCheetahBulletEnv-v0", "stop": 9000}}
 
 ray.init()
-for i in range(2,7):
+for i in range(3,5):
     #---- adjust parameters: -------------------------------------
     algorithm = algos["gradient-based"][i]
     # algorithm = algos["0"]
-    environment = envs[3]["name"]
+    environment = envs[1]["name"]
     output_dir = "./data/"
     if os.path.exists("./params/" + environment + "/" + algorithm + ".json"):
         config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
@@ -65,7 +65,7 @@ for i in range(2,7):
     #---- tune hyperparameters: ----------------------------------
     config['model'] = tune.grid_search([{"custom_model": "RBF", 
                                          "custom_options": {
-                                             "normalization": False,
+                                             "normalization": True,
                                              "units": 64,
                                              "const_beta": False,
                                              "beta_initial": "ones"}},
