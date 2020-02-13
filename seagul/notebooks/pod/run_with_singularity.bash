@@ -1,8 +1,9 @@
 #!/bin/bash -l
-#SBATCH -N 1 --ntasks-per-node=40
-#SBATCH --mail-user=sgillen@ucsb.edu
+#SBATCH -N 1 --ntasks-per-node=20
+#SBATCH --mail-user=grabka@ucsb.edu
 #SBATCH --mail-type=start,end
-
-git pull
+cd seagul
+git pull origin rbf
+cd ..
 module load singularity
-singularity exec $HOME/rllib.simg python3 $1
+singularity exec $HOME/rbf.simg python3.7 $1
