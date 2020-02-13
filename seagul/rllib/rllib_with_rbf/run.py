@@ -11,7 +11,7 @@ import gym
 from gym import envs
 
 import pybullet_envs
-# import seagul.envs
+import seagul.envs
 from pathlib import Path
 # import and register custom models
 all_envs = envs.registry.all()
@@ -51,49 +51,52 @@ envs = {
     3: {"name": "HalfCheetahBulletEnv-v0", "stop": 9000}}
 
 ray.init()
-for i in range(4,5):
+for i in range(2,7):
     #---- adjust parameters: -------------------------------------
     algorithm = algos["gradient-based"][i]
     # algorithm = algos["0"]
     environment = envs[3]["name"]
     output_dir = "./data/"
-    config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
+    if os.path.exists("./params/" + environment + "/" + algorithm + ".json"):
+        config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
+    else: # for cluster
+        config = json.load(open("./seagul/seagul/rllib/rllib_with_rbf/params/" + environment + "/" + algorithm + ".json"))
     config['env'] = environment
     #---- tune hyperparameters: ----------------------------------
-    # config['model'] = tune.grid_search([{"custom_model": "RBF", 
-    #                                      "custom_options": {
-    #                                          "normalization": False,
-    #                                          "units": 64,
-    #                                          "const_beta": False,
-    #                                          "beta_initial": "ones"}},
-    #                                     {"custom_model": "MLP",
-    #                                      "custom_options": {
-    #                                          "hidden_neuons": [64, 64]}},
-    #                                     {"custom_model": "linear"}])
     config['model'] = tune.grid_search([{"custom_model": "RBF", 
                                          "custom_options": {
                                              "normalization": False,
                                              "units": 64,
                                              "const_beta": False,
                                              "beta_initial": "ones"}},
-                                        {"custom_model": "RBF", 
+                                        {"custom_model": "MLP",
                                          "custom_options": {
-                                             "normalization": True,
-                                             "units": 64,
-                                             "const_beta": True,
-                                             "beta_initial": "ones"}},
-                                        {"custom_model": "RBF", 
-                                         "custom_options": {
-                                             "normalization": True,
-                                             "units": 64,
-                                             "const_beta": False,
-                                             "beta_initial": "ones"}},
-                                        {"custom_model": "RBF", 
-                                         "custom_options": {
-                                             "normalization": False,
-                                             "units": 64,
-                                             "const_beta": True,
-                                             "beta_initial": "ones"}}])
+                                             "hidden_neuons": [64, 64]}},
+                                        {"custom_model": "linear"}])
+    # config['model'] = tune.grid_search([{"custom_model": "RBF", 
+    #                                      "custom_options": {
+    #                                          "normalization": False,
+    #                                          "units": 64,
+    #                                          "const_beta": False,
+    #                                          "beta_initial": "ones"}},
+    #                                     {"custom_model": "RBF", 
+    #                                      "custom_options": {
+    #                                          "normalization": True,
+    #                                          "units": 64,
+    #                                          "const_beta": True,
+    #                                          "beta_initial": "ones"}},
+    #                                     {"custom_model": "RBF", 
+    #                                      "custom_options": {
+    #                                          "normalization": True,
+    #                                          "units": 64,
+    #                                          "const_beta": False,
+    #                                          "beta_initial": "ones"}},
+    #                                     {"custom_model": "RBF", 
+    #                                      "custom_options": {
+    #                                          "normalization": False,
+    #                                          "units": 64,
+    #                                          "const_beta": True,
+    #                                          "beta_initial": "ones"}}])
     #---------------------------------------------------------------
     try:
         analysis = tune.run(
@@ -105,7 +108,7 @@ for i in range(4,5):
             max_failures=5,
             checkpoint_at_end=True,
             config=config,
-            num_samples=2
+            num_samples=4
         )
     except Exception as e:
                 Path(output_dir + algorithm).mkdir(parents=True, exist_ok=True)
