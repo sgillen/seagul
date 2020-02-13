@@ -12,6 +12,7 @@ config["env"] = env_name
 config["model"]["fcnet_hiddens"] = [32, 32]
 config["actor_hiddens"] =  [32, 32]
 config["critic_hiddens"] = [32, 32]
+config["no_done_at_end"] =  True
 
 def reward_fn(s):
     if s[3] > 0:
@@ -19,20 +20,19 @@ def reward_fn(s):
             reward = 5.0
             s[3] = -10
         else:
-            reward = -1.0
+            reward = 0.0
 
     elif s[3] < 0:
         if s[0] < -2 and s[2] < -3:
             reward = 5.0
             s[3] = 10
         else:
-            reward = -1.0
+            reward = 0.0
 
     return reward, s
 
-
 config["env_config"]["reward_fn"] = reward_fn
-config["env_config"]["num_steps"] = 500
+config["env_config"]["num_steps"] = 100
 config["env_config"]["act_hold"] = 10
 config["env_config"]["xyz_max"] = float('inf')
 
@@ -44,8 +44,8 @@ config["env_config"]["xyz_max"] = float('inf')
 analysis = tune.run(
     td3.TD3Trainer,
     config=config,
-    stop={"timesteps_total": 5e5, "time_total_s": 9000}, #900s == 15m
+    stop={"timesteps_total": 5e5, "time_total_s": 1800}, #900s == 15m
     num_samples=4,
-    local_dir="./data/tune/custom_reward",
+    local_dir="./data/tune/box_reward",
     checkpoint_at_end=True,
 )

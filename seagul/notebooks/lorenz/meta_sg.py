@@ -43,14 +43,14 @@ for seed in [0,1,2,3]:
                 reward = 5.0
                 s[3] = 0
             else:
-                reward = -1.0
+                reward = 0.0
 
         elif s[3] == 0:
             if s[0] < -2 and s[2] < -3:
                 reward = 5.0
                 s[3] = 1
             else:
-                reward = -1.0
+                reward = 0.0
 
         return reward, s
 

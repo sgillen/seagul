@@ -53,11 +53,14 @@ class LinearEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self):
-        self.state = self.init_state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
+    def reset(self, init_state=None):
+        if init_state is None:
+            self.state = self.init_state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
+        else:
+            self.state = init_state
+
         self.cur_step = 0
         aug_state = np.concatenate((self.state, np.array(self.reward_state).reshape(-1)))
-    
         return aug_state
 
     def step(self, action):
