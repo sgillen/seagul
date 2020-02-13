@@ -20,10 +20,11 @@ from gym import envs
 class RBFLayer(Layer):
     def __init__(self, config, **kwargs):
         super(RBFLayer, self).__init__(**kwargs)
-        self.units = config["units"]
-        self.normalization = config["normalization"]
-        self.same_smooth_fac = config["const_beta"]
-        self.beta_initial = config["beta_initial"]
+        self.units = config["units"] if "units" in config else 64
+        self.normalization = config["normalization"] if "normalization" in config else True
+        self.same_smooth_fac = config["const_beta"] if "const_beta" in config else False
+        self.beta_initial = config["beta_initial"] if "beta_initial" in config else "ones"
+        self.dist = config["distance"] if "distance" in config else "euclidean"
     def build(self, input_shape):
         initializer_gaus = RandomNormal(mean=0.0, stddev=1.0, seed=None)
         self.mu = self.add_weight(name='mu',
@@ -58,10 +59,16 @@ class RBFLayer(Layer):
         # with norm:
         # rho = K.exp(- self.beta * K.pow(tf.norm(inputs - self.mu, ord = 'euclidean', axis = 0),2))
         # same as with norm but less comp cost:
-        if self.same_smooth_fac:
-            rho = K.exp(- self.beta * K.pow(K.sum(inputs - self.mu, axis = 0),2))
+        if self.dist == "mahalanobis":
+            if self.same_smooth_fac:
+                rho = K.exp(- self.beta * K.sum(K.pow(inputs - self.mu, 2), axis = 0))
+            else:
+                rho = K.exp(- tf.math.abs(self.beta) * K.sum(K.pow(inputs - self.mu, 2), axis = 0)) # beta has to be positive
         else:
-            rho = K.exp(- tf.math.abs(self.beta) * K.pow(K.sum(inputs - self.mu, axis = 0),2)) # beta has to be positive
+            if self.same_smooth_fac:
+                rho = K.exp(- self.beta * K.sum(K.pow(inputs - self.mu, 2), axis = 0))
+            else:
+                rho = K.exp(- tf.math.abs(self.beta) * K.sum(K.pow(inputs - self.mu, 2), axis = 0)) # beta has to be positive
         if self.normalization:
             return K.transpose(rho / K.sum(rho, axis = 0))
         else:

@@ -24,6 +24,7 @@ import pybullet_envs
 from ray.rllib.models import ModelCatalog
 import random
 import tensorflow as tf
+import pickle
 
 from seagul.rllib.rllib_with_rbf.rbf_net import RBFModel
 from seagul.rllib.rllib_with_rbf.mlp_net import MLP, Linear
@@ -32,7 +33,11 @@ def plot_progress(output_dir, smoothing_factor):
     colors = {}
     all_colors = ['b', 'r', 'c', 'm', 'y', 'k', 'g', 'g', 'g', 'g']
     if os.path.exists(output_dir +  "/progress.csv"):
-        df = pd.read_csv(output_dir +  "/progress.csv")
+        try:
+            df = pd.read_csv(output_dir +  "/progress.csv")
+        except Exception as e:
+            print("Empty folder! \n" + str(e))
+            return
         config = json.load(open(output_dir + "/params.json"))
         model = config['model']['custom_model']
         if model in colors:
@@ -46,27 +51,31 @@ def plot_progress(output_dir, smoothing_factor):
         return
     for subdir, dirs, files in os.walk(output_dir):
         for dir in dirs:
+            try:
                 df = pd.read_csv(subdir + dir + "/progress.csv")
-                config = json.load(open(subdir + dir + "/params.json"))
-                model = config['model']['custom_model']
-                #--------------------------------------------------------------
-                if config['model']['custom_options']['normalization'] == False:
-                    model = model + "_no_normal"
-                else:
-                    model = model + "_normal"
-                if config['model']['custom_options']['const_beta'] == False:
-                    model = model + "_with_beta"
-                else:
-                    model = model + "_const_beta"
-                #--------------------------------------------------------------
-                if model in colors:
-                    line_color = colors[model]
-                else:
-                    colors[model] = all_colors[0]
-                    line_color = colors[model]
-                    all_colors.pop(0)
-                # plt.plot(df['time_total_s'], gaussian_filter1d(df['episode_reward_mean'], sigma=4), line_color, label = model)
-                plt.plot(df['timesteps_total'], gaussian_filter1d(df['episode_reward_mean'], sigma=smoothing_factor), line_color, label = model)
+            except Exception as e:
+                print("Empty folder! \n" + str(e))
+                continue
+            config = json.load(open(subdir + dir + "/params.json"))
+            model = config['model']['custom_model']
+            #--------------------------------------------------------------
+            # if config['model']['custom_options']['normalization'] == False:
+            #     model = model + "_no_normal"
+            # else:
+            #     model = model + "_normal"
+            # if config['model']['custom_options']['const_beta'] == False:
+            #     model = model + "_with_beta"
+            # else:
+            #     model = model + "_const_beta"
+            #--------------------------------------------------------------
+            if model in colors:
+                line_color = colors[model]
+            else:
+                colors[model] = all_colors[0]
+                line_color = colors[model]
+                all_colors.pop(0)
+            # plt.plot(df['time_total_s'], gaussian_filter1d(df['episode_reward_mean'], sigma=4), line_color, label = model)
+            plt.plot(df['timesteps_total'], gaussian_filter1d(df['episode_reward_mean'], sigma=smoothing_factor), line_color, label = model)
         break
     plt.xlabel('timesteps')
     plt.ylabel('episode reward mean')
@@ -75,8 +84,9 @@ def plot_progress(output_dir, smoothing_factor):
 def render(alg, current_env, checkpoint, home_path):
     checkpoint_path = home_path + "checkpoint_" + checkpoint + "/checkpoint-" + checkpoint
     config = json.load(open(home_path + "params.json"))
-    config_bin = pkl.load(open(home_path + "params.pkl", "rb"))
+    config_bin = pickle.load(open(home_path + "params.pkl", "rb"))
     ray.shutdown()
+    import pybullet_envs
     ray.init()
     ModelCatalog.register_custom_model("RBF", RBFModel)
     ModelCatalog.register_custom_model("MLP", MLP)
@@ -85,7 +95,7 @@ def render(alg, current_env, checkpoint, home_path):
     if alg == "PPO":
         trainer = ppo.PPOTrainer(config)
     if alg == "SAC":
-        trainer = sac.SACTrainer(config)
+        trainer = sac.SACTrainer(config_bin)
     if alg == "DDPG":
         trainer = ddpg.DDPGTrainer(config)
     if alg == "PG":
