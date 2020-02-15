@@ -44,11 +44,9 @@ for seed in [0,1,2,3]:
         reward -= (abs(ns[2]) > 10)
         reward -= (abs(ns[3]) > 30) 
         return reward
-        
-        
-    
+
     env_config = {
-        "max_torque" : 25,
+        "max_torque" : 10,
         "init_state" : [0.0, 0.0, 0.0, 0.0],
         "init_state_weights" : np.array([0, 0, 0, 0]),
         "dt" : .01,
@@ -74,7 +72,7 @@ for seed in [0,1,2,3]:
     }
 
     #    run_sg(alg_config, ppo, "debug_2pol" + str(seed), "debugging the large pol loss spike", "/data/debug")a
-    p  = Process(target=run_sg, args=(alg_config, ppo, "debug_kl" + str(seed), "debugging the large pol loss spike", "/data/debug"))
+    p  = Process(target=run_sg, args=(alg_config, ppo, "low_t" + str(seed), "debugging the large pol loss spike", "/data/low_t"))
     p.start()
     proc_list.append(p)
 
