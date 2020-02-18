@@ -82,8 +82,9 @@ class DrakeAcroEnv(core.Env):
         self.reward_fn = reward_fn
 
         
-        high = np.array([2 * pi, pi, 10, 30])
-        low = np.array([0, -pi, -10, -30])
+        high = np.array([2 * pi, pi, float('inf'), float('inf')])
+        low = np.array([0, -pi, -float('inf'), -float('inf')])
+
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([-max_torque]), high=np.array([max_torque]), dtype=np.float32)
         self.seed()
@@ -170,7 +171,7 @@ class DrakeAcroEnv(core.Env):
         self.simulator.AdvanceTo(self.t)
         ns = self.state_logger.data()[:, -1]
         
-        reward = self.reward_fn(ns)
+        reward = self.reward_fn(ns,a)
 
 
         #I should probably do this with a wrapper...

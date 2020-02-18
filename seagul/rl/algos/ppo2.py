@@ -96,6 +96,8 @@ def ppo(
     obs_var = torch.ones(obs_size)
     adv_mean = torch.zeros(1)
     adv_var = torch.ones(1)
+    rew_mean = torch.zeros(1)
+    rew_var = torch.ones(1)
 
     old_model = pickle.loads(
         pickle.dumps(model)
@@ -153,6 +155,11 @@ def ppo(
                 ep_rew, gamma
             )  # [:-1] because we appended the value function to the end as an extra reward
             batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
+
+            rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
+            rew_var = update_var(batch_discrew, rew_var, cur_total_steps)
+            batch_discrew = (batch_discrew - rew_mean) / (rew_var + 1e-6)
+
 
             # calculate this episodes advantages
             last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
@@ -221,7 +228,6 @@ def ppo(
                 val_loss.backward()
                 val_opt.step()
 
-        old_model = pickle.loads(pickle.dumps(model))
 
         # update observation mean and variance
         obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
@@ -231,12 +237,15 @@ def ppo(
         model.policy.state_var = obs_var
         model.value_fn.state_var = obs_var
         model.action_var = actvar_lookup(cur_total_steps)
-
+        old_model = pickle.loads(pickle.dumps(model))
+                
         val_loss_hist.append(val_loss)
         pol_loss_hist.append(pol_loss)
 
         progress_bar.update(cur_batch_steps)
 
+        
+        
     progress_bar.close()
     return model, raw_rew_hist, locals()
 
