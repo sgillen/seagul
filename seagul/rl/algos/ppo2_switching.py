@@ -82,6 +82,9 @@ def ppo_switch(
 
     # init everything
     # ==============================================================================
+    torch.set_num_threads(1)
+        
+        
     env = gym.make(env_name, **env_config)
     if isinstance(env.action_space, gym.spaces.Box):
         act_size = env.action_space.shape[0]
@@ -158,10 +161,13 @@ def ppo_switch(
             batch_path = torch.cat((batch_path, ep_path[:-1]))
             batch_gate = torch.cat((batch_gate, ep_gate[:-1]))
 
-            ep_discrew = discount_cumsum(
-                ep_rew, gamma
-            )  # [:-1] because we appended the value function to the end as an extra reward
+            # [:-1] because we appended the value function to the end as an extra reward
+            ep_discrew = discount_cumsum(ep_rew, gamma)  
             batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
+
+            rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
+            rew_var = update_var(batch_discrew, rew_var, cur_total_steps)
+            batch_discrew = (batch_discrew - rew_mean) / (rew_var + 1e-6)
 
             # calculate this episodes advantages
             last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
@@ -212,14 +218,14 @@ def ppo_switch(
                         local_act.to(device),
                         local_adv.to(device),
                     )
-
+                    
                     # Compute the loss
                     logp = model.get_action_logp(local_obs, local_act).reshape(-1, 1)
                     old_logp = old_model.get_action_logp(local_obs, local_act).reshape(-1, 1)
                     r = torch.exp(logp - old_logp)
                     clip_r = torch.clamp(r, 1 - eps, 1 + eps)
                     pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean()
-
+                                                            
                     approx_kl = (logp - old_logp).mean()
                     if approx_kl > target_kl:
                         break
@@ -281,7 +287,7 @@ def ppo_switch(
                 gate_loss.backward()
                 gate_opt.step()
 
-        old_model = pickle.loads(pickle.dumps(model))
+
 
         # update observation mean and variance
         obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
@@ -292,13 +298,16 @@ def ppo_switch(
         model.value_fn.state_var = obs_var
         model.action_var = actvar_lookup(cur_total_steps)
         model.gate_var = gatevar_lookup(cur_total_steps)
-
+        old_model = pickle.loads(pickle.dumps(model))
+        
         val_loss_hist.append(val_loss)
         pol_loss_hist.append(pol_loss)
         gate_loss_hist.append(gate_loss)
 
         progress_bar.update(cur_batch_steps)
 
+       
+        
     progress_bar.close()
     return model, raw_rew_hist, locals()
 
@@ -359,5 +368,7 @@ def do_rollout(env, model):
 
     ep_path = torch.tensor(path_list).reshape(-1, 1)
     ep_gate = torch.tensor(gate_list).reshape(-1, 1)
+
+    #import ipdb; ipdb.set_trace()
 
     return (ep_obs, ep_act, ep_rew, ep_length, ep_path, ep_gate)

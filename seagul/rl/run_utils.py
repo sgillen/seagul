@@ -246,14 +246,12 @@ def load_workspace(save_path):
         save_base_path = os.getcwd() + save_path.split(".")[1]
 
     with open(save_base_path + "/" + "workspace", "rb") as infile:
-        print(__name__)
         workspace = torch.load(infile, pickle_module=dill)
 
     with open(save_base_path + "/" + "info.json", "r") as infile:
         data = json.load(infile)  # , Loader=yaml.Loader)
 
     with open(save_base_path + "/" + "model", "rb") as infile:
-        print(__name__)
         model = torch.load(infile, pickle_module=dill)
 
     env_name = data["args"]["env_name"]

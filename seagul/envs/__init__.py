@@ -74,6 +74,8 @@ try:
     def generic_creator(env_config):
         return gym.make("gen_nonlin-v0", **env_config)
 
+    def drake_creator(env_config):
+        return gym.make("su_acro_drake-v0", **env_config)
     
     #  register_env("five_link-v3", five_link_creator)
     register_env("Walker2DBulletEnv-v0", bullet_walker_creator)
@@ -86,6 +88,7 @@ try:
     register_env("lorenz-v0", lorenz_creator)
     register_env("linear_z-v0", linear_creator)
     register_env("gen_nonlin-v0", generic_creator)
+    register_env("su_acro_drake-v0", drake_creator)
 
 except:
     import warnings
