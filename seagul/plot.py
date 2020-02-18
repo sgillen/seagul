@@ -105,7 +105,7 @@ def smooth_bounded_curve(
     ax.plot(time_steps, data_smoothed, color=color)
     ax.fill_between(time_steps, min_smoothed, max_smoothed, color=color, alpha=.2)
     ax.set_xlabel('Time Steps')
-    ax.set_ylabel('Average data')
+    ax.set_ylabel('Average return')
     ax.set_title('Reward curve')
 
     return fig, ax
