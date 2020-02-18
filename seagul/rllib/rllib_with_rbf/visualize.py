@@ -22,64 +22,73 @@ from numpy import pi
 import gym
 import pybullet_envs
 from ray.rllib.models import ModelCatalog
-import random
+from random import shuffle
 import tensorflow as tf
 import pickle
+import re
 
 from seagul.rllib.rllib_with_rbf.rbf_net import RBFModel
 from seagul.rllib.rllib_with_rbf.mlp_net import MLP, Linear
-
-def plot_progress(output_dir, smoothing_factor):
-    colors = {}
-    all_colors = ['b', 'r', 'c', 'm', 'y', 'k', 'g', 'g', 'g', 'g']
-    if os.path.exists(output_dir +  "/progress.csv"):
-        try:
-            df = pd.read_csv(output_dir +  "/progress.csv")
-        except Exception as e:
-            print("Empty folder! \n" + str(e))
-            return
-        config = json.load(open(output_dir + "/params.json"))
-        model = config['model']['custom_model']
-        if model in colors:
-            line_color = colors[model]
-        else:
-            colors[model] = all_colors[-1]
-            line_color = colors[model]
-            all_colors.pop(-1)
-        plt.plot(df['timesteps_total'], gaussian_filter1d(df['episode_reward_mean'], sigma=smoothing_factor), line_color, label = model)
-        plt.legend()
+def define_plot(colors, all_colors, output_dir, dir, smoothing_factor, cutoff):
+    try:
+        df = pd.read_csv(output_dir + dir + "/progress.csv")
+    except Exception as e:
+        print("Empty folder! \n" + str(e))
         return
-    for subdir, dirs, files in os.walk(output_dir):
-        for dir in dirs:
-            try:
-                df = pd.read_csv(subdir + dir + "/progress.csv")
-            except Exception as e:
-                print("Empty folder! \n" + str(e))
-                continue
-            config = json.load(open(subdir + dir + "/params.json"))
-            model = config['model']['custom_model']
-            #--------------------------------------------------------------
-            # if config['model']['custom_options']['normalization'] == False:
-            #     model = model + "_no_normal"
-            # else:
-            #     model = model + "_normal"
-            # if config['model']['custom_options']['const_beta'] == False:
-            #     model = model + "_with_beta"
-            # else:
-            #     model = model + "_const_beta"
-            #--------------------------------------------------------------
-            if model in colors:
-                line_color = colors[model]
-            else:
-                colors[model] = all_colors[0]
-                line_color = colors[model]
-                all_colors.pop(0)
-            # plt.plot(df['time_total_s'], gaussian_filter1d(df['episode_reward_mean'], sigma=4), line_color, label = model)
-            plt.plot(df['timesteps_total'], gaussian_filter1d(df['episode_reward_mean'], sigma=smoothing_factor), line_color, label = model)
-        break
+    config = json.load(open(output_dir + dir + "/params.json"))
+    model = config['model']['custom_model']
+    env = config["env"]
+    alg = re.match('.+?(?=_)', os.path.basename(os.path.normpath(output_dir + dir)))[0]
+    # try:
+    #     if config['model']['custom_options']['normalization'] == False:
+    #         model = model + "_no_normal"
+    #     else:
+    #         model = model + "_normal"
+    #     if config['model']['custom_options']['const_beta'] == False:
+    #         model = model + "_with_beta"
+    #     else:
+    #         model = model + "_const_beta"
+    # except:
+    #     pass
+    # if model == "mlp":
+    #     try:
+    #         model = model + "_" + config['model']['custom_options']['hidden_neuons']
+    #     except:
+    #         pass
+    #     try: 
+    #         model = model + "_" + config['model']['custom_options']['hidden_neurons']
+    #     except:
+    #         pass
+    #--------------------------------------------------------------
+    if model in colors:
+        line_color = colors[model]
+    else:
+        colors[model] = all_colors[0]
+        line_color = colors[model]
+        all_colors.pop(0)
+    cutoff_idx = df.index[df['timesteps_total'] == cutoff][0] if cutoff != -1 else -1
+    if smoothing_factor == 0:
+        plt.plot(df['timesteps_total'][:cutoff_idx], df['episode_reward_mean'][:cutoff_idx], line_color, label = model)
+    else:
+        plt.plot(df['timesteps_total'][:cutoff_idx], gaussian_filter1d(df['episode_reward_mean'][:cutoff_idx], sigma=smoothing_factor), line_color, label = model)
+    plt.title("Environment: " + env + ",  Algorithm: " + alg)
+
+def plot_progress(output_dir, smoothing_factor = 0, cutoff = -1):
+    colors = {'RBF': 'g', 'MLP': 'b', 'linear': 'c'}
+    all_colors = ['m', 'y', 'k', 'r']
+    # shuffle(all_colors)
+    if os.path.exists(output_dir +  "/progress.csv"): # if already in folder and no looping required
+        define_plot(colors, all_colors, output_dir, "", smoothing_factor, cutoff)
+    else:
+        for subdir, dirs, files in os.walk(output_dir):
+            for dir in dirs:
+                define_plot(colors, all_colors, subdir, dir, smoothing_factor, cutoff)
+            break
     plt.xlabel('timesteps')
     plt.ylabel('episode reward mean')
-    plt.legend()
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys())
 
 def render(alg, current_env, checkpoint, home_path):
     checkpoint_path = home_path + "checkpoint_" + checkpoint + "/checkpoint-" + checkpoint

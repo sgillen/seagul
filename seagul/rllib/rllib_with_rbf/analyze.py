@@ -1,14 +1,17 @@
 import matplotlib.pyplot as plt
 import visualize
 
-output_dirs = ["./data/SAC/", "./data/HalfCheetah/SAC_all/SAC_HalfCheetahBulletEnv-v0_48677418_2020-02-10_18-50-377zn3_x67",
-               "./data/HalfCheetahBulletEnv-v0/compare_rbf/SAC/"]
+# output_dirs = ["./data/SAC/", "./data/HalfCheetah/SAC_all/SAC_HalfCheetahBulletEnv-v0_48677418_2020-02-10_18-50-377zn3_x67",
+#                "./data/HalfCheetahBulletEnv-v0/compare_rbf/SAC/"]
 # output_dirs = ["./data/from_cluster_temp/"]
+output_dirs = ["./Results/HalfCheetah/SAC/RBF_1/", "./Results/HalfCheetah/SAC/MIXED_1_bug_in_rbf/"]
 for dir in output_dirs:
-    visualize.plot_progress(dir, smoothing_factor=7)
-plt.show()
-
-# plt.savefig("Results/name.png")
+    visualize.plot_progress(dir, smoothing_factor=5, cutoff=1000000)
+plot = False
+if plot:
+    plt.show()
+else:
+    plt.savefig("Results/Halfcheetah_sac_mixed_corrected_cutoff.png")
 
 algos = {
     0: "A2C",
