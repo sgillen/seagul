@@ -20,16 +20,17 @@ def ppo_switch(
     lam=0.99,
     eps=0.2,
     seed=0,
-    pol_batch_size=1024,
-    val_batch_size=1024,
-    gate_batch_size=1024,
+    minibatch_size=1024,
     pol_lr=1e-4,
     val_lr=1e-5,
     gate_lr=1e-4,
     pol_epochs=10,
     val_epochs=10,
+    gate_epochs=10,
     use_gpu=False,
     reward_stop=None,
+    target_kl=.01,
+    env_config={}
 ):
 
     """
@@ -44,14 +45,17 @@ def ppo_switch(
         gamma: discount applied to future rewards, usually close to 1
         lam: lambda for the Advantage estimmation, usually close to 1
         eps: epsilon for the clipping, usually .1 or .2
-        pol_batch_size: batch size for policy updates
-        val_batch_size: batch size for value function updates
+        minibatch_size: batch size for policy updates
         pol_lr: learning rate for policy pol_optimizer
         val_lr: learning rate of value function pol_optimizer
+        gate_lr: learning rate for the gate_fn
         pol_epochs: how many epochs to use for each policy update
         val_epochs: how many epochs to use for each value update
+        gate_epochs: how many epochs to use for each gate update
         use_gpu:  want to use the GPU? set to true
         reward_stop: reward value to stop if we achieve
+        target_kl: maximum kl between old and current policy before stopping updates
+        env_config: dictionary containing kwargs to pass to your the environment
 
     Returns:
         model: trained model
@@ -78,7 +82,10 @@ def ppo_switch(
 
     # init everything
     # ==============================================================================
-    env = gym.make(env_name)
+    torch.set_num_threads(1)
+        
+        
+    env = gym.make(env_name, **env_config)
     if isinstance(env.action_space, gym.spaces.Box):
         act_size = env.action_space.shape[0]
         act_dtype = torch.double
@@ -118,6 +125,7 @@ def ppo_switch(
     raw_rew_hist = []
     val_loss_hist = []
     pol_loss_hist = []
+    gate_loss_hist = []
 
     progress_bar = tqdm.tqdm(total=total_steps)
     cur_total_steps = 0
@@ -131,7 +139,7 @@ def ppo_switch(
         batch_obs = torch.empty(0)
         batch_act = torch.empty(0)
         batch_adv = torch.empty(0)
-        batch_path = torch.empty(0)
+        batch_path = torch.empty(0, dtype=torch.long)
         batch_gate = torch.empty(0)
         batch_discrew = torch.empty(0)
         cur_batch_steps = 0
@@ -151,12 +159,15 @@ def ppo_switch(
             batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
             batch_act = torch.cat((batch_act, ep_act[:-1]))
             batch_path = torch.cat((batch_path, ep_path[:-1]))
-            batch_path = torch.cat((batch_gate, ep_gate[:-1]))
+            batch_gate = torch.cat((batch_gate, ep_gate[:-1]))
 
-            ep_discrew = discount_cumsum(
-                ep_rew, gamma
-            )  # [:-1] because we appended the value function to the end as an extra reward
+            # [:-1] because we appended the value function to the end as an extra reward
+            ep_discrew = discount_cumsum(ep_rew, gamma)  
             batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
+
+            rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
+            rew_var = update_var(batch_discrew, rew_var, cur_total_steps)
+            batch_discrew = (batch_discrew - rew_mean) / (rew_var + 1e-6)
 
             # calculate this episodes advantages
             last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
@@ -186,36 +197,38 @@ def ppo_switch(
         p_adv_list = []
         for obs, act, adv, path in zip(batch_obs, batch_act, batch_adv, batch_path):
             if not path:
-                p_obs_list.append(state.clone())
-                p_act_list.append(action.clone())
+                p_obs_list.append(obs.clone())
+                p_act_list.append(act.clone())
                 p_adv_list.append(adv.clone())
 
-        if len(p_state_list):
+        if len(p_obs_list):
             p_batch_obs = torch.stack(p_obs_list).reshape(-1, env.observation_space.shape[0])
-            p_batch_act = torch.stack(p_act_list).reshape(-1, action_size)
+            p_batch_act = torch.stack(p_act_list).reshape(-1, act_size)
             p_batch_adv = torch.stack(p_adv_list).reshape(-1, 1)
 
             training_data = data.TensorDataset(p_batch_obs, p_batch_act, p_batch_adv)
-            training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True)
+            training_generator = data.DataLoader(training_data, batch_size=minibatch_size, shuffle=True)
 
             # Update the policy using the PPO loss
             for pol_epoch in range(pol_epochs):
                 for local_obs, local_act, local_adv in training_generator:
                     # Transfer to GPU (if GPU is enabled, else this does nothing)
-                    local_states, local_actions, local_adv = (
+                    local_obs, local_act, local_adv = (
                         local_obs.to(device),
                         local_act.to(device),
                         local_adv.to(device),
                     )
-
+                    
                     # Compute the loss
-                    logp = model.get_logp(local_obs, local_act).reshape(-1, 1)
-                    old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, 1)
+                    logp = model.get_action_logp(local_obs, local_act).reshape(-1, 1)
+                    old_logp = old_model.get_action_logp(local_obs, local_act).reshape(-1, 1)
                     r = torch.exp(logp - old_logp)
-                    pol_loss = (
-                        -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps))))
-                        / r.shape[0]
-                    )
+                    clip_r = torch.clamp(r, 1 - eps, 1 + eps)
+                    pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean()
+                                                            
+                    approx_kl = (logp - old_logp).mean()
+                    if approx_kl > target_kl:
+                        break
 
                     # do the normal pytorch update
                     pol_opt.zero_grad()
@@ -225,9 +238,9 @@ def ppo_switch(
         # value_fn update
         # ========================================================================
         training_data = data.TensorDataset(batch_obs, batch_discrew)
-        training_generator = data.DataLoader(training_data, batch_size=val_batch_size, shuffle=True)
+        training_generator = data.DataLoader(training_data, batch_size=minibatch_size, shuffle=True)
 
-        # Upadte value function with the standard L2 Loss
+        # Update value function with the standard L2 Loss
         for val_epoch in range(val_epochs):
             for local_obs, local_val in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -235,43 +248,46 @@ def ppo_switch(
 
                 # predict and calculate loss for the batch
                 val_preds = model.value_fn(local_obs)
-                val_loss = torch.sum(torch.pow(val_preds - local_val, 2)) / (val_preds.shape[0])
+                val_loss = ((val_preds - local_val)**2).mean()
 
-                # do the normal pytorch update
+                # backprop and update
                 val_opt.zero_grad()
                 val_loss.backward()
                 val_opt.step()
 
-        # update gating function
+        # Update gating function
         # ----------------------------------------------------------------------
-        # construct a training data generator
-        training_data = data.TensorDataset(batch_obs, batch_gate, adv_tensor)
-        training_generator = data.DataLoader(training_data, batch_size=gate_batch_size, shuffle=True)
+        # Construct a training data generator
+        training_data = data.TensorDataset(batch_obs, batch_gate, batch_adv)
+        training_generator = data.DataLoader(training_data, batch_size=minibatch_size, shuffle=True)
 
         # Update the policy using the PPO loss
-        for pol_epoch in range(pol_epochs):
+        for gate_epoch in range(gate_epochs):
             for local_obs, local_gate, local_adv in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_states, local_actions, local_adv = (
+                local_obs, local_gate, local_adv = (
                     local_obs.to(device),
                     local_gate.to(device),
                     local_adv.to(device),
                 )
 
                 # Compute the loss
-                logp = model.get_logp(local_obs, local_gate).reshape(-1, 1)
-                old_logp = old_model.get_logp(local_obs, local_gate).reshape(-1, 1)
+                logp = model.get_path_logp(local_obs, local_gate).reshape(-1, 1)
+                old_logp = old_model.get_path_logp(local_obs, local_gate).reshape(-1, 1)
                 r = torch.exp(logp - old_logp)
-                pol_loss = (
-                    -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps)))) / r.shape[0]
-                )
+                clip_r = torch.clamp(r, 1-eps, 1+eps)
+                gate_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
+
+                approx_kl = (logp - old_logp).mean()
+                if approx_kl > target_kl:
+                    break
 
                 # do the normal pytorch update
                 gate_opt.zero_grad()
                 gate_loss.backward()
                 gate_opt.step()
 
-        old_model = pickle.loads(pickle.dumps(model))
+
 
         # update observation mean and variance
         obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
@@ -282,13 +298,16 @@ def ppo_switch(
         model.value_fn.state_var = obs_var
         model.action_var = actvar_lookup(cur_total_steps)
         model.gate_var = gatevar_lookup(cur_total_steps)
-
+        old_model = pickle.loads(pickle.dumps(model))
+        
         val_loss_hist.append(val_loss)
         pol_loss_hist.append(pol_loss)
         gate_loss_hist.append(gate_loss)
 
         progress_bar.update(cur_batch_steps)
 
+       
+        
     progress_bar.close()
     return model, raw_rew_hist, locals()
 
@@ -313,7 +332,6 @@ def update_var(data, cur_var, cur_steps):
 
 
 def do_rollout(env, model):
-
     act_list = []
     obs_list = []
     rew_list = []
@@ -324,7 +342,6 @@ def do_rollout(env, model):
     dtype = torch.float32
     obs = env.reset()
     done = False
-
     while not done:
         obs = torch.as_tensor(obs, dtype=dtype).detach()
         obs_list.append(obs.clone())
@@ -347,7 +364,11 @@ def do_rollout(env, model):
     ep_length = len(rew_list)
     ep_obs = torch.stack(obs_list)
     ep_act = torch.stack(act_list)
-    ep_rew = torch.tensor(rew_list)
-    ep_rew = ep_rew.reshape(-1, 1)
+    ep_rew = torch.tensor(rew_list).reshape(-1, 1)
 
-    return (ep_obs, ep_act, ep_rew, ep_length, path_list, gate_list)
+    ep_path = torch.tensor(path_list).reshape(-1, 1)
+    ep_gate = torch.tensor(gate_list).reshape(-1, 1)
+
+    #import ipdb; ipdb.set_trace()
+
+    return (ep_obs, ep_act, ep_rew, ep_length, ep_path, ep_gate)

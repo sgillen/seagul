@@ -1,9 +1,7 @@
 import torch
-import math
 from torch.distributions import Normal, Categorical
-import torch.nn as nn
 import numpy as np
-import dill
+
 
 """
 'Models' used by the seaguls reinforcement learning algos. 
@@ -25,8 +23,6 @@ class RandModel:
 
     def select_action(self, state, noise):
         return (torch.rand(self.act_size) * 2 * self.act_limit - self.act_limit, 1 / (self.act_limit * 2))
-
-
 
 
 class SACModel:
@@ -88,9 +84,7 @@ class SACModelActHold:
 
         self.num_acts = int(policy.output_layer.out_features / 2)
         self.act_limit = act_limit
-        self.hold_count = hold_count
         self.cur_hold_count = 0
-
 
     # Step is the deterministic evaluation of the policy
     def step(self, state):
@@ -129,9 +123,7 @@ class SACModelActHold:
         if self.cur_hold_count > self.hold_count:
             self.cur_hold_count = 0
 
-
         return acts, logp
-
 
 
 class PPOModel:
@@ -259,26 +251,6 @@ class SwitchedPPOModel:
             return 1
         else:
             return 0
-
-    # def hyst(self, x):
-    #     """
-    #     Unvectorized hysteris function with sharp transitions
-
-    #     :param x double between 0 and 1:
-    #     :return activation function:
-    #     """
-    #     if self.hyst_state == 0:
-    #         if x > 0.55:
-    #             self.hyst_state = 1
-    #             return 1
-    #         else:
-    #             return 0
-    #     elif self.hyst_state == 1:
-    #         if x < 0.45:
-    #             self.hyst_state = 0
-    #             return 0
-    #         else:
-    #             return 1
 
 
 class SwitchedPPOModelActHold:
