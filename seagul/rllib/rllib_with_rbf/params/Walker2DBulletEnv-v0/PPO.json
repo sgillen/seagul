@@ -1,7 +1,4 @@
 {
-    "model": {
-        "custom_options": {}
-    },
     "train_batch_size": 2048,
     "vf_clip_param": 10.0,
     "num_workers": 1,

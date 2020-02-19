@@ -1,7 +1,4 @@
 {
-    "model": {
-        "custom_options": {}
-    },
     "gamma": 0.995,
     "kl_coeff": 1.0,
     "num_sgd_iter": 20,

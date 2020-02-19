@@ -1,7 +1,4 @@
 {
-    "model": {
-        "custom_options": {}
-    },
     "train_batch_size": 65536,
     "vf_clip_param": 10.0,
     "lambda": 0.95,

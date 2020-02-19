@@ -1,7 +1,4 @@
 {
-    "model": {
-        "custom_options": {}
-    },
     "num_workers": 16,
     "sample_batch_size": 20,
     "use_pytorch": false,

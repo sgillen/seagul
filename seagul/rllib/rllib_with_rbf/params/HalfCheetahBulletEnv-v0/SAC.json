@@ -1,7 +1,4 @@
 {
-    "model": {
-        "custom_options": {}
-    },
     "horizon": 1000,
     "soft_horizon": false,
     "tau": 0.005,

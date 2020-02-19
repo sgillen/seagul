@@ -1,7 +1,4 @@
 {
-    "model": {
-        "custom_options": {}
-    },
     "gamma": 0.99,
     "exploration_should_anneal": true,
     "schedule_max_timesteps": 100000,

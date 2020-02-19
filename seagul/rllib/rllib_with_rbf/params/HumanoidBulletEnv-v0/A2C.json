@@ -1,7 +1,4 @@
 {
-    "model": {
-        "custom_options": {}
-    },
     "sample_batch_size": 20,
     "clip_rewards": true,
     "num_workers": 5,
