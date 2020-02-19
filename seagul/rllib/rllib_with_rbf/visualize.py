@@ -78,7 +78,7 @@ def define_plot(colors, all_colors, output_dir, dir, smoothing_factor, cutoff):
     plt.title("Environment: " + env + ",  Algorithm: " + alg)
 
 def plot_progress(output_dir, smoothing_factor = 0, cutoff = -1):
-    colors = {'RBF': 'g', 'MLP': 'b', 'linear': 'c'}
+    colors = {'RBF': 'g', 'MLP': 'b', 'linear': 'c', 'FCN': 'r'}
     all_colors = ['m', 'y', 'k', 'r']
     # shuffle(all_colors)
     if os.path.exists(output_dir +  "/progress.csv"): # if already in folder and no looping required

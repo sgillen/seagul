@@ -2,16 +2,16 @@ import matplotlib.pyplot as plt
 import visualize
 
 # path can be to multiple samples or inside a specific one:
-checkpoint = "240" # only needed for rendering
+checkpoint = "500" # only needed for rendering
 # res_dir = ['./data/HalfCheetahBulletEnv-v0/debug_ddpg/DDPG/DDPG_HalfCheetahBulletEnv-v0_fa22b113_2020-02-18_13-45-28q4lgdx2f/']
-res_dir = ["./data/HalfCheetahBulletEnv-v0/compare_mlp/SAC/", "./Results/HalfCheetah/SAC/MIXED_1_bug_in_rbf/"]
+res_dir = ["./Results/HalfCheetah/MLP_vs_FCN/SAC/SAC_HalfCheetahBulletEnv-v0_62a7a43c_2020-02-18_16-25-528ucxifxi/"]
 
 for dir in res_dir:
-    visualize.plot_progress(dir, smoothing_factor=5, cutoff=60000)
-plot = False
+    visualize.plot_progress(dir, smoothing_factor=2, cutoff=-1)
+plot = True
 if plot:
     plt.show()
 else:
-    plt.savefig("Results/Halfcheetah_ddpg_debug_ddpg.png")
+    plt.savefig("Results/Halfcheetah_td3.png")
 
 visualize.render(checkpoint, res_dir[0])
