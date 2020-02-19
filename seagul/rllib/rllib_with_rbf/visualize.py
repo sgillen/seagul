@@ -36,37 +36,41 @@ def define_plot(colors, all_colors, output_dir, dir, smoothing_factor, cutoff):
         print("Empty folder! \n" + str(e))
         return
     config = json.load(open(output_dir + dir + "/params.json"))
-    model = config['model']['custom_model']
+    try:
+        model = config['model']['custom_model']
+    except:
+        model = "FCN"
     env = config["env"]
-    alg = re.match('.+?(?=_)', os.path.basename(os.path.normpath(output_dir + dir)))[0]
-    # try:
-    #     if config['model']['custom_options']['normalization'] == False:
-    #         model = model + "_no_normal"
-    #     else:
-    #         model = model + "_normal"
-    #     if config['model']['custom_options']['const_beta'] == False:
-    #         model = model + "_with_beta"
-    #     else:
-    #         model = model + "_const_beta"
-    # except:
-    #     pass
-    # if model == "mlp":
-    #     try:
-    #         model = model + "_" + config['model']['custom_options']['hidden_neuons']
-    #     except:
-    #         pass
-    #     try: 
-    #         model = model + "_" + config['model']['custom_options']['hidden_neurons']
-    #     except:
-    #         pass
-    #--------------------------------------------------------------
+    alg = re.match('.+?(?=_)', os.path.basename(os.path.normpath(output_dir + dir))).group(0)
+    if model == "RBF":
+        try:
+            if config['model']['custom_options']['normalization'] == False:
+                model = model + "_no_normal"
+            else:
+                model = model + "_normal"
+            if config['model']['custom_options']['const_beta'] == False:
+                model = model + "_with_beta"
+            else:
+                model = model + "_const_beta"
+        except:
+            pass
+    if model == "MLP":
+        try:
+            model = model + "_" + str(config['model']['custom_options']['hidden_neurons'])
+            model = model + "_ts-per-iter-" + str(config['timesteps_per_iteration'])
+        except:
+            pass
     if model in colors:
         line_color = colors[model]
     else:
         colors[model] = all_colors[0]
         line_color = colors[model]
         all_colors.pop(0)
-    cutoff_idx = df.index[df['timesteps_total'] == cutoff][0] if cutoff != -1 else -1
+    try:
+        cutoff_idx = df.index[df['timesteps_total'] == cutoff][0] if cutoff != -1 else -1
+    except Exception as e:
+        print("Redefine cutoff index. It might be too high. \n" + str(e))
+        cutoff_idx = -1
     if smoothing_factor == 0:
         plt.plot(df['timesteps_total'][:cutoff_idx], df['episode_reward_mean'][:cutoff_idx], line_color, label = model)
     else:
@@ -90,8 +94,10 @@ def plot_progress(output_dir, smoothing_factor = 0, cutoff = -1):
     by_label = dict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys())
 
-def render(alg, current_env, checkpoint, home_path):
-    checkpoint_path = home_path + "checkpoint_" + checkpoint + "/checkpoint-" + checkpoint
+def render(checkpoint, home_path):
+    alg = re.match('.+?(?=_)', os.path.basename(os.path.normpath(home_path))).group(0)
+    current_env = re.search("(?<=_).*?(?=_)", os.path.basename(os.path.normpath(home_path))).group(0)
+    checkpoint_path = home_path + "checkpoint_" + str(checkpoint) + "/checkpoint-" + str(checkpoint)
     config = json.load(open(home_path + "params.json"))
     config_bin = pickle.load(open(home_path + "params.pkl", "rb"))
     ray.shutdown()
@@ -104,7 +110,7 @@ def render(alg, current_env, checkpoint, home_path):
     if alg == "PPO":
         trainer = ppo.PPOTrainer(config)
     if alg == "SAC":
-        trainer = sac.SACTrainer(config_bin)
+        trainer = sac.SACTrainer(config)
     if alg == "DDPG":
         trainer = ddpg.DDPGTrainer(config)
     if alg == "PG":
@@ -113,7 +119,7 @@ def render(alg, current_env, checkpoint, home_path):
         trainer = a3c.A3CTrainer(config)
     if alg == "TD3":
         trainer = td3.TD3Trainer(config)
-
+#   "normalize_actions": true,
     trainer.restore(checkpoint_path)
 
     if "Bullet" in current_env:

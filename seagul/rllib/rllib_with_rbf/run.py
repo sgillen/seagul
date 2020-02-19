@@ -36,8 +36,8 @@ algos = {
         2: "DDPG",
         3: "PPO",
         4: "SAC",
-        5: "PG",
-        6: "TD3"
+        5: "TD3",
+        6: "PG"
     },
     "derivative-free" : {
         0: "ARS",
@@ -51,22 +51,22 @@ envs = {
     3: {"name": "HalfCheetahBulletEnv-v0", "stop": 9000}}
 
 ray.init()
-for i in range(2,3):
+for i in range(3,6):
     #---- adjust parameters: -------------------------------------
     algorithm = algos["gradient-based"][i]
     # algorithm = algos["0"]
     environment = envs[3]["name"]
-    output_dir = "./data/" + environment + "/debug_ddpg/"
+    output_dir = "./data/" + environment + "/mlp_default/"
     if os.path.exists("./params/" + environment + "/" + algorithm + ".json"):
         config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
     else: # for cluster
         config = json.load(open("./seagul/seagul/rllib/rllib_with_rbf/params/" + environment + "/" + algorithm + ".json"))
     config['env'] = environment
     #---- tune hyperparameters: ----------------------------------
-    config['model'] = {"custom_model": "MLP",
-                       "custom_options": {
-                            "hidden_neurons": [64, 64]}}
-    config["timesteps_per_iteration"] = tune.grid_search([600,1000])       
+    config['Q_model'] = {'hidden_activation': 'relu',
+                         'hidden_layer_sizes': [256, 256]}
+    config['policy_model'] = {'hidden_activation': 'relu',
+                              'hidden_layer_sizes': [256, 256]}
     # config['model'] = tune.grid_search([{"custom_model": "RBF", 
     #                                      "custom_options": {
     #                                          "normalization": False,
@@ -107,7 +107,7 @@ for i in range(2,3):
             algorithm,
             local_dir=output_dir,
             # name="test",
-            stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 1000000},
+            stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 500000},
             checkpoint_freq=10,
             max_failures=5,
             checkpoint_at_end=True,
@@ -120,4 +120,4 @@ for i in range(2,3):
                 file.write(str(e))
                 file.close()
 
-                # sbatch ./seagul/seagul/notebooks/pod/run_with_singularity.bash seagul/seagul/rllib/rllib_with_rbf/run.py
+                # sbatch ./seagul/seagul/notebooks/pod/run_with_singularity.bash seagul/seagul/rllib/rllib_with_rbf/run.py -p short

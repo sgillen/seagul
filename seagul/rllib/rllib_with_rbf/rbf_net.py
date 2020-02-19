@@ -70,7 +70,7 @@ class RBFLayer(Layer):
             else:
                 rho = K.exp(- tf.math.abs(self.beta) * K.sum(K.pow(inputs - self.mu, 2), axis = 0)) # beta has to be positive
         if self.normalization:
-            return K.transpose(rho / K.sum(rho, axis = 0))
+            return K.transpose(rho / (K.sum(rho, axis = 0)+10e-6))
         else:
             return K.transpose(rho)
 
