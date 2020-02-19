@@ -63,20 +63,20 @@ for i in range(3,6):
         config = json.load(open("./seagul/seagul/rllib/rllib_with_rbf/params/" + environment + "/" + algorithm + ".json"))
     config['env'] = environment
     #---- tune hyperparameters: ----------------------------------
-    config['Q_model'] = {'hidden_activation': 'relu',
-                         'hidden_layer_sizes': [256, 256]}
-    config['policy_model'] = {'hidden_activation': 'relu',
-                              'hidden_layer_sizes': [256, 256]}
-    # config['model'] = tune.grid_search([{"custom_model": "RBF", 
-    #                                      "custom_options": {
-    #                                          "normalization": False,
-    #                                          "units": 64,
-    #                                          "const_beta": False,
-    #                                          "beta_initial": "ones"}},
-    #                                     {"custom_model": "MLP",
-    #                                      "custom_options": {
-    #                                          "hidden_neurons": [64, 64]}},
-    #                                     {"custom_model": "linear"}])
+    # config['Q_model'] = {'hidden_activation': 'relu',
+    #                      'hidden_layer_sizes': [256, 256]}
+    # config['policy_model'] = {'hidden_activation': 'relu',
+    #                           'hidden_layer_sizes': [256, 256]}
+    config['model'] = tune.grid_search([{"custom_model": "RBF", 
+                                         "custom_options": {
+                                             "normalization": False,
+                                             "units": 256,
+                                             "const_beta": False,
+                                             "beta_initial": "ones"}},
+                                        {"custom_model": "MLP",
+                                         "custom_options": {
+                                             "hidden_neurons": [256, 256]}},
+                                        {"custom_model": "linear"}])
     # config['model'] = tune.grid_search([{"custom_model": "RBF", 
     #                                      "custom_options": {
     #                                          "normalization": False,
