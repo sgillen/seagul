@@ -21,53 +21,42 @@ num_layers = 2
 activation = nn.ReLU
 
 from seagul.rl.run_utils import run_sg, run_and_save_bs
-from seagul.rl.algos import sac
-from seagul.rl.models import SACModel, SACModelActHold
+from seagul.rl.algos import ppo, ppo_switch
+from seagul.rl.models import PPOModel, SwitchedPPOModel, PPOModelActHold
 from seagul.nn import MLP, CategoricalMLP
-
-torch.set_num_threads(1)
 
 proc_list = []
 
 #torch.set_default_dtype(torch.double)
 seed = 0
 
-policy = MLP(input_size, output_size*2, num_layers, layer_size, activation)
-value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
-q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
-
-# model = SACModelActHold(
-#     policy=policy,
-#     value_fn = value_fn,
-#     q1_fn = q1_fn,
-#     q2_fn = q2_fn,
-#     act_limit = 5,
-#     hold_count = 200,
-# )
-
-model = SACModel(
+policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+    
+model = PPOModelActHold(
     policy=policy,
-    value_fn = value_fn,
-    q1_fn = q1_fn,
-    q2_fn = q2_fn,
-    act_limit = 5,
+    value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
+    discrete=False,
+    hold_count = 1
 )
+
+#model = PPOModel(policy=policy, value_fn=MLP(input_size, 1, num_layers, layer_size, activation), discrete=False)
 
 
 arg_dict = {
     "env_name": env_name,
     "model": model,
+    "act_var_schedule": [.1],
     "seed": seed,  # int((time.time() % 1)*1e8),
-    "total_steps" : 5e5,
-    "exploration_steps" : 10000,
-    "min_steps_per_update" : 200,
-    "reward_stop" : 1500,
+    "total_steps" : 200*2048,
+    "epoch_batch_size": 2048,
+    "reward_stop" : 900,
     "gamma": 1,
+    "pol_epochs": 10,
+    "val_epochs": 10,
 }
 
 
-run_sg(arg_dict, sac, None, 'back to 200 ah', "/data/data2/sac/")
+run_sg(arg_dict, ppo, None, 'lets see if we can learn to balance', "/data/data2/10_sat/")
 
     # p = Process(
     #     target=run_sg,

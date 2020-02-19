@@ -9,6 +9,9 @@ register(id="det_humanoid-v1", entry_point="seagul.envs.mujoco:DetHumanoidEnv", 
 register(id="humanoid_long-v1", entry_point="gym.envs.mujoco:HumanoidEnv")
 
 register(id="lorenz-v0", entry_point="seagul.envs.simple_nonlinear:LorenzEnv")
+register(id="linear_z-v0", entry_point="seagul.envs.simple_nonlinear:LinearEnv")
+register(id="gen_nonlin-v0", entry_point="seagul.envs.simple_nonlinear:GenEnv")
+
 
 register(id="dyn_car-v0", entry_point="seagul.envs.car:DynCarEnv")
 register(id="bullet_car-v0", entry_point="seagul.envs.bullet:RacecarGymEnv_v1")
@@ -63,8 +66,17 @@ try:
         return gym.make("humanoid_long-v1")
 
     def lorenz_creator(env_config):
-        return gym.make("lorenz-v0")
+        return gym.make("lorenz-v0", **env_config)
 
+    def linear_creator(env_config):
+        return gym.make("linear_z-v0", **env_config)
+
+    def generic_creator(env_config):
+        return gym.make("gen_nonlin-v0", **env_config)
+
+    def drake_creator(env_config):
+        return gym.make("su_acro_drake-v0", **env_config)
+    
     #  register_env("five_link-v3", five_link_creator)
     register_env("Walker2DBulletEnv-v0", bullet_walker_creator)
     register_env("HumanoidBulletEnv-v0", bullet_humanoid_creator)
@@ -74,6 +86,9 @@ try:
     register_env("sg_cartpole-v0", sg_pendulum_creator)
     register_env("humanoid_long-v1", humanoid_long_creator)
     register_env("lorenz-v0", lorenz_creator)
+    register_env("linear_z-v0", linear_creator)
+    register_env("gen_nonlin-v0", generic_creator)
+    register_env("su_acro_drake-v0", drake_creator)
 
 except:
     import warnings
