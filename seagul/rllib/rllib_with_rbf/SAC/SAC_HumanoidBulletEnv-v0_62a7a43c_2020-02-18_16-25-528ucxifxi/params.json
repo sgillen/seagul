@@ -7,7 +7,7 @@
     ]
   },
   "clip_actions": false,
-  "env": "HalfCheetahBulletEnv-v0",
+  "env": "HumanoidBulletEnv-v0",
   "evaluation_interval": 1,
   "exploration_enabled": true,
   "horizon": 1000,

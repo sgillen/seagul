@@ -52,7 +52,7 @@ envs = {
 
 ray.init()
 for i in range(0,2):
-    for j in range(0,2):
+    for j in range(3,4):
         #---- adjust parameters: -------------------------------------
         algorithm = algos["derivative-free"][i]
         # algorithm = algos["0"]
@@ -128,3 +128,4 @@ for i in range(0,2):
                     file.close()
 
                     # sbatch ./seagul/seagul/notebooks/pod/run_with_singularity.bash seagul/seagul/rllib/rllib_with_rbf/run.py -p short
+                    # ./seagul/seagul/notebooks/pod/run_with_singularity.bash seagul/seagul/rllib/rllib_with_rbf/analyze.py

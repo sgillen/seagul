@@ -1,17 +1,21 @@
 import matplotlib.pyplot as plt
-import visualize
+import numpy as np
+import analysis_functions
 
 # path can be to multiple samples or inside a specific one:
-checkpoint = "500" # only needed for rendering
+checkpoint = "43" # only needed for rendering
 # res_dir = ['./data/HalfCheetahBulletEnv-v0/debug_ddpg/DDPG/DDPG_HalfCheetahBulletEnv-v0_fa22b113_2020-02-18_13-45-28q4lgdx2f/']
-res_dir = ["./Results/HalfCheetah/MLP_vs_FCN/SAC/SAC_HalfCheetahBulletEnv-v0_62a7a43c_2020-02-18_16-25-528ucxifxi/"]
+res_dir = ["./Results/HumanoidBulletEnv-v0/ES/ES_HumanoidBulletEnv-v0_dd3a290c_2020-02-19_13-36-185vmhppes/"] #ES_HumanoidBulletEnv-v0_dd3a4f36_2020-02-19_13-36-18xbj0wfpg/"]
 
-for dir in res_dir:
-    visualize.plot_progress(dir, smoothing_factor=2, cutoff=-1)
+entries = analysis_functions.outputs_to_df(res_dir, cutoff=-1)
+analysis_functions.plot_outputs(entries)
+env, alg = analysis_functions.get_params(res_dir)
+plt.title("Environment: " + env + ",  Algorithm: " + alg)
+
 plot = True
 if plot:
     plt.show()
 else:
-    plt.savefig("Results/Halfcheetah_td3.png")
+    plt.savefig("Results/Walker_es_fcn.png")
 
-visualize.render(checkpoint, res_dir[0])
+analysis_functions.render(checkpoint, res_dir[0])
