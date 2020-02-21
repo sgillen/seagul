@@ -23,7 +23,8 @@ class LinearEnv(gym.Env):
         u_max=25,
         state_noise_max=5.0,
         act_hold=1,
-        reward_fn=lambda s: (-((.01*s[0])**2 + (.01*s[1])**2 + (.01*s[2])**2), s)
+        reward_fn=lambda s: (-((.01*s[0])**2 + (.01*s[1])**2 + (.01*s[2])**2), s),
+        integrator = rk4
     ):
         
         # Simulation/integration parameters
@@ -33,7 +34,7 @@ class LinearEnv(gym.Env):
         self.init_state = init_state
         self.act_hold = act_hold
         self.cur_step = 0
-        self.integrator = rk4
+        self.integrator = integrator
 
         self.state_max = np.array([xyz_max, xyz_max, xyz_max, 1])
         self.observation_space = gym.spaces.Box(low=-(self.state_max+50), high=self.state_max+50, dtype=np.float32)
@@ -88,8 +89,9 @@ class LinearEnv(gym.Env):
         Implements the dynamics for the system
 
         Args:
-            t: float with the current time (not actually used but most ODE solvers want to pass this in anyway)
-            q: numpy array of state variables [x,y,z]
+            t: float with the current time (may not actually be used but need to keep signature compatible with ODE solvers)
+            q: numpy array of state variables 
+            u: nump array of control variables
 
         Returns:
             dqdt: numpy array with the derivatives of the current state variable
