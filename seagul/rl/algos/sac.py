@@ -161,7 +161,6 @@ def sac(
             noise = torch.randn(replay_batch_size, act_size)
             sample_acts, sample_logp = model.select_action(replay_obs1, noise)
 
-            #            import ipdb; ipdb.set_trace()
             q_in = torch.cat((replay_obs1, sample_acts), dim=1)
             q_in = q_in.to(device)
             # print(q_in.device)

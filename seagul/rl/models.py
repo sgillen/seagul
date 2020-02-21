@@ -84,6 +84,7 @@ class SACModelActHold:
 
         self.num_acts = int(policy.output_layer.out_features / 2)
         self.act_limit = act_limit
+        self.hold_count = hold_count
         self.cur_hold_count = 0
 
     # Step is the deterministic evaluation of the policy
@@ -116,6 +117,8 @@ class SACModelActHold:
             self.cur_hold_count += 1
 
         else:
+
+
             acts = self.cur_action
             logp = self.cur_logp
             self.cur_hold_count += 1
@@ -333,31 +336,31 @@ class SwitchedPPOModelActHold:
     def get_path_logp(self, states, actions):
         return get_cont_logp(self.gate_fn, states, actions, self.gate_var)
 
-    def hyst(self, x):
-        if x > 0.5:
-            return 1
-        else:
-            return 0
-
     # def hyst(self, x):
-    #     """
-    #     Unvectorized hysteris function with sharp transitions
+    #     if x > 0.5:
+    #         return 1
+    #     else:
+    #         return 0
 
-    #     :param x double between 0 and 1:
-    #     :return activation function:
-    #     """
-    #     if self.hyst_state == 0:
-    #         if x > 0.55:
-    #             self.hyst_state = 1
-    #             return 1
-    #         else:
-    #             return 0
-    #     elif self.hyst_state == 1:
-    #         if x < 0.45:
-    #             self.hyst_state = 0
-    #             return 0
-    #         else:
-    #             return 1
+    def hyst(self, x):
+        """
+        Unvectorized hysteris function with sharp transitions
+
+        :param x double between 0 and 1:
+        :return activation function:
+        """
+        if self.hyst_state == 0:
+            if x > 0.65:
+                self.hyst_state = 1
+                return 1
+            else:
+                return 0
+        elif self.hyst_state == 1:
+            if x < 0.35:
+                self.hyst_state = 0
+                return 0
+            else:
+                return 1
 
 
 # helper functions

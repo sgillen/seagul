@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils import data
-import tqdm
+import tqdm.auto as tqdm
 import copy
 import gym
 import pickle
