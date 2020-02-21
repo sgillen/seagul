@@ -8,25 +8,35 @@ from seagul.integration import euler,rk4
 
 class LinearEnv(gym.Env):
     """
-    Environment for the lorenz system
-
-
-    Attributes:
+    Environment for the our "Linear Z" system.. just take a look at the dynamics. Also includes an extra
+    "reward" state for the policy, in case you have a time dependend reward
     """
 
     def __init__(
         self,
         num_steps=50,
         dt=0.01,
+        act_hold=1,
         init_state=np.array([1, 1, 1]),
+        init_noise_max=5.0,
         xyz_max=float('inf'),
         u_max=25,
-        state_noise_max=5.0,
-        act_hold=1,
         reward_fn=lambda s: (-((.01*s[0])**2 + (.01*s[1])**2 + (.01*s[2])**2), s),
-        integrator = rk4
+        integrator=rk4
     ):
-        
+
+        """
+        num_steps: number of actions to take in an episode
+        dt: integration timestep
+        act_hold: how many integration steps to do between policy evals. So total time for an episode is act_hold*dt*num_steps
+        init_state: on reset, the state is init_state + np.random.uniform(-init_noise_max, init_noise_max)
+        init_noise_max: see above ^^
+        xyz_max: values to kill the episode at, if we exceed them
+        u_max: values to clip actions at
+        reward_fn: lambda defining reward in terms of the augmented state (x,y,z,r)
+        integrator: which integrator to use, must be from seagul.integration
+        """
+
         # Simulation/integration parameters
         self.dt = dt
         self.num_steps = num_steps
@@ -38,12 +48,11 @@ class LinearEnv(gym.Env):
 
         self.state_max = np.array([xyz_max, xyz_max, xyz_max, 1])
         self.observation_space = gym.spaces.Box(low=-(self.state_max+50), high=self.state_max+50, dtype=np.float32)
-        self.state_noise_max = 5.0
+        self.init_noise_max = init_noise_max
 
         # Action (Control) parameters
         self.action_max = np.array([u_max, u_max])
         self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float32)
-        self.u_noise_max = 0.0
 
         self.reward_state = 10
         self.seed()
@@ -56,7 +65,7 @@ class LinearEnv(gym.Env):
 
     def reset(self, init_state=None):
         if init_state is None:
-            self.state = self.init_state + self.np_random.uniform(-self.state_noise_max, self.state_noise_max)
+            self.state = self.init_state + self.np_random.uniform(-self.init_noise_max, self.init_noise_max)
         else:
             self.state = init_state
 
@@ -86,7 +95,7 @@ class LinearEnv(gym.Env):
 
     def _derivs(self, t, q, u):
         """
-        Implements the dynamics for the system
+        Implements the dynamics for the system, you could monkey patch this if you really wanted
 
         Args:
             t: float with the current time (may not actually be used but need to keep signature compatible with ODE solvers)
