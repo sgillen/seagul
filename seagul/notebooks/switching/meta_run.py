@@ -27,9 +27,7 @@ activation = nn.ReLU
 
 proc_list = []
 
-for max_torque in [1,5,25,100]:
-    for seed in [0,1]:
-
+for seed in [0,1,2,3]:
         policy = MLP(input_size, output_size, num_layers, layer_size, activation)
         value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
         model = PPOModelActHold(
@@ -40,21 +38,20 @@ for max_torque in [1,5,25,100]:
         )
 
         def reward_fn(ns, act):
-            reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
-            reward -= (abs(ns[2]) > 5)
-            reward -= (abs(ns[3]) > 10)
-            return 1e-2*np.array(reward, np.float32)
+            return -1e-4*(ns[0]**2 + ns[1]**2 + .1*ns[2]**2 + .2*ns[3]**2)
+            #return 1e-2*(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
 
         env_config = {
-            "max_torque" : max_torque,
+            "max_torque" : 25,
             "init_state" : [0.0, 0.0, 0.0, 0.0],
             "init_state_weights" : np.array([1, 1, 0, 0]),
             "dt" : .01,
-            "max_t" : 2,
-            "act_hold" : 5,
+            "max_t" : 10,
+            "act_hold" : 1,
             "fixed_step" : True,
-            "int_accuracy" : .01,
-            "reward_fn" : reward_fn
+            "reward_fn" : reward_fn,
+            # "max_th1dot" : 20,
+            # "max_th2dot" : 40
         }
 
         alg_config = {
@@ -62,21 +59,18 @@ for max_torque in [1,5,25,100]:
             "model": model,
             "act_var_schedule": [1],
             "seed": seed,  # int((time.time() % 1)*1e8),
-            "total_steps" : 500*2048,
+            "total_steps" : 5e5,
             "epoch_batch_size": 2048,
-            "reward_stop" : 900,
+            "reward_stop" : None,
             "gamma": 1,
-            "pol_epochs": 30,
-            "val_epochs": 30,
+            "pol_epochs": 10,
+            "val_epochs": 10,
             "env_config" : env_config
         }
 
-        #    run_sg(alg_config, ppo, "debug_2pol" + str(seed), "debugging the large pol loss spike", "/data/debug")a
-        now = datetime.datetime.now()
-        date_str = str(now.day) + "-" + str(now.month) + "_" + str(now.hour) + "-" + str(now.minute)
-        run_name = "small_rew" + str(seed) + "_" + str(max_torque) + "--" + date_str
+        run_name = "swingdown" + str(seed)
 
-        p = Process(target=run_sg, args=(alg_config, ppo, run_name , "debugging the large pol loss spike", "/data/small_rew_search3/"))
+        p = Process(target=run_sg, args=(alg_config, ppo, run_name , "new reward, just the states now with angle wrap", "/data_sd/trial7/"))
         p.start()
         proc_list.append(p)
 

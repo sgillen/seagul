@@ -2,6 +2,7 @@ import ray
 from ray import tune
 import ray.rllib.agents.ppo as ppo
 import seagul.envs
+from seagul.integration import euler,rk4
 
 config = ppo.DEFAULT_CONFIG.copy()
 config["num_workers"] = 1
@@ -43,13 +44,11 @@ def reward_fn(s):
 
     return reward, s
 
-
 config["env_config"]["reward_fn"] = reward_fn
-config["env_config"]["num_steps"] = 100
-config["env_config"]["act_hold"] = 10
+config["env_config"]["num_steps"] = 1000
 config["env_config"]["xyz_max"] = float('inf')
-
-
+config["env_config"]["integrator"] = euler
+config["env_config"]["act_hold"] = 1
 
 # import pprint
 # pprint.pprint(config)
@@ -59,6 +58,6 @@ analysis = tune.run(
     config=config,
     stop={"timesteps_total": 2e6},
     num_samples=4,
-    local_dir="./data/tune/custom_reward",
+    local_dir="./data/tune/euler",
     checkpoint_at_end=True,
 )

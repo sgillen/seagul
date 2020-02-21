@@ -32,8 +32,8 @@ for seed in [1,2,3,4]:
     env_name = "su_acro_drake-v0"
     env = gym.make(env_name)
 
+    run_name = "heavy_switch"
 
-    run_name = "ello"
     def control(q):
         k = np.array([[1316.85000612, 555.41763935, 570.32667002, 272.57631536]], dtype=np.float32)
         # k = np.array([[278.44223126, 112.29125985, 119.72457377,  56.82824017]])
@@ -41,11 +41,10 @@ for seed in [1,2,3,4]:
         # return 0
         return (-k.dot(gs - np.asarray(q)))
 
-
     model = SwitchedPPOModelActHold(
         # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-        policy=torch.load("warm/ppo2_warm_pol2"),
-        value_fn=torch.load("warm/ppo2_warm_val2"),
+        policy=torch.load("warm/ppo2_warm_polh"),
+        value_fn=torch.load("warm/ppo2_warm_valh"),
         # MLP(input_size, 1, num_layers, layer_size, activation),
         gate_fn=torch.load("warm/gate_fn_ppo2_nz128"),
         nominal_policy=control,
@@ -53,30 +52,24 @@ for seed in [1,2,3,4]:
     )
     
     def reward_fn(ns, act):
-        reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
-        #reward -= (abs(ns[2]) > 5)
-        #reward -= (abs(ns[3]) > 10)
-        #reward -= (abs(act) > 10)
-        return 1e-2*np.array(reward, np.float32)
-
+        return 1e-2*-(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
 
     env_config = {
-        "max_torque" : 200,
+        "max_torque" : 700,
         "init_state" : [0.0, 0.0, 0.0, 0.0],
         "init_state_weights" : np.array([1, 1, 0, 0]),
         "dt" : .01,
-        "max_t" : 4,
-        "act_hold" : 1,
+        "max_t" : 5,
+        "act_hold" : 20,
         "fixed_step" : True,
         "int_accuracy" : .01,
         "reward_fn" : reward_fn
     }
 
-
     arg_dict = {
         "env_name": env_name,
         "model": model,
-        "total_steps": 100*2048,
+        "total_steps": 1e6,
         "epoch_batch_size": 2048,
         "act_var_schedule": [1, 1],
         "gate_var_schedule": [0.1, 0.1],
@@ -88,24 +81,18 @@ for seed in [1,2,3,4]:
         "env_config": env_config
     }
 
-    
-    cur_time = time.time()
-    
-
     p = Process(
         target=run_sg,
         args=(
             arg_dict,
             ppo_switch,
-            run_name + str(cur_time),
-            "now with penalties for velocity",
-            "/data/drake_ppo2/",
+            run_name,
+            "heavier second link",
+            "/data2/ht/",
         ),
     )
     p.start()
     proc_list.append(p)
-
-
 
 for p in proc_list:
     print("joining")
