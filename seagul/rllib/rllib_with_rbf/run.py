@@ -55,7 +55,7 @@ ray.init()
 #---- adjust parameters: -------------------------------------
 algorithm = "PPO" # algos["gradient-based"][a]
 # algorithm = algos["0"]
-environment = envs[2]["name"]
+environment = envs[3]["name"]
 output_dir = "./data/" + environment + "/"
 if os.path.exists("./params/" + environment + "/" + algorithm + ".json"):
     config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
