@@ -4,8 +4,8 @@ import time
 import re
 
 # copies the params and result files (csv/json etc) AND the last checkpoint folder
-copy_from_dir = "/home/grabka/data/HalfCheetahBulletEnv-v0/mlp_default/PPO"
-copy_to_dir = "./temp/"
+copy_from_dir = "./data/HalfCheetahBulletEnv-v0/compare_mlp/SAC/"
+copy_to_dir = "./Results/"
 
 for subdir, dirs, files in os.walk(copy_from_dir):
     for dir in dirs:

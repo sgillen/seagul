@@ -143,7 +143,7 @@ def outputs_to_df(res_dir, cutoff = -1):
     """
 
     all_results = pd.DataFrame(columns = ['model', 'ts', 'rewards', 'color'])
-    all_colors = {'RBF': ['#E85E10', '#BF2E0F', '#BE7F72', '#E6A092'], 'MLP': ['#9AE692', '#2BB51D', '#26FE11', '#578653'], 'linear': ['#DDEA11'], 'FCN': ['#1166EA', '#5B93E9', '#526F9C', '#5898FA']}
+    all_colors = {'RBF': ['#E85E10', '#BF2E0F', '#BE7F72', '#E6A092'], 'mlp': ['#9AE692', '#2BB51D', '#26FE11', '#578653'], 'linear': ['#DDEA11'], 'FCN': ['#1166EA', '#5B93E9', '#526F9C', '#5898FA']}
     colors = {}
     for output_dir in res_dir:
         if os.path.exists(output_dir +  "/progress.csv"): # if already in folder and no looping required
@@ -195,7 +195,7 @@ def render(checkpoint, home_path):
     import pybullet_envs
     ray.init()
     ModelCatalog.register_custom_model("RBF", RBFModel)
-    ModelCatalog.register_custom_model("MLP", MLP)
+    ModelCatalog.register_custom_model("MLP_2_64", MLP)
     ModelCatalog.register_custom_model("linear", Linear)
 
     if alg == "PPO":
@@ -218,7 +218,7 @@ def render(checkpoint, home_path):
     trainer.restore(checkpoint_path)
 
     if "Bullet" in current_env:
-        env = gym.make(current_env, render=False)
+        env = gym.make(current_env, render=True)
     else:
         env = gym.make(current_env)
     #env.unwrapped.reset_model = det_reset_model
@@ -236,13 +236,14 @@ def render(checkpoint, home_path):
         # for some algorithms you can get the sample mean out, need to change the value on the index to match your env for now
         # mean_actions = out_dict['behaviour_logits'][:17]
         # actions = trainer.compute_action(obs.flatten())
-        sampled_actions, _ , out_dict = trainer.compute_action(obs.flatten(),full_fetch=True)
+        # sampled_actions, _ , out_dict = trainer.compute_action(obs.flatten(),full_fetch=True)
+        sampled_actions = trainer.compute_action(obs.flatten())
         
         actions = sampled_actions
         
         obs, reward, done, _ = env.step(np.asarray(actions))
         
-        # env.render()
+        env.render()
         
         action_hist.append(np.copy(actions))
         obs_hist.append(np.copy(obs))

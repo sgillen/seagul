@@ -101,7 +101,7 @@ def smooth_bounded_curve(
     min_data = [np.min(data[i,:]) for i in range(data.shape[0])]
     max_data = [np.max(data[i,:]) for i in range(data.shape[0])]
 
-    if len(avg_data) > 1000:
+    if len(avg_data) > 100:
         min_data = pd.Series(min_data).rolling(100, min_periods=10).mean()
         max_data = pd.Series(max_data).rolling(100, min_periods=10).mean()
         avg_data = pd.Series(avg_data).rolling(100, min_periods=10).mean()

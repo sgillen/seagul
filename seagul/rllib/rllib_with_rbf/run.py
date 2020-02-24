@@ -51,12 +51,12 @@ envs = {
     3: {"name": "HalfCheetahBulletEnv-v0", "stop": 9000}}
 
 ray.init()
-for i in range(0,2):
-    for j in range(3,4):
+for a in range(3,7):
+    for e in range(0,2):
         #---- adjust parameters: -------------------------------------
-        algorithm = algos["derivative-free"][i]
+        algorithm = algos["gradient-based"][a]
         # algorithm = algos["0"]
-        environment = envs[j]["name"]
+        environment = envs[e]["name"]
         output_dir = "./data/" + environment + "/"
         if os.path.exists("./params/" + environment + "/" + algorithm + ".json"):
             config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
@@ -74,6 +74,7 @@ for i in range(0,2):
             config['critic_hiddens'] = [256, 256]
         else: # if algorithm == "PPO":
             config['model'] = {'fcnet_hiddens': [256,256]}
+        # config['model'] = {"custom_model": {}, "custom_options": {}}
         # config['model'] = tune.grid_search([{"custom_model": "RBF", 
         #                                      "custom_options": {
         #                                          "normalization": False,
@@ -114,7 +115,7 @@ for i in range(0,2):
                 algorithm,
                 local_dir=output_dir,
                 # name="test",
-                stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 500000},
+                stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 2000000},
                 checkpoint_freq=10,
                 max_failures=5,
                 checkpoint_at_end=True,

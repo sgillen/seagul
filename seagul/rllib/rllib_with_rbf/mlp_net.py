@@ -23,9 +23,12 @@ class MLP(TFModelV2):
         super(MLP, self).__init__(obs_space, action_space,
                                            num_outputs, model_config, name)
         try:
-            self.hidden_neurons = model_config["custom_options"]["hidden_neuons"] # typo
+            try:
+                self.hidden_neurons = model_config["custom_options"]["hidden_neuons"] # typo
+            except:
+                self.hidden_neurons = model_config["custom_options"]["hidden_neurons"]
         except:
-            self.hidden_neurons = model_config["custom_options"]["hidden_neurons"]
+            self.hidden_neurons = [64,64]
         self.inputs = tf.keras.layers.Input(
             shape=obs_space.shape, name="observations")
         layer_1 = tf.keras.layers.Dense(
