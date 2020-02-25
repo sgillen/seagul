@@ -58,6 +58,8 @@ class DrakeAcroEnv(core.Env):
                  fixed_step = True,
                  int_accuracy = .01,
                  reward_fn = lambda ns, a: -(np.cos(ns[0]) + np.cos(ns[0] + ns[1])),
+                 th1_range = [0, 2*pi],
+                 th2_range = [-pi, pi],
                  max_th1dot = float('inf'),
                  max_th2dot = float('inf')
     ):
@@ -91,8 +93,9 @@ class DrakeAcroEnv(core.Env):
         self.LINK_LENGTH_2 = 1.0
         self.viewer = None
 
-        high = np.array([2 * pi, pi, max_th1dot, max_th2dot])
-        low = np.array([0, -pi, -max_th1dot, -max_th2dot])
+        low = np.array([th1_range[0], th2_range[0], -max_th1dot, -max_th2dot])
+        high = np.array([th1_range[1], th2_range[1], max_th1dot, max_th2dot])
+
 
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([-max_torque]), high=np.array([max_torque]), dtype=np.float32)
@@ -107,8 +110,8 @@ class DrakeAcroEnv(core.Env):
         builder.Connect(saturation.get_output_port(0), acrobot.get_input_port(0))
 
         wrapangles = WrapToSystem(4)
-        wrapangles.set_interval(0, -2*pi, 2.0 * math.pi)
-        wrapangles.set_interval(1, -math.pi, math.pi)
+        wrapangles.set_interval(0, th1_range[0], th1_range[1])
+        wrapangles.set_interval(1, th2_range[0], th2_range[1])
         wrapto = builder.AddSystem(wrapangles)
         builder.Connect(acrobot.get_output_port(0), wrapto.get_input_port(0))
 

@@ -72,8 +72,6 @@ class AcrobotEnv(core.Env):
     MAX_VEL_1 = 4 * np.pi
     MAX_VEL_2 = 9 * np.pi
 
-    AVAIL_TORQUE = [-1.0, 0.0, +1]
-
     torque_noise_max = 0.0
 
     #: use dynamics equations from the nips paper or the book
@@ -82,9 +80,14 @@ class AcrobotEnv(core.Env):
     domain_fig = None
     actions_num = 3
 
-    def __init__(self):
+    def __init__(self,
+                 dt = .01,
+                 max_torque = 25
+                 ):
         self.viewer = None
         high = np.array([1.0, 1.0, 1.0, 1.0, self.MAX_VEL_1, self.MAX_VEL_2])
+        self.max_torque = max_torque
+
         low = -high
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([-10]), high=np.array([10]), dtype=np.float32)
@@ -117,11 +120,11 @@ class AcrobotEnv(core.Env):
         # ns = euler(self._dsdt, s_augmented, [0, self.dt])
 
         # only care about final timestep of integration returned by integrator
-        for i in range(5):
+        for i in range(self.act_hold):
             s = self.state
             s_augmented = np.append(s, torque)
 
-            ns = rk4(self._dsdt, s_augmented, [0, self.dt])
+            ns = self.integrator(self._dsdt, s_augmented, [0, self.dt])
             ns = ns[-1]
 
             ns = ns[:4]  # omit action
@@ -158,7 +161,7 @@ class AcrobotEnv(core.Env):
         s = self.state
         return bool(-np.cos(s[0]) - np.cos(s[1] + s[0]) > 1.0)
 
-    def _dsdt(self, s_augmented, t):
+    def _dsdt(self, t, s_augmented, action):
         m1 = self.LINK_MASS_1
         m2 = self.LINK_MASS_2
         l1 = self.LINK_LENGTH_1

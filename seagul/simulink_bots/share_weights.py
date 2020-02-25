@@ -2,7 +2,7 @@ import numpy as np
 import array
 import time
 
-dtype="d" # need to change d->f this for float32
+dtype="f" # need to change d->f this for float32
 ep_steps = 200
 obs_size  = 4
 act_size = 1
@@ -22,7 +22,7 @@ def do_simulink_rollout(env, model):
     with open("update_ready", "w") as f:
         f.write("1")
 
-    # this is terrible I know but the only way to get anything out of similink is via disk backed file IO
+    # this is terrible I know but the only way to get anything out of simulink is via disk backed file IO
 
     ep_done = "0"
     while(ep_done == "0"):
@@ -40,13 +40,13 @@ def do_simulink_rollout(env, model):
 
     return obs, act, done, rews
     
-    
-def write_net(prefix, net, num_layers = 4):
-    weight_names = ["wght.dat" + str(num) for num in range(num_layers)]
-    bias_names   = ["bias.dat" + str(num) for num in range(num_layers)]
+# This relies on the net_dict being ordered
+def write_net(prefix, net_dict_vals, num_layers = 4):
+    weight_names = ["wght" + str(num) + ".dat" for num in range(num_layers)]
+    bias_names   = ["bias" + str(num) + ".dat" for num in range(num_layers)]
     file_names = [val for pair in zip(weight_names, bias_names) for val in pair]
     
-    for name, value in zip(file_names, net.state_dict().values()):
+    for name, value in zip(file_names, net_dict_vals):
         write_layer(prefix + name, value)
 
     return
