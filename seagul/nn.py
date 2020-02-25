@@ -1,9 +1,12 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn.parameter import Parameter
 from torch.utils import data
 
 from tqdm import trange
+
+
 
 """
 Utility functions for seagul, all vaguely related to neural networks
@@ -180,27 +183,43 @@ class MLP(nn.Module):
     """
 
     def __init__(
-            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, device="cpu"):
+            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity,input_bias=None):
         """
-         :param input_size: how many inputs
-         :param output_size: how many outputs
-         :param num_layers: how many HIDDEN layers
-         :param layer_size: how big each hidden layer should be
-         :param activation: which activation function to use
+         input_size: how many inputs
+         output_size: how many outputs
+         num_layers: how many HIDDEN layers
+         layer_size: how big each hidden layer should be
+         activation: which activation function to use
+         input_bias: can add an "input bias" such that the first layer computer activation([x+bi]*W^T + b0)
          """
         super(MLP, self).__init__()
 
+
+        
         self.activation = activation()
         self.output_activation = output_activation()
 
-        self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
-        self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers)])
-        self.output_layer = nn.Linear(layer_size, output_size)
+        if input_bias is not None:
+            self.input_bias = Parameter(torch.Tensor(input_size))
+        else:
+            self.input_bias = None
+            
+        if num_layers == 0:
+            self.layers = []
+            self.output_layer = nn.Linear(input_size, output_size)
 
-        self.state_means = torch.zeros(input_size,device=device)
-        self.state_var = torch.ones(input_size,device=device)
+        else:
+            self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
+            self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers-1)])
+            self.output_layer = nn.Linear(layer_size, output_size)
+
+        self.state_means = torch.zeros(input_size)
+        self.state_var = torch.ones(input_size)
 
     def forward(self, data):
+
+        if self.input_bias is not None:
+            data += self.input_bias
 
         data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
 

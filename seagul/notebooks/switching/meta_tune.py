@@ -27,12 +27,11 @@ config["sgd_minibatch_size"] = 512
 config["train_batch_size"] = 2048
 config["vf_clip_param"] = 10
 config["env"] = env_name
-
 config["model"]["fcnet_hiddens"] = [24, 24]
 config["no_done_at_end"] = True
 
 def reward_fn(ns, act):
-    reward = -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+    reward = (np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
     #reward -= (abs(ns[2]) > 5)
     #reward -= (abs(ns[3]) > 10)
     #reward -= (abs(act) > 10)
@@ -57,6 +56,6 @@ analysis = tune.run(
     config=config,
     stop={"timesteps_total": 5e5},
     num_samples=4,
-    local_dir="./data/tune/",
+    local_dir="./data/tune/swingdown/trial0",
     checkpoint_at_end=True,
 )

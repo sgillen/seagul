@@ -63,7 +63,7 @@ class LinearEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self, init_state=None):
+    def reset(self, init_state=None):        
         if init_state is None:
             self.state = self.init_state + self.np_random.uniform(-self.init_noise_max, self.init_noise_max)
         else:
@@ -76,19 +76,21 @@ class LinearEnv(gym.Env):
     def step(self, action):
         action = np.clip(action, -self.action_max, self.action_max)
 
-        for _ in range(self.act_hold):
+        full_obs = np.zeros((self.act_hold,3))
+        for i in range(self.act_hold):
             self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
+            full_obs[i,:] = self.state
 
         aug_state = np.concatenate((self.state, np.array(self.reward_state).reshape(-1)))
         reward, aug_state = self.reward_fn(aug_state)
         self.reward_state = aug_state[-1]
-
+    
         done = False
         self.cur_step += 1
         if self.cur_step > self.num_steps:
             done = True
 
-        return aug_state , reward, done, {}
+        return aug_state , reward, done, {"full_obs": full_obs}
 
     def render(self, mode="human"):
         raise NotImplementedError
