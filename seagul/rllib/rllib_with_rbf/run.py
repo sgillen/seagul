@@ -11,7 +11,7 @@ import gym
 from gym import envs
 
 import pybullet_envs
-# import seagul.envs
+import seagul.envs
 from pathlib import Path
 # import and register custom models
 all_envs = envs.registry.all()
@@ -45,17 +45,17 @@ algos = {
     }
 }
 envs = {
-    0: {"name": "HumanoidBulletEnv-v0", "stop": 6000},
+    0: {"name": "HalfCheetahBulletEnv-v0", "stop": 9000},
     1: {"name": "Pendulum-v0", "stop": 150},
     2: {"name": "Walker2DBulletEnv-v0", "stop": 2000},
-    3: {"name": "HalfCheetahBulletEnv-v0", "stop": 9000}}
+    3: {"name": "HumanoidBulletEnv-v0", "stop": 6000}}
 
 ray.init()
 
 #---- adjust parameters: -------------------------------------
-algorithm = "PPO" # algos["gradient-based"][a]
+algorithm = "ARS" # algos["gradient-based"][a]
 # algorithm = algos["0"]
-environment = envs[3]["name"]
+environment = envs[0]["name"]
 output_dir = "./data/" + environment + "/"
 if os.path.exists("./params/" + environment + "/" + algorithm + ".json"):
     config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
@@ -73,12 +73,20 @@ config['env'] = environment
 #     config['critic_hiddens'] = [256, 256]
 # else: # if algorithm == "PPO":
 #     config['model'] = {'fcnet_hiddens': [256,256]}
+# config['model']['custom_model'] = 'MLP'
+# config['model']['custom_options'] = {'hidden_neurons': [256, 256]}
+# config['model'] = {"fcnet_hiddens": [256,256]}
+# config['model'] = tune.grid_search([{'fcnet_hiddens': [256,256]},
+#                                     {'fcnet_hiddens': [64,64]},
+#                                     {'custom_model': 'MLP',
+#                                      'custom_options': {
+#                                         'hidden_neurons': [256, 256]}},
+#                                     {'custom_model': 'linear'}])
 
-config['model'] = tune.grid_search([{'fcnet_hiddens': [256,256]},
+config['model'] = tune.grid_search([{'fcnet_hiddens': []},
                                     {'fcnet_hiddens': [64,64]},
-                                    {'custom_model': 'MLP',
-                                     'custom_options': {
-                                        'hidden_neurons': [256, 256]}}])
+                                    {'fcnet_hiddens': [256,256]}])
+
 # config['model'] = {"custom_model": {}, "custom_options": {}}
 # config['model'] = tune.grid_search([{"custom_model": "RBF", 
 #                                      "custom_options": {
@@ -125,7 +133,7 @@ try:
         max_failures=5,
         checkpoint_at_end=True,
         config=config,
-        num_samples=3
+        num_samples=2
     )
 except Exception as e:
             Path(output_dir + algorithm).mkdir(parents=True, exist_ok=True)

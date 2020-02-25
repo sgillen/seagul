@@ -78,6 +78,7 @@ class Linear(TFModelV2):
 
     def __init__(self, obs_space, action_space, num_outputs, model_config,
                  name):
+        print(obs_space)
         super(Linear, self).__init__(obs_space, action_space,
                                            num_outputs, model_config, name)
         self.inputs = tf.keras.layers.Input(
