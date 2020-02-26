@@ -148,27 +148,31 @@ class PPOModel:
 
     def step(self, obs):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
-        action, logp = self.select_action(obs)
+        action, _ = self.select_action(torch.as_tensor(obs))
         value = self.value_fn(torch.as_tensor(obs))
+        logp = get_cont_logp(self.policy, obs, action, self.action_std)
         return action, value, None, logp
 
     def select_action_fixed_std(self, obs):
-        return sample_guassian(self.policy(obs), self.action_std)
+        return select_cont_action(self.policy, obs, self.action_std)
+        #        return sample_gaussian(self.policy(obs), self.action_std)
 
-    def get_logp_fixed_std(self, obs, actions):
-        return guassian_logp(actions, self.policy(obs), self.action_std)
+    def get_logp_fixed_std(self, obs, acts):
+        return get_cont_logp(self.policy, obs, acts, self.action_std)
+
+        #return gaussian_logp(acts, self.policy(obs), self.action_std)
 
     def select_action_variable_std(self, obs):
         out = self.policy(obs)
         means = out[0:out.shape/2]
         logstds = out[out.shape/2:-1]
-        return sample_guassian(means, torch.exp(logstds))
+        return sample_gaussian(means, torch.exp(logstds))
 
     def get_logp_variable_std(self, obs, actions):
         out = self.policy(obs)
         means = out[0:out.shape / 2]
         logstds = out[out.shape / 2:-1]
-        return guassian_logp(actions, means, torch.exp(self.action_std))
+        return gaussian_logp(actions, means, torch.exp(logstds))
 
 
 class PPOModelActHold:
@@ -375,6 +379,38 @@ class SwitchedPPOModelActHold:
 
 # helper functions
 # ============================================================================================
+
+# takes a policy and the states and sample an action from it... (can we make this faster?)
+def select_cont_action(policy, state, variance):
+    means = policy(torch.as_tensor(state)).squeeze()
+    m = Normal(loc=means, scale=torch.ones_like(means) * variance)
+    action = m.sample()
+    logprob = m.log_prob(action)
+    return action.detach().reshape(-1), logprob
+
+
+# given a policy plus a state/action pair, what is the log liklihood of having taken that action?
+def get_cont_logp(policy, states, actions, variance):
+    means = policy(torch.as_tensor(states)).squeeze()
+    m = Normal(loc=means, scale=torch.ones_like(means) * variance)
+    logprob = m.log_prob(actions.squeeze())
+    return logprob
+
+#
+# def sample_gaussian(means, stds):
+#     m = Normal(loc=means.squeeze(), scale=torch.ones_like(means.squeeze()) * stds)
+#     action = m.sample()
+#     logprob = m.log_prob(action)
+#     return action.detach().reshape(-1), logprob
+#
+#
+# # given a policy plus a state/action pair, what is the log liklihood of having taken that action?
+# def gaussian_logp(actions, means, variance):
+#     m = Normal(loc=means.squeeze(), scale=torch.ones_like(means.squeeze()) * variance)
+#     logprob = m.log_prob(actions.squeeze())
+#     return logprob
+#
+#
 
 # Selects a sample from a Gaussian with mean and stds given. Returns sample and the logprob
 def sample_guassian(means, stds):
