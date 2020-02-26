@@ -337,7 +337,7 @@ if __name__ == "__main__":
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, action_var=0.1, discrete=True)
+    model = PPOModel(policy, value_fn, action_std=0.1, discrete=True)
 
     # Define our hyper parameters
     num_epochs = 100
