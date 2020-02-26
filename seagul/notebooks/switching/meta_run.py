@@ -1,7 +1,7 @@
 import seagul.envs
 import gym
 
-env_name = "su_acro_drake-v0"
+env_name = "su_acrobot-v0"
 env = gym.make(env_name)
 
 import datetime
@@ -19,58 +19,61 @@ import time
 # init policy, valuefn
 input_size = 4
 output_size = 1
-layer_size = 0
-num_layers = 0
+layer_size = 16
+num_layers = 1
 activation = nn.ReLU
 
 
 proc_list = []
+trial_num = input("What trial is this?\n")
 
-for seed in range(200)[-16:]:
+for seed in np.random.randint(0, 2**32, 4):
+    for max_t in [5,10,20]:
+
+        max_torque = 5
+        max_t = max_t
+
         policy = MLP(input_size, output_size, num_layers, layer_size, activation)
         value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-        model = PPOModel(
+        model = PPOModelActHold(
             policy=policy,
             value_fn = value_fn,
             discrete=False,
-#            hold_count = 0
+            hold_count = 20
         )
 
         def reward_fn(ns, act):
-            return -1e-2*((ns[0] - np.pi)**2 + ns[1]**2 + .1*ns[2]**2 + .2*ns[3]**2)
-            #return 1e-2*(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+            #return -1e-4*(5*(ns[0] - np.pi)**2 + ns[1]**2 + .5*ns[2]**2 + .5*ns[3]**2)
+            return -1e-2*(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+            #return -.1 * np.exp(np.sqrt(.1 * (ns[0] - np.pi) ** 2 + .1 * ns[1] ** 2 + .01 * ns[2] ** 2 + .01 * ns[3] ** 2))
+
 
         env_config = {
-            "max_torque" : 25,
-            "init_state" : [0.0, 0.0, 0.0, 0.0],
-            "init_state_weights" : np.array([.1, .3, .1, .1]),
-            "dt" : .02,
-            "max_t" : 1,
-            "act_hold" : 1,
-            "fixed_step" : True,
+            "init_state": [0, 0, 0, 0],
+            "max_torque": max_torque,
+            "init_state_weights": [0, 0, 0, 0],
+            "dt": .01,
             "reward_fn" : reward_fn,
-            "th1_range" : [-2*np.pi, 2*np.pi],
-            # "max_th1dot" : 20,
-            # "max_th2dot" : 40
-        }
+            "max_t" : max_t
+            }
 
         alg_config = {
             "env_name": env_name,
             "model": model,
-            "act_var_schedule": [.1],
-            "seed": seed,  # int((time.time() % 1)*1e8),
-            "total_steps" : 1e6,
+            "act_var_schedule": [3],
+            "seed": 0,  # int((time.time() % 1)*1e8),
+            "total_steps" : 5e5,
             "epoch_batch_size": 2048,
             "reward_stop" : None,
             "gamma": 1,
-            "pol_epochs": 10,
+            "pol_epochs": 30,
             "val_epochs": 10,
             "env_config" : env_config
         }
 
-        run_name = "swingdown" + str(seed)
+        run_name = "swingup" + str(seed)
 
-        p = Process(target=run_sg, args=(alg_config, ppo, run_name , "new reward, just the states now with angle wrap", "/data_linear_b/trial0/"))
+        p = Process(target=run_sg, args=(alg_config, ppo, run_name , "normal reward", "/data/sg_acro2/trial" + str(trial_num) + "_maxt" + str(max_t) + "/"))
         p.start()
         proc_list.append(p)
 

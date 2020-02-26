@@ -158,7 +158,8 @@ class DrakeAcroEnv(core.Env):
         self.context = self.simulator.get_mutable_context()
 
         init_state = self.InitialState().CopyToVector()
-        init_state += np.random.random(4)*self.init_state_weights
+
+        init_state += np.random.random(4)*np.random.random(4)(self.state_weights*2) - self.state_weights
 
         if init_vec is not None:
             init_state[0] = init_vec[0]

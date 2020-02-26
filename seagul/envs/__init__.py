@@ -23,7 +23,7 @@ register(id="sg_cartpole-v0", entry_point="seagul.envs.classic_control:SGCartPol
 register(id="su_cartpole_push-v0", entry_point="seagul.envs.classic_control:SUCartPolePushEnv")
 register(id="su_cartpole_discrete-v0", entry_point="seagul.envs.classic_control:SUCartPoleDiscEnv")
 register(id="su_pendulum-v0", entry_point="seagul.envs.classic_control:SUPendulumEnv")
-register(id="su_acrobot-v0", entry_point="seagul.envs.classic_control:AcrobotEnv")
+register(id="su_acrobot-v0", entry_point="seagul.envs.classic_control:SGAcroEnv")
 register(id="su_acrobot-v1", entry_point="seagul.envs.classic_control:AcrobotEnv2")
 register(id="su_cartpole_gym-v0", entry_point="seagul.envs.classic_control:CartPoleEnv")
 register(id="sym_pendulum-v0", entry_point="seagul.envs.classic_control:PendulumSymEnv", max_episode_steps=200)
@@ -76,7 +76,10 @@ try:
 
     def drake_creator(env_config):
         return gym.make("su_acro_drake-v0", **env_config)
-    
+
+    def acro_creator(env_config):
+        return gym.make("su_acrobot-v0", **env_config)
+
     #  register_env("five_link-v3", five_link_creator)
     register_env("Walker2DBulletEnv-v0", bullet_walker_creator)
     register_env("HumanoidBulletEnv-v0", bullet_humanoid_creator)
@@ -89,6 +92,7 @@ try:
     register_env("linear_z-v0", linear_creator)
     register_env("gen_nonlin-v0", generic_creator)
     register_env("su_acro_drake-v0", drake_creator)
+    register_env("su_acrobot-v0", acro_creator)
 
 except:
     import warnings

@@ -1,8 +1,7 @@
 import seagul.envs
 import gym
 
-env_name = "su_acro_drake-v0"
-env = gym.make(env_name)
+env_name = "su_acrobot-v0"
 
 import ray
 from ray import tune
@@ -27,27 +26,26 @@ config["sgd_minibatch_size"] = 512
 config["train_batch_size"] = 2048
 config["vf_clip_param"] = 10
 config["env"] = env_name
-config["model"]["fcnet_hiddens"] = [24, 24]
+config["model"]["fcnet_hiddens"] = [16, 16]
 config["no_done_at_end"] = True
 
+
 def reward_fn(ns, act):
-    reward = (np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
-    #reward -= (abs(ns[2]) > 5)
-    #reward -= (abs(ns[3]) > 10)
-    #reward -= (abs(act) > 10)
-    return 1e-2*reward.item()
+    # return -1e-4*(5*(ns[0] - np.pi)**2 + ns[1]**2 + .5*ns[2]**2 + .5*ns[3]**2)
+    return -1e-2 * (np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+    # return -.1 * np.exp(np.sqrt(.1 * (ns[0] - np.pi) ** 2 + .1 * ns[1] ** 2 + .01 * ns[2] ** 2 + .01 * ns[3] ** 2))
+
+env_name = "su_acrobot-v0"
 
 
 config["env_config"] = {
-    "max_torque" : 10,
+    "max_torque" : 5,
     "init_state" : [0.0, 0.0, 0.0, 0.0],
-    "init_state_weights" : np.array([1, 1, 5, 5]),
+    "init_state_weights" : np.array([0, 0, 0, 0]),
     "dt" : .01,
-    "max_t" : 2,
+    "max_t" : 10,
     "act_hold" : 1,
-    "fixed_step" : True,
-    "int_accuracy" : .01,
-    "reward_fn" : reward_fn 
+    "reward_fn" : reward_fn
 }
 
 
@@ -55,7 +53,7 @@ analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
     stop={"timesteps_total": 5e5},
-    num_samples=4,
-    local_dir="./data/tune/swingdown/trial0",
+    num_samples=8,
+    local_dir="./data/sg_acro2/tune/trial1/",
     checkpoint_at_end=True,
 )

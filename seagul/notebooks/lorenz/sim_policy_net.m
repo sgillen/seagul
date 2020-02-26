@@ -37,7 +37,7 @@ z_lim = [min(z_eval), max(z_eval)];
 
 Rstart = 10.0;
 %X0 = [2.5000    0.4651    0.1250    Rstart]';
-X0 = [1 1 .3 Rstart]';  % reaches the value below (close to a limit cycle)
+X0 = [1 0 .3 Rstart]';  % reaches the value below (close to a limit cycle)
 %X0 = [-22.628522872924805   6.247414588928223  -0.975820839405060 -10.000000000000000];
 
 dt = .01;
@@ -45,7 +45,7 @@ nact = 10; % nact dt's occur before next action update...
 
 ttot = []; xtot = [];
 addt = 0;
-for nswap = 1:20
+for nswap = 1:500
     [nswap, 20]
     
     tout = addt+[0:dt:100]';
@@ -71,9 +71,6 @@ for nswap = 1:20
         dr = 0;
         if mod(n-1,10) == 1
             
-            dy = interp3(X,Y,Z,dyf(:,:,:,ri),x,y,z,'cubic');
-            dx = interp3(X,Y,Z,dxf(:,:,:,ri),x,y,z,'cubic');
-            
             if ri == 1
                 r = -10;
             else
@@ -87,6 +84,10 @@ for nswap = 1:20
             out = x2*weights{3}' + biases{3};
             means = out(1:2); std = out(3:4);
             dx = means(1); dy = means(2);
+            
+            %xyzr
+            %diffx = interp3(X,Y,Z,dxf(:,:,:,ri),x,y,z,'linear') - dx
+            %diffy = interp3(X,Y,Z,dyf(:,:,:,ri),x,y,z,'linear') - dy
 
         end
         
@@ -145,7 +146,7 @@ end
 axis vis3d; grid on
 %figure(22); clf
 %plot(tout,xout)
-%
+%close
 % if 1
 %     ttot = tout; xtot = xout;
 %     for nswap = 1:100
