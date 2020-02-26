@@ -27,7 +27,7 @@ activation = nn.ReLU
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-model = PPOModel(policy, value_fn, action_var=0.1, discrete=False)
+model = PPOModel(policy, value_fn, action_std=0.1)
 
 def run_and_test(arg_dict, retval):
 
@@ -43,6 +43,7 @@ def run_and_test(arg_dict, retval):
         print("Error: seed:", seed, "failed")
         print("Rewards were", rewards[-1])
         retval[seed] = False
+
 
 # Define our hyper parameters
 arg_dict = {
@@ -60,19 +61,22 @@ arg_dict = {
     "act_var_schedule": [0.707],
 }
 
-if __name__ == "__main__":
 
-    proc_list = []
-    manager = Manager()
-    ret_dict = manager.dict()
+run_and_test(arg_dict,{})
 
-    for seed in [0, 1, 2, 3]:
-        arg_dict["seed"] = seed
-        p = Process(target=run_and_test, args=(arg_dict,ret_dict))
-        p.start()
-        proc_list.append(p)
-
-    for p in proc_list:
-        p.join()
-
-print(ret_dict)
+# if __name__ == "__main__":
+#
+#     proc_list = []
+#     manager = Manager()
+#     ret_dict = manager.dict()
+#
+#     for seed in [0, 1, 2, 3]:
+#         arg_dict["seed"] = seed
+#         p = Process(target=run_and_test, args=(arg_dict,ret_dict))
+#         p.start()
+#         proc_list.append(p)
+#
+#     for p in proc_list:
+#         p.join()
+#
+#     print(ret_dict)

@@ -26,7 +26,7 @@ from seagul.nn import MLP, CategoricalMLP
 proc_list = []
 trial_num = input("What trial is this?\n")
 
-for seed in np.random.randint(0, 2 ** 32, 4):
+for seed in np.random.randint(0, 2 ** 32, 8):
 
     max_torque = 5
 
@@ -83,11 +83,9 @@ for seed in np.random.randint(0, 2 ** 32, 4):
         "env_config": env_config
     }
 
-
-
     p = Process(
         target=run_sg,
-        args=(alg_config, sac, "sac-test", "no act hold this time", "/data2_sac/trial" + trial_num),
+        args=(alg_config, sac, "sac-test", "no act hold this time", "/data2_sac/trial" + trial_num + "/" + "seed" + str(seed)),
     )
     p.start()
     proc_list.append(p)
