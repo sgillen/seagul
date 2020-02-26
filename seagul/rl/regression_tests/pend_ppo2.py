@@ -62,6 +62,7 @@ arg_dict = {
 }
 
 
+arg_dict["seed"] = 0
 run_and_test(arg_dict,{})
 
 # if __name__ == "__main__":
