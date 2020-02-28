@@ -21,7 +21,7 @@ class SGAcroEnv(core.Env):
                  max_t=5,
                  act_hold=1,
                  integrator=euler,
-                 reward_fn=lambda ns, a: -(np.cos(ns[0]) + np.cos(ns[0] + ns[1])),
+                 reward_fn=lambda ns, a: (-(np.cos(ns[0]) + np.cos(ns[0] + ns[1])), False),
                  th1_range=[0, 2 * pi],
                  th2_range=[-pi, pi],
                  max_th1dot=float('inf'),
@@ -34,7 +34,6 @@ class SGAcroEnv(core.Env):
                  i1=.083,
                  i2=.33
                  ):
-
         """
         Args:
             max_torque: torque at which the controller saturates (N*m)
@@ -105,20 +104,15 @@ class SGAcroEnv(core.Env):
         for _ in range(self.act_hold):
             self.state = self.integrator(self._dynamics, a, self.t, self.dt, self.state)
 
-        reward = self.reward_fn(self.state, a)
+        done = False
+        reward, done = self.reward_fn(self.state, a)
 
         # I should probably do this with a wrapper...
-        done = False
         if self.t > self.max_t:
             done = True
 
         if abs(self.state[2]) > self.max_th1dot or abs(self.state[2] > self.max_th2dot):
             reward -= 5
-            done = True
-
-        if abs(self.state[0] - pi) < 1 and abs(self.state[1]) < 1 and abs(self.state[2]) < 3 and abs(self.state[3]) < 3:
-            reward += 100
-            print("holla")
             done = True
 
         return self._get_obs(), reward, done, {}
@@ -168,39 +162,93 @@ class SGAcroEnv(core.Env):
             self.viewer.close()
             self.viewer = None
 
-    def _dynamics(self, t, s0, act):
-        m1 = self.m1
-        m2 = self.m2
-        l1 = self.l1
-        lc1 = self.lc1
-        lc2 = self.lc2
-        I1 = self.i1
-        I2 = self.i2
-        g = 9.8
-        s = s0
-        a = act.item()
-        theta1 = s[0]
-        theta2 = s[1]
-        dtheta1 = s[2]
-        dtheta2 = s[3]
-        d1 = m1 * lc1 ** 2 + m2 * (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
-        d2 = m2 * (lc2 ** 2 + l1 * lc2 * np.cos(theta2)) + I2
-        phi2 = m2 * lc2 * g * np.cos(theta1 + theta2 - np.pi / 2.0)
-        phi1 = (
-                -m2 * l1 * lc2 * dtheta2 ** 2 * np.sin(theta2)
-                - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2)
-                + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2)
-                + phi2
-        )
-        # the following line is consistent with the description in the
-        # paper
-        #ddtheta2 = (a + d2 / d1 * phi1 - phi2) / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
-        # else:
-        #     # the following line is consistent with the java implementation and the
-        #     # book
-        ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * np.sin(theta2) - phi2) / (
-            m2 * lc2 ** 2 + I2 - d2 ** 2 / d1
-        )
-        ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
 
-        return np.array([dtheta1, dtheta2, ddtheta1, ddtheta2])
+
+    def _dynamics(self, t, s0, act):        
+
+        tau = act.item()
+        th1 = s0[0]
+        th2 = s0[1]
+        th1d = s0[2]
+        th2d = s0[3]
+        g = 9.8
+
+        TAU = np.array([[0],[tau]])
+
+        m11 = self.m1*self.lc1**2 + self.m2*(self.l1**2 + self.lc2**2 + 2*self.l1*self.lc2*cos(th2)) + self.i1 + self.i2
+        m22 = self.m2*self.lc2**2 + self.i2
+        m12 = self.m2*(self.lc2**2 + self.l1*self.lc2*cos(th2)) + self.i2
+        M = np.array([[m11, m12], [m12, m22]])
+
+        h1 = -self.m2*self.l1*self.lc2*sin(th2)*th2d**2 - 2*self.m2*self.l1*self.lc2*sin(th2)*th2d*th1d
+        h2 = self.m2*self.l1*self.lc2*sin(th2)*th1d**2
+        H = np.array([[h1],[h2]])
+
+        phi1 = (self.m1*self.lc1+self.m2*self.l1)*g*cos(th1) + self.m2*self.lc2*g*cos(th1+th2)
+        phi2 = self.m2*self.lc2*g*cos(th1+th2)
+        PHI = np.array([[phi1], [phi2]])
+
+        d2th = np.linalg.solve(M,(TAU - H - PHI))
+        return np.array([th1d, th2d, d2th[0].item(), d2th[1].item()])
+
+
+            #
+    # def _dynamics(self, t, s0, act):
+    #     th1 = s0[0]
+    #     th2 = s0[1]
+    #     th1d = s0[2]
+    #     th2d = s0[3]
+    #     g = 9.8
+    #
+    #     B = np.array([[0], [1]])
+    #
+    #     M = np.array([[self.i1 + self.i2 + self.m2 * self.l1 ** 2 + 2 * self.m2 * self.l1 * self.lc2 * cos(th2), self.i2 + self.m2 * self.l1 * self.lc2 * cos(th2)],
+    #                   [self.i2 + self.m2 * self.l1 * self.lc2 * cos(th2), self.i2]])
+    #
+    #     C = np.array([[-2 * self.m2 * self.l1 * self.lc2 * sin(th2) * th2d, -self.m2 * self.l1 * self.lc2 * sin(th2) * th2d],
+    #                   [self.m2 * self.l1 * self.lc2 * sin(th2) * th1d, 0]])
+    #
+    #     G = np.array([[-self.m1 * g * self.lc1 * sin(th1) - (self.m2 * g * (self.l1 * sin(th1) + self.lc2 * sin(th1 + th2)))],
+    #                   [-self.m2 * g * self.lc2 * sin(th1 + th2)]])
+    #
+    #     dqdt = np.linalg.solve(M, G + B*act - C@np.array([th1d, th2d]).reshape(2,1)).squeeze()
+    #
+    #     return np.array([th1d, th2d, dqdt[0], dqdt[1]])
+
+
+    # def _dynamics(self, t, s0, act):
+    #     m1 = self.m1
+    #     m2 = self.m2
+    #     l1 = self.l1
+    #     lc1 = self.lc1
+    #     lc2 = self.lc2
+    #     I1 = self.i1
+    #     I2 = self.i2
+    #     g = 9.8
+    #     s = s0
+    #     a = act.item()
+    #     theta1 = s[0]
+    #     theta2 = s[1]
+    #     dtheta1 = s[2]
+    #     dtheta2 = s[3]
+    #     d1 = m1 * lc1 ** 2 + m2 * (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
+    #     d2 = m2 * (lc2 ** 2 + l1 * lc2 * np.cos(theta2)) + I2
+    #     phi2 = m2 * lc2 * g * np.cos(theta1 + theta2 - np.pi / 2.0)
+    #     phi1 = (
+    #             -m2 * l1 * lc2 * dtheta2 ** 2 * np.sin(theta2)
+    #             - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2)
+    #             + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2)
+    #             + phi2
+    #     )
+    #     # the following line is consistent with the description in the
+    #     # paper
+    #     #ddtheta2 = (a + d2 / d1 * phi1 - phi2) / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+    #     # else:
+    #     #     # the following line is consistent with the java implementation and the
+    #     #     # book
+    #     ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * np.sin(theta2) - phi2) / (
+    #         m2 * lc2 ** 2 + I2 - d2 ** 2 / d1
+    #     )
+    #     ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
+
+    #     return np.array([dtheta1, dtheta2, ddtheta1, ddtheta2])

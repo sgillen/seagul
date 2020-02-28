@@ -26,9 +26,8 @@ config["sgd_minibatch_size"] = 512
 config["train_batch_size"] = 2048
 config["vf_clip_param"] = 10
 config["env"] = env_name
-config["model"]["fcnet_hiddens"] = [16, 16]
+config["model"]["fcnet_hiddens"] = [16]
 config["no_done_at_end"] = True
-
 
 def reward_fn(ns, act):
     # return -1e-4*(5*(ns[0] - np.pi)**2 + ns[1]**2 + .5*ns[2]**2 + .5*ns[3]**2)

@@ -147,7 +147,8 @@ def sac(
             cur_batch_steps += ep_steps
             cur_total_steps += ep_steps
 
-        raw_rew_hist.append(torch.sum(ep_rews))
+            raw_rew_hist.append(torch.sum(ep_rews))
+
         progress_bar.update(cur_batch_steps)
 
         for _ in range(min(int(ep_steps), iters_per_update)):
