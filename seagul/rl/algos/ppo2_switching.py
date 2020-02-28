@@ -287,8 +287,6 @@ def ppo_switch(
                 gate_loss.backward()
                 gate_opt.step()
 
-
-
         # update observation mean and variance
         obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
         obs_var = update_var(batch_obs, obs_var, cur_total_steps)
@@ -342,6 +340,7 @@ def do_rollout(env, model):
     dtype = torch.float32
     obs = env.reset()
     done = False
+    last_act = None
     while not done:
         obs = torch.as_tensor(obs, dtype=dtype).detach()
         obs_list.append(obs.clone())
@@ -356,10 +355,14 @@ def do_rollout(env, model):
 
         obs, rew, done, _ = env.step(act.reshape(-1))
 
-        act_list.append(torch.as_tensor(act))
-        rew_list.append(rew)
-        path_list.append(path)
-        gate_list.append(gate_out)
+        if act != last_act:
+            act_list.append(torch.as_tensor(act))
+            rew_list.append(rew)
+            path_list.append(path)
+            gate_list.append(gate_out)
+            last_act = act
+        else:
+            pass
 
     ep_length = len(rew_list)
     ep_obs = torch.stack(obs_list)
