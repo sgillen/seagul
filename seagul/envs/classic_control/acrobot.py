@@ -123,39 +123,43 @@ class SGAcroEnv(core.Env):
         obs[1] = wrap(obs[1], self.th2_range[0], self.th2_range[1])
         return obs
 
-    def render(self, mode="human"):
+
+
+    def render(self, mode='human'):
         from gym.envs.classic_control import rendering
 
         s = self.state
 
         if self.viewer is None:
-            self.viewer = rendering.Viewer(500, 500)
+            self.viewer = rendering.Viewer(500,500)
             bound = self.render_length1 + self.render_length2 + 0.2  # 2.2 for default
-            self.viewer.set_bounds(-bound, bound, -bound, bound)
+            self.viewer.set_bounds(-bound,bound,-bound,bound)
 
-        if s is None:
-            return None
+        if s is None: return None
 
-        p1 = [-self.render_length1 * np.cos(s[0]), self.render_length1 * np.sin(s[0])]
+        p1 = [self.render_length1 *
+              sin(s[0]), self.render_length1 * cos(s[0])]
 
-        p2 = [p1[0] - self.render_length2 * np.cos(s[0] + s[1]), p1[1] + self.render_length2 * np.sin(s[0] + s[1])]
+        p2 = [p1[0] + self.render_length2 * sin(s[0] + s[1]),
+              p1[1] + self.render_length2 * cos(s[0] + s[1])]
 
-        xys = np.array([[0, 0], p1, p2])[:, ::-1]
-        thetas = [s[0] - np.pi / 2, s[0] + s[1] - np.pi / 2]
+        xys = np.array([[0,0], p1, p2])[:,::-1]
+        thetas = [s[0], s[0]+s[1]]
         link_lengths = [self.render_length1, self.render_length2]
 
         self.viewer.draw_line((-2.2, 1), (2.2, 1))
-        for ((x, y), th, llen) in zip(xys, thetas, link_lengths):
-            l, r, t, b = 0, llen, 0.1, -0.1
-            jtransform = rendering.Transform(rotation=th, translation=(x, y))
-            link = self.viewer.draw_polygon([(l, b), (l, t), (r, t), (r, b)])
+        for ((x,y),th,llen) in zip(xys, thetas, link_lengths):
+            l,r,t,b = 0, llen, .1, -.1
+            jtransform = rendering.Transform(rotation=th, translation=(x,y))
+            link = self.viewer.draw_polygon([(l,b), (l,t), (r,t), (r,b)])
             link.add_attr(jtransform)
-            link.set_color(0, 0.8, 0.8)
-            circ = self.viewer.draw_circle(0.1)
-            circ.set_color(0.8, 0.8, 0)
+            link.set_color(0,.8, .8)
+            circ = self.viewer.draw_circle(.1)
+            circ.set_color(.8, .8, 0)
             circ.add_attr(jtransform)
 
-        return self.viewer.render(return_rgb_array=mode == "rgb_array")
+        return self.viewer.render(return_rgb_array = mode=='rgb_array')
+
 
     def close(self):
         if self.viewer:
