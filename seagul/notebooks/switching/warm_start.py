@@ -39,7 +39,7 @@ g = 9.8
 
 
 dt = .01
-max_torque = 10
+max_torque = 25
 integrator = euler
 
 Q = np.identity(4)
@@ -49,7 +49,7 @@ Q[2, 2] = 1
 Q[3, 3] = 1
 #
 # Q = np.array([[1000, -500, 0,0],[-500, 1000, 0, 0],[0, 0, 1000, -500],[0,0,-500,1000]])
-R = np.identity(2) * 1
+R = np.identity(2) * .01
 
 eval_max_t = 10
 
@@ -198,9 +198,11 @@ import torch
 net = MLP(4, 1, 2, 32)  # output_activation=torch.nn.Softmax)
 Y0 = np.ones((num_trials, 1), dtype=np.float32)
 
-class_weight = torch.tensor(Y.shape[0]/sum(Y), dtype=torch.float32)
+w = 1e-2
+class_weight = torch.tensor(Y.shape[0]/sum(Y)*w, dtype=torch.float32)
 
-loss_hist = fit_model(net, X, Y, 50, batch_size=2048, loss_fn=torch.nn.BCEWithLogitsLoss())
+loss_hist = fit_model(net, X, Y, 50, batch_size=2048, loss_fn=torch.nn.BCEWithLogitsLoss(pos_weight=class_weight))
+#loss_hist = fit_model(net, X, Y, 50, batch_size=2048, loss_fn=torch.nn.BCEWithLogitsLoss())
 
 # loss_hist = fit_model(net, X, Y, 100, batch_size=2048)
 # loss_hist = fit_model(net, X, Y0, 5, batch_size=2048, loss_fn=torch.nn.BCEWithLogitsLoss(pos_weight=class_weight))
@@ -229,7 +231,7 @@ from itertools import product
 
 start = time.time()
 for i, j in product(range(n_th), range(n_th)):
-    coords[i, j, :] = np.array([th1_vals[i], th2_vals[j], 0, 0])
+    coords[j, i, :] = np.array([th1_vals[i], th2_vals[j], 0, 0])
 
 preds = sig(net(coords.reshape(-1, 4)).reshape(n_th, n_th).detach())
 
@@ -249,6 +251,9 @@ z_min, z_max = 0, np.abs(z).max()
 
 c = ax.pcolormesh(x, y, z, cmap='RdBu', vmin=z_min, vmax=z_max)
 ax.set_title('Theta')
+ax.set_xlabel('Th1')
+ax.set_ylabel('Th2')
+
 # set the limits of the plot to the limits of the data
 ax.axis([x.min(), x.max(), y.min(), y.max()])
 fig.colorbar(c, ax=ax)
@@ -258,7 +263,7 @@ coords = np.zeros((n_th, n_th, 4), dtype=np.float32)
 
 start = time.time()
 for i, j in product(range(n_th), range(n_th)):
-    coords[i, j, :] = np.array([pi/2, 0, th1dot_vals[i], th2dot_vals[j]])
+    coords[j, i, :] = np.array([pi/2, 0, th1dot_vals[i], th2dot_vals[j]])
 
 preds = sig(net(coords.reshape(-1, 4)).reshape(n_th, n_th).detach())
 end = time.time()
@@ -267,7 +272,7 @@ print(end - start)
 
 fig, ax = plt.subplots(n_thdot, n_thdot, figsize=(8, 8))
 # generate 2 2d grids for the x & y bounds
-y, x = np.meshgrid(th1dot_vals, th2dot_vals)
+x, y = np.meshgrid(th1dot_vals, th2dot_vals)
 z = preds
 
 # x and y are bounds, so z should be the value *inside* those bounds.
@@ -277,6 +282,8 @@ z_min, z_max = 0, np.abs(z).max()
 
 c = ax.pcolormesh(x, y, z, cmap='RdBu', vmin=z_min, vmax=z_max)
 ax.set_title('DTheta')
+ax.set_xlabel('dth1')
+ax.set_ylabel('dth2')
 # set the limits of the plot to the limits of the data
 ax.axis([x.min(), x.max(), y.min(), y.max()])
 fig.colorbar(c, ax=ax)
@@ -310,7 +317,7 @@ def do_rollout(trial_num):
 
     for i in range(env.num_steps):
         obs = np.array(obs, dtype=np.float32)
-        if sig(net(obs)) > .75:
+        if sig(net(obs)) > .85:
             actions = np.clip(np.asarray(control(obs)), -max_torque, max_torque)
             local_lqr = True
             local_gate_hist[i] = 1
@@ -343,7 +350,7 @@ config = {"init_state": [-pi / 2, 0, 0, 0],
           "integrator" : integrator,
           "reward_fn": reward_fn,
           "act_hold": 1,
-          "max_t" : eval_max_t
+          "max_t" : 10
           }
 
 env = gym.make('su_acrobot-v0', **config)
@@ -363,7 +370,6 @@ hold_count = 0
 obs = env.reset()
 
 start = time.time()
-
 
 pool = Pool() # defaults to number of available CPU's
 for i, res in enumerate(pool.imap(do_rollout,range(num_trials))):
