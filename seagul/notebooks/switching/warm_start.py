@@ -4,12 +4,13 @@ from numpy import sin, cos, pi
 import gym
 import seagul.envs
 
+from seagul.integration import rk4,euler
 from control import lqr, ctrb
 from torch.multiprocessing import Pool
 import matplotlib.pyplot as plt
 import matplotlib
 
-matplotlib.use('Qt5Agg')
+#matplotlib.use('Qt5Agg')
 
 import time
 
@@ -36,7 +37,10 @@ g = 9.8
 # I2 = 1.0
 # g = 9.8
 
-max_torque = 25
+
+dt = .01
+max_torque = 10
+integrator = euler
 
 Q = np.identity(4)
 Q[0, 0] = 1
@@ -92,7 +96,7 @@ def control(q):
 
 def reward_fn(s, a):
     reward = np.sin(s[0]) + 2 * np.sin(s[0] + s[1])
-    done = reward < 0
+    done = reward < 2
     return reward, done
 
 
@@ -100,33 +104,26 @@ def do_rollout(args):
     x, trial_num = args
     th1, th2, dth1, dth2 = x
     np.random.seed(trial_num)
-
-    obs = env.reset(init_vec=[th1, th2, dth1, dth2])
-
-    local_state_hist = np.zeros((env.num_steps, env.observation_space.shape[0]))
     local_reward_hist = np.ones((env.num_steps, 1)) * -1
-    local_gate_hist = np.zeros((env.num_steps, 1))
-    local_action_hist = np.zeros((env.num_steps, 1))
+    obs = env.reset(init_vec=[th1, th2, dth1, dth2])
 
     for i in range(env.num_steps):
         actions = np.clip(np.asarray(control(obs)), -max_torque, max_torque)
-        local_gate_hist[i] = 1
         obs, reward, done, _ = env.step(actions)
-        local_action_hist[i, :] = np.copy(actions)
-        local_state_hist[i, :] = np.copy(obs)
         local_reward_hist[i, :] = np.copy(reward)
         if done:
             break
 
-    return local_action_hist, local_state_hist, local_reward_hist, local_gate_hist, i
+    return local_reward_hist, i
 
 
 # %%b
-
+start = time.time()
 config = {"init_state": [0, 0, 0, 0],
           "max_torque": max_torque,
           "init_state_weights": [0, 0, 0, 0],
-          "dt": .01,
+          "max_t" : 2.5,
+          "dt": dt,
           "m2": m2,
           "m1": m1,
           "l1": l1,
@@ -134,54 +131,63 @@ config = {"init_state": [0, 0, 0, 0],
           "lc2": lc2,
           "i1": I1,
           "i2": I2,
+          "integrator" : integrator,
           "reward_fn": reward_fn,
           "act_hold": 1
           }
-
 env = gym.make('su_acrobot-v0', **config)
 
-num_trials = 20000
-action_hist = np.zeros((num_trials, env.num_steps, 1))
-state_hist = np.zeros((num_trials, env.num_steps, env.observation_space.shape[0]))
+num_trials = 200000
 reward_hist = np.zeros((num_trials, env.num_steps, 1))
-gate_hist = np.zeros((num_trials, env.num_steps, 1))
-lqr_list = []
-
-obs = env.reset()
-
-import time
-
-start = time.time()
-
-th1_min = pi / 2 - 1;
-th1_max = pi / 2 + 1
-th2_min = -1;
-th2_max = 1
-th1dot_min = -5;
-th1dot_max = 5
-th2dot_min = -5;
-th2dot_max = 5
 
 X = np.zeros((num_trials, 4), dtype=np.float32)
 Y = np.zeros((num_trials, 1), dtype=np.float32)
 
-samples = np.random.random_sample((num_trials, 4))
+th1_min = pi / 2 - .5
+th1_max = pi / 2 + .5
+th2_min = -1
+th2_max = 1
+th1dot_min = -5
+th1dot_max = 5
+th2dot_min = -10
+th2dot_max = 10
+
+samples = np.random.random_sample((int(num_trials/2), 4))
 samples *= np.array([th1_min - th1_max, th2_min - th2_max, th1dot_min - th1dot_max, th2dot_min - th2dot_max])
 samples += np.array([th1_max, th2_max, th1dot_max, th2dot_max])
-total_steps = 0
 
+total_steps = 0
 pool = Pool()  # defaults to number of available CPU's
-for i, res in enumerate(pool.imap(do_rollout, zip(samples, range(num_trials)))):
-    acts, obs, rews, gate, steps = res
-    action_hist[i, :, :] = acts
-    state_hist[i, :, :] = obs
+for i, res in enumerate(pool.imap(do_rollout, zip(samples, range(int(num_trials/2))))):
+    rews, steps = res
     reward_hist[i, :, :] = rews
-    gate_hist[i, :, :] = gate
     total_steps += steps
     X[i, :] = samples[i, :]
     Y[i] = sum(rews) > env.num_steps*3 - 10
 
-Y *= np.sqrt(Y.shape[0] / sum(Y)) / 2
+
+th1_min = 0
+th1_max = 2*pi
+th2_min = -pi
+th2_max = pi
+th1dot_min = -10
+th1dot_max = 10
+th2dot_min = -30
+th2dot_max = 30
+
+samples = np.random.random_sample((int(num_trials/2), 4))
+samples *= np.array([th1_min - th1_max, th2_min - th2_max, th1dot_min - th1dot_max, th2dot_min - th2dot_max])
+samples += np.array([th1_max, th2_max, th1dot_max, th2dot_max])
+total_steps = 0
+
+
+for i, res in enumerate(pool.imap(do_rollout, zip(samples, range(int(num_trials/2), int(num_trials))))):
+    rews, steps = res
+    reward_hist[i, :, :] = rews
+    total_steps += steps
+    X[i+int(num_trials/2), :] = samples[i, :]
+    Y[i+int(num_trials/2)] = sum(rews) > env.num_steps*3 - 5
+
 
 print(time.time() - start)
 
@@ -192,7 +198,7 @@ import torch
 net = MLP(4, 1, 2, 32)  # output_activation=torch.nn.Softmax)
 Y0 = np.ones((num_trials, 1), dtype=np.float32)
 
-#class_weight = torch.tensor(.001, dtype=torch.float32)
+class_weight = torch.tensor(Y.shape[0]/sum(Y), dtype=torch.float32)
 
 loss_hist = fit_model(net, X, Y, 50, batch_size=2048, loss_fn=torch.nn.BCEWithLogitsLoss())
 
@@ -209,11 +215,11 @@ plt.show()
 n_thdot = 1
 n_th = 1000
 
-th1_vals = np.linspace(pi / 2 - 1, pi / 2 + 1, n_th)
+th1_vals = np.linspace(0, 2*pi, n_th)
 th2_vals = np.linspace(-pi, pi, n_th)
 
-th1dot_vals = np.linspace(-5, 5, n_th)
-th2dot_vals = np.linspace(-5, 5, n_th)
+th1dot_vals = np.linspace(-10, 10, n_th)
+th2dot_vals = np.linspace(-30, 30, n_th)
 
 sig = torch.nn.Sigmoid()
 
@@ -233,7 +239,7 @@ print(end - start)
 
 fig, ax = plt.subplots(n_thdot, n_thdot, figsize=(8, 8))
 # generate 2 2d grids for the x & y bounds
-y, x = np.meshgrid(th1_vals, th2_vals)
+x, y = np.meshgrid(th1_vals, th2_vals)
 z = preds
 
 # x and y are bounds, so z should be the value *inside* those bounds.
@@ -288,7 +294,7 @@ def reward_fn(s, a):
 
 
 def do_rollout(trial_num):
-    np.random.seed()
+    np.random.seed(trial_num)
     act_hold = 20
     hold_count = 0
 
@@ -304,7 +310,7 @@ def do_rollout(trial_num):
 
     for i in range(env.num_steps):
         obs = np.array(obs, dtype=np.float32)
-        if sig(net(obs)) > .99:
+        if sig(net(obs)) > .75:
             actions = np.clip(np.asarray(control(obs)), -max_torque, max_torque)
             local_lqr = True
             local_gate_hist[i] = 1
@@ -326,7 +332,7 @@ def do_rollout(trial_num):
 config = {"init_state": [-pi / 2, 0, 0, 0],
           "max_torque": max_torque,
           "init_state_weights": [0, 0, 0, 0],
-          "dt": .01,
+          "dt": dt,
           "m2": m2,
           "m1": m1,
           "l1": l1,
@@ -334,6 +340,7 @@ config = {"init_state": [-pi / 2, 0, 0, 0],
           "lc2": lc2,
           "i1": I1,
           "i2": I2,
+          "integrator" : integrator,
           "reward_fn": reward_fn,
           "act_hold": 1,
           "max_t" : eval_max_t
@@ -366,14 +373,12 @@ for i, res in enumerate(pool.imap(do_rollout,range(num_trials))):
     reward_hist[i, :, :] = rews
     gate_hist[i, :, :] = gate
     err_hist[i] = (np.sqrt(sum(((state_hist[i, -1, :] - np.array([pi / 2, 0, 0, 0])) ** 2))))
-
-    if err_hist[i] < 1:
-        success_list.append(i)
-
     if lqr_on:
         lqr_list.append(i)
-
-
+        #print(err_hist[i])
+        #print(reward_hist[i,-1])
+        if err_hist[i] < 2:
+            success_list.append(i)
 
 print(len(lqr_list))
 print(len(success_list))

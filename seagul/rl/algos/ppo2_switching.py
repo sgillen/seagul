@@ -83,8 +83,7 @@ def ppo_switch(
     # init everything
     # ==============================================================================
     torch.set_num_threads(1)
-        
-        
+
     env = gym.make(env_name, **env_config)
     if isinstance(env.action_space, gym.spaces.Box):
         act_size = env.action_space.shape[0]

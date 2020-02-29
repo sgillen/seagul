@@ -166,9 +166,7 @@ class SGAcroEnv(core.Env):
             self.viewer.close()
             self.viewer = None
 
-
-
-    def _dynamics(self, t, s0, act):        
+    def _dynamics(self, t, s0, act):
 
         tau = act.item()
         th1 = s0[0]
@@ -194,32 +192,7 @@ class SGAcroEnv(core.Env):
 
         d2th = np.linalg.solve(M,(TAU - H - PHI))
         return np.array([th1d, th2d, d2th[0].item(), d2th[1].item()])
-
-
-            #
-    # def _dynamics(self, t, s0, act):
-    #     th1 = s0[0]
-    #     th2 = s0[1]
-    #     th1d = s0[2]
-    #     th2d = s0[3]
-    #     g = 9.8
     #
-    #     B = np.array([[0], [1]])
-    #
-    #     M = np.array([[self.i1 + self.i2 + self.m2 * self.l1 ** 2 + 2 * self.m2 * self.l1 * self.lc2 * cos(th2), self.i2 + self.m2 * self.l1 * self.lc2 * cos(th2)],
-    #                   [self.i2 + self.m2 * self.l1 * self.lc2 * cos(th2), self.i2]])
-    #
-    #     C = np.array([[-2 * self.m2 * self.l1 * self.lc2 * sin(th2) * th2d, -self.m2 * self.l1 * self.lc2 * sin(th2) * th2d],
-    #                   [self.m2 * self.l1 * self.lc2 * sin(th2) * th1d, 0]])
-    #
-    #     G = np.array([[-self.m1 * g * self.lc1 * sin(th1) - (self.m2 * g * (self.l1 * sin(th1) + self.lc2 * sin(th1 + th2)))],
-    #                   [-self.m2 * g * self.lc2 * sin(th1 + th2)]])
-    #
-    #     dqdt = np.linalg.solve(M, G + B*act - C@np.array([th1d, th2d]).reshape(2,1)).squeeze()
-    #
-    #     return np.array([th1d, th2d, dqdt[0], dqdt[1]])
-
-
     # def _dynamics(self, t, s0, act):
     #     m1 = self.m1
     #     m2 = self.m2
@@ -231,7 +204,7 @@ class SGAcroEnv(core.Env):
     #     g = 9.8
     #     s = s0
     #     a = act.item()
-    #     theta1 = s[0]
+    #     theta1 = s[0]+pi/2
     #     theta2 = s[1]
     #     dtheta1 = s[2]
     #     dtheta2 = s[3]
@@ -254,5 +227,5 @@ class SGAcroEnv(core.Env):
     #         m2 * lc2 ** 2 + I2 - d2 ** 2 / d1
     #     )
     #     ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
-
+    #
     #     return np.array([dtheta1, dtheta2, ddtheta1, ddtheta2])
