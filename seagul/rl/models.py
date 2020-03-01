@@ -264,7 +264,7 @@ class SwitchedPPOModelActHold:
     """
 
     def __init__(
-        self, policy, nominal_policy, value_fn, gate_fn, action_var=None, gate_var=None, discrete=False, hold_count=5
+        self, policy, nominal_policy, value_fn, gate_fn, action_var=None, gate_var=None, thresh=.9, hold_count=5
     ):
         self.policy = policy
         self.value_fn = value_fn
@@ -277,33 +277,41 @@ class SwitchedPPOModelActHold:
         self.gate_var = gate_var
         self.hyst_state = 1
         self.hyst_vec = np.vectorize(self.hyst)
+        self.sig = torch.nn.Sigmoid()
 
         self.hold_count = hold_count
         self.cur_hold_count = 0
 
-        if discrete:
-            self._select_action = select_discrete_action
-            self._get_logp = get_discrete_logp
-        else:
-            self._select_action = select_cont_action
-            self._get_logp = get_cont_logp
+        self._select_action = select_cont_action
+        self._get_logp = get_cont_logp
+
+        self.thresh = thresh
 
     def step(self, state):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
-        action, _ = self.select_action(state)
         value = self.value_fn(torch.as_tensor(state))
 
-        path, gate_path = self.select_path(state)
+        path = self.sig(self.gate_fn(state)) > self.thresh
 
         if path:
             action = self.nominal_policy(state)
             logp = 0
         else:
-            action, logp = self.select_action(state)
+            action, logp = self.select_policy_action(state)
 
         return action, value, None, logp
 
-    def select_action(self, state):
+    def select_action(self,state):
+        path = self.sig(self.gate_fn(state))
+        if path > self.thresh:
+            action = self.nominal_policy(state)
+            logp = 0
+        else:
+            action, logp = self.select_policy_action(state)
+
+        return action, logp
+
+    def select_policy_action(self, state):
         if self.cur_hold_count == 0:
             action, logp = self._select_action(self.policy, state, self.action_var)
             self.cur_action = action
@@ -325,6 +333,9 @@ class SwitchedPPOModelActHold:
 
     def get_path_logp(self, states, actions):
         return get_cont_logp(self.gate_fn, states, actions, self.gate_var)
+
+    def get_logp(self, states, actions):
+        return self.get_action_logp(states,actions)
 
     def get_action_logp(self, states, actions):
         return get_cont_logp(self.policy, states, actions, self.action_var)

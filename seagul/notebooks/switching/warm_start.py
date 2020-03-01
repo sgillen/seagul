@@ -26,6 +26,7 @@ lc2 = 1
 I1 = .083
 I2 = .33
 g = 9.8
+
 #
 # m1 = 1
 # m2 = 1
@@ -338,7 +339,7 @@ def do_rollout(trial_num):
 
 config = {"init_state": [-pi / 2, 0, 0, 0],
           "max_torque": max_torque,
-          "init_state_weights": [0, 0, 0, 0],
+          "init_state_weights": [1, 1, 5, 5],
           "dt": dt,
           "m2": m2,
           "m1": m1,
@@ -385,6 +386,23 @@ for i, res in enumerate(pool.imap(do_rollout,range(num_trials))):
         #print(reward_hist[i,-1])
         if err_hist[i] < 2:
             success_list.append(i)
+
+#
+# for i in (range(num_trials)):
+#     res = do_rollout(i)
+#     acts, obs, rews, gate, lqr_on = res
+#     action_hist[i, :, :] = acts
+#     state_hist[i, :, :] = obs
+#     reward_hist[i, :, :] = rews
+#     gate_hist[i, :, :] = gate
+#     err_hist[i] = (np.sqrt(sum(((state_hist[i, -1, :] - np.array([pi / 2, 0, 0, 0])) ** 2))))
+#     if lqr_on:
+#         lqr_list.append(i)
+#         #print(err_hist[i])
+#         #print(reward_hist[i,-1])
+#         if err_hist[i] < 2:
+#             success_list.append(i)
+
 
 print(len(lqr_list))
 print(len(success_list))

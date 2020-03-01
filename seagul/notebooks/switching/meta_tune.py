@@ -38,7 +38,7 @@ env_name = "su_acrobot-v0"
 
 
 config["env_config"] = {
-    "max_torque" : 5,
+    "max_torque" : 25,
     "init_state" : [0.0, 0.0, 0.0, 0.0],
     "init_state_weights" : np.array([0, 0, 0, 0]),
     "dt" : .01,
