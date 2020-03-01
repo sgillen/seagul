@@ -7,28 +7,30 @@ import pickle
 
 from seagul.rl.common import discount_cumsum, update_mean, update_var
 
-def ppo(
-    env_name,
-    total_steps,
-    model,
-    act_var_schedule=[0.7],
-    epoch_batch_size=2048,
-    gamma=0.99,
-    lam=0.99,
-    eps=0.2,
-    seed=0,
-    pol_batch_size=1024,
-    val_batch_size=1024,
-    pol_lr=1e-4,
-    val_lr=1e-4,
-    pol_epochs=10,
-    val_epochs=10,
-    target_kl = .01,
-    use_gpu=False,
-    reward_stop=None,
-    env_config = {}
-):
 
+def ppo_switch(
+        env_name,
+        total_steps,
+        model,
+        act_var_schedule=[0.7],
+        epoch_batch_size=2048,
+        gamma=0.99,
+        lam=0.99,
+        eps=0.2,
+        seed=0,
+        pol_batch_size=1024,
+        val_batch_size=1024,
+        pol_lr=1e-4,
+        val_lr=1e-4,
+        pol_epochs=10,
+        val_epochs=10,
+        target_kl=.01,
+        goal_state = np.array([np.pi/2,0,0,0]),
+        goal_thresh = .2,
+        use_gpu=False,
+        reward_stop=None,
+        env_config={}
+):
     """
     Implements proximal policy optimization with clipping
 
@@ -49,6 +51,8 @@ def ppo(
         pol_epochs: how many epochs to use for each policy update
         val_epochs: how many epochs to use for each value update
         target_kl: max KL before breaking
+        goal_state: final state that we are aiming for
+        goal_thresh: how close to the goal do we want to be to consider an episode a success
         use_gpu:  want to use the GPU? set to true
         reward_stop: reward value to stop if we achieve
         env_config: dictionary containing kwargs to pass to your the environment
@@ -133,6 +137,9 @@ def ppo(
         batch_discrew = torch.empty(0)
         cur_batch_steps = 0
 
+        gate_obs_list = []
+        gate_correct_list = []
+
         # Bail out if we have met out reward threshold
         if len(raw_rew_hist) > 2 and reward_stop:
             if raw_rew_hist[-1] >= reward_stop and raw_rew_hist[-2] >= reward_stop:
@@ -143,7 +150,26 @@ def ppo(
         # ==============================================================================
         while cur_batch_steps < epoch_batch_size:
 
-            ep_obs, ep_act, ep_rew, ep_steps = do_rollout(env, model)
+            ep_obs, ep_act, ep_rew, ep_steps, ep_path = do_rollout(env, model)
+
+            # if ep_path.sum() != 0:
+            #     reverse_obs = np.flip(ep_obs.numpy(), 0).copy()
+            #     reverse_obs = torch.from_numpy(reverse_obs)
+
+            #     reverse_path = np.flip(ep_path.numpy(), 0).copy()
+            #     reverse_path = torch.from_numpy(reverse_path)
+
+            #     ep_err = ((ep_obs[-1, :] - goal_state) ** 2).sqrt()
+
+            #     for path, obs in zip(reverse_path, reverse_obs):
+            #         if not path:
+            #             break
+            #         else:
+            #             gate_obs_list.append(obs)
+            #             if ep_err < 2:
+            #                 gate_correct_list.append(torch.ones(1, dtype=dtype))
+            #             else:
+            #                 gate_correct_list.append(torch.zeros(1, dtype=dtype))
 
             raw_rew_hist.append(sum(ep_rew))
             ep_rew = (ep_rew - ep_rew.mean()) / (ep_rew.std() + 1e-6)
@@ -151,15 +177,12 @@ def ppo(
             batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
             batch_act = torch.cat((batch_act, ep_act[:-1]))
 
-            ep_discrew = discount_cumsum(
-                ep_rew, gamma
-            )  # [:-1] because we appended the value function to the end as an extra reward
-            batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
+            ep_discrew = discount_cumsum(ep_rew, gamma)
+            batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))  # [:-1] because we appended the value function to the end as an extra reward
 
             rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
             rew_var = update_var(batch_discrew, rew_var, cur_total_steps)
             batch_discrew = (batch_discrew - rew_mean) / (rew_var + 1e-6)
-
 
             # calculate this episodes advantages
             last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
@@ -181,7 +204,8 @@ def ppo(
         # policy update
         # ========================================================================
         training_data = data.TensorDataset(batch_obs, batch_act, batch_adv)
-        training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True, num_workers=0, pin_memory=False)
+        training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True, num_workers=0,
+                                             pin_memory=False)
 
         # Update the policy using the PPO loss
         for pol_epoch in range(pol_epochs):
@@ -197,13 +221,13 @@ def ppo(
                 logp = model.get_logp(local_obs, local_act).reshape(-1, act_size)
                 old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, act_size)
                 r = torch.exp(logp - old_logp)
-                clip_r = torch.clamp(r, 1-eps, 1+eps)
-                pol_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
+                clip_r = torch.clamp(r, 1 - eps, 1 + eps)
+                pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean()
 
                 approx_kl = (logp - old_logp).mean()
                 if approx_kl > target_kl:
                     break
-                
+
                 pol_opt.zero_grad()
                 pol_loss.backward()
                 pol_opt.step()
@@ -211,7 +235,8 @@ def ppo(
         # value_fn update
         # ========================================================================
         training_data = data.TensorDataset(batch_obs, batch_discrew)
-        training_generator = data.DataLoader(training_data, batch_size=val_batch_size, shuffle=True, num_workers=0, pin_memory=False)
+        training_generator = data.DataLoader(training_data, batch_size=val_batch_size, shuffle=True, num_workers=0,
+                                             pin_memory=False)
 
         # Update value function with the standard L2 Loss
         for val_epoch in range(val_epochs):
@@ -221,13 +246,12 @@ def ppo(
 
                 # predict and calculate loss for the batch
                 val_preds = model.value_fn(local_obs)
-                val_loss = ((val_preds - local_val)**2).mean()
+                val_loss = ((val_preds - local_val) ** 2).mean()
 
                 # do the normal pytorch update
                 val_opt.zero_grad()
                 val_loss.backward()
                 val_opt.step()
-
 
         # update observation mean and variance
         obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
@@ -238,14 +262,12 @@ def ppo(
         model.value_fn.state_var = obs_var
         model.action_var = actvar_lookup(cur_total_steps)
         old_model = pickle.loads(pickle.dumps(model))
-                
+
         val_loss_hist.append(val_loss)
         pol_loss_hist.append(pol_loss)
 
         progress_bar.update(cur_batch_steps)
 
-        
-        
     progress_bar.close()
     return model, raw_rew_hist, locals()
 
@@ -258,6 +280,7 @@ def make_variance_schedule(var_schedule, model, num_steps):
     var_lookup = lambda epoch: np.interp(epoch, x_vals, var_schedule)
     return var_lookup
 
+
 def do_rollout(env, model):
     act_list = []
     obs_list = []
@@ -266,21 +289,71 @@ def do_rollout(env, model):
     dtype = torch.float32
     obs = env.reset()
     done = False
-
+    last_act = None
     while not done:
-        obs = torch.as_tensor(obs,dtype=dtype).detach()
-        obs_list.append(obs.clone())
+        obs = torch.as_tensor(obs, dtype=dtype).detach()
+        prev_obs = obs.clone()
 
         act, logprob = model.select_action(obs)
-        obs, rew, done, _ = env.step(act.numpy().reshape(-1))
+        act = act.numpy()
 
-        act_list.append(torch.as_tensor(act.clone()))
-        rew_list.append(rew)
+        obs, rew, done, _ = env.step(act.reshape(-1))
+
+        # want to avoid adding redundant data from the action hold
+        if act != last_act:
+            act_list.append(torch.as_tensor(act))
+            rew_list.append(rew)
+            obs_list.append(prev_obs)
+            last_act = act
 
     ep_length = len(rew_list)
     ep_obs = torch.stack(obs_list)
     ep_act = torch.stack(act_list)
-    ep_rew = torch.tensor(rew_list)
-    ep_rew = ep_rew.reshape(-1, 1)
+    ep_rew = torch.tensor(rew_list).reshape(-1, 1)
 
     return ep_obs, ep_act, ep_rew, ep_length
+
+
+def do_rollout(env, model):
+    act_list = []
+    obs_list = []
+    rew_list = []
+    path_list = []
+    num_steps = 0
+
+    dtype = torch.float32
+    obs = env.reset()
+    done = False
+    last_act = None
+    while not done:
+        obs = torch.as_tensor(obs, dtype=dtype).detach()
+        last_obs = obs.clone()
+
+        act, logp = model.select_action(obs)
+        act = torch.as_tensor(act,dtype = torch.float32)
+        
+        obs, rew, done, _ = env.step(act.numpy().reshape(-1))
+
+        if logp == 0:
+            path = 1
+        else:
+            path = 0
+        
+        # want to avoid adding redundant data from the action hold
+        if act != last_act:
+            act_list.append(torch.as_tensor(act))
+            rew_list.append(rew)
+            path_list.append(path)
+            obs_list.append(last_obs)
+            last_act = act
+        else:
+            pass
+
+    ep_length = len(rew_list)
+    ep_obs = torch.stack(obs_list)
+    ep_act = torch.stack(act_list)
+    ep_rew = torch.tensor(rew_list).reshape(-1, 1)
+
+    ep_path = torch.tensor(path_list).reshape(-1, 1)
+
+    return ep_obs, ep_act, ep_rew, ep_length, ep_path

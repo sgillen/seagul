@@ -4,6 +4,7 @@ import torch.nn as nn
 from torch.nn.parameter import Parameter
 from torch.utils import data
 
+import tqdm.auto as tqdm
 from tqdm import trange
 
 

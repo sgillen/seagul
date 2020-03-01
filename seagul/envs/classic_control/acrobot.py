@@ -72,11 +72,11 @@ class SGAcroEnv(core.Env):
         self.render_length2 = 1.0
         self.viewer = None
 
-        low = np.array([th1_range[0], th2_range[0], -max_th1dot, -max_th2dot])
-        high = np.array([th1_range[1], th2_range[1], max_th1dot, max_th2dot])
+        low = np.array([th1_range[0], th2_range[0], -max_th1dot, -max_th2dot], dtype=np.float32)
+        high = np.array([th1_range[1], th2_range[1], max_th1dot, max_th2dot], dtype=np.float32)
 
         self.observation_space = spaces.Box(low=low-1, high=high+1, dtype=np.float32)
-        self.action_space = spaces.Box(low=np.array([-max_torque]), high=np.array([max_torque]), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([-max_torque],dtype=np.float32), high=np.array([max_torque], dtype=np.float32), dtype=np.float32)
 
         self.t = 0
 
@@ -192,7 +192,7 @@ class SGAcroEnv(core.Env):
 
         d2th = np.linalg.solve(M,(TAU - H - PHI))
         return np.array([th1d, th2d, d2th[0].item(), d2th[1].item()])
-    #
+
     # def _dynamics(self, t, s0, act):
     #     m1 = self.m1
     #     m2 = self.m2
