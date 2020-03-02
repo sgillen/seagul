@@ -53,9 +53,9 @@ envs = {
 ray.init()
 
 #---- adjust parameters: -------------------------------------
-algorithm = "ARS" # algos["gradient-based"][a]
+algorithm = "PPO" # algos["gradient-based"][a]
 # algorithm = algos["0"]
-environment = envs[0]["name"]
+environment = envs[2]["name"]
 output_dir = "./data/" + environment + "/"
 if os.path.exists("./params/" + environment + "/" + algorithm + ".json"):
     config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
@@ -128,12 +128,12 @@ try:
         algorithm,
         local_dir=output_dir,
         # name="test",
-        stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 15000000},
+        stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 40000000},
         checkpoint_freq=10,
         max_failures=5,
         checkpoint_at_end=True,
         config=config,
-        num_samples=2
+        num_samples=4
     )
 except Exception as e:
             Path(output_dir + algorithm).mkdir(parents=True, exist_ok=True)
