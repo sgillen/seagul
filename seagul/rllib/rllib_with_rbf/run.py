@@ -55,7 +55,7 @@ ray.init()
 #---- adjust parameters: -------------------------------------
 algorithm = "PPO" # algos["gradient-based"][a]
 # algorithm = algos["0"]
-environment = envs[2]["name"]
+environment = envs[1]["name"]
 output_dir = "./data/" + environment + "/"
 if os.path.exists("./params/" + environment + "/" + algorithm + ".json"):
     config = json.load(open("./params/" + environment + "/" + algorithm + ".json"))
@@ -83,9 +83,9 @@ config['env'] = environment
 #                                         'hidden_neurons': [256, 256]}},
 #                                     {'custom_model': 'linear'}])
 
-config['model'] = tune.grid_search([{'fcnet_hiddens': []},
-                                    {'fcnet_hiddens': [64,64]},
-                                    {'fcnet_hiddens': [256,256]}])
+# config['model'] = tune.grid_search([{'fcnet_hiddens': []},
+#                                     {'fcnet_hiddens': [64,64]},
+#                                     {'fcnet_hiddens': [256,256]}])
 
 # config['model'] = {"custom_model": {}, "custom_options": {}}
 # config['model'] = tune.grid_search([{"custom_model": "RBF", 
@@ -98,37 +98,38 @@ config['model'] = tune.grid_search([{'fcnet_hiddens': []},
 #                                      "custom_options": {
 #                                          "hidden_neurons": [256, 256]}},
 #                                     {"custom_model": "linear"}])
-# config['model'] = tune.grid_search([{"custom_model": "RBF", 
-#                                      "custom_options": {
-#                                          "normalization": False,
-#                                          "units": 64,
-#                                          "const_beta": False,
-#                                          "beta_initial": "ones"}},
-#                                     {"custom_model": "RBF", 
-#                                      "custom_options": {
-#                                          "normalization": True,
-#                                          "units": 64,
-#                                          "const_beta": True,
-#                                          "beta_initial": "ones"}},
-#                                     {"custom_model": "RBF", 
-#                                      "custom_options": {
-#                                          "normalization": True,
-#                                          "units": 64,
-#                                          "const_beta": False,
-#                                          "beta_initial": "ones"}},
-#                                     {"custom_model": "RBF", 
-#                                      "custom_options": {
-#                                          "normalization": False,
-#                                          "units": 64,
-#                                          "const_beta": True,
-#                                          "beta_initial": "ones"}}])
+config['model'] = tune.grid_search([{"custom_model": "RBF", 
+                                     "custom_options": {
+                                         "normalization": False,
+                                         "units": 64,
+                                         "const_beta": False,
+                                         "beta_initial": "ones"}},
+                                    {"custom_model": "RBF", 
+                                     "custom_options": {
+                                         "normalization": True,
+                                         "units": 64,
+                                         "const_beta": True,
+                                         "beta_initial": "ones"}},
+                                    {"custom_model": "RBF", 
+                                     "custom_options": {
+                                         "normalization": True,
+                                         "units": 64,
+                                         "const_beta": False,
+                                         "beta_initial": "ones"}},
+                                    {"custom_model": "RBF", 
+                                     "custom_options": {
+                                         "normalization": False,
+                                         "units": 64,
+                                         "const_beta": True,
+                                         "beta_initial": "ones"}},
+                                    {"custom_model": "linear"}])
 #---------------------------------------------------------------
 try:
     analysis = tune.run(
         algorithm,
         local_dir=output_dir,
         # name="test",
-        stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 40000000},
+        stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": 30000000},
         checkpoint_freq=10,
         max_failures=5,
         checkpoint_at_end=True,
