@@ -27,6 +27,7 @@ import tensorflow as tf
 import pickle
 import re
 from seagul.plot import smooth_bounded_curve
+import pybullet as p
 
 from rbf_net import RBFModel
 from mlp_net import MLP, Linear
@@ -143,7 +144,7 @@ def outputs_to_df(res_dir, cutoff = -1):
     """
 
     all_results = pd.DataFrame(columns = ['model', 'ts', 'rewards', 'color'])
-    all_colors = {'RBF': ['#E85E10', '#BF2E0F', '#BE7F72', '#E6A092'], 'mlp': ['#9AE692', '#2BB51D', '#26FE11', '#578653'], 'linear': ['#DDEA11'], 'FCN': ['#1166EA', '#5B93E9', '#526F9C', '#5898FA']}
+    all_colors = {'RBF': ['#E85E10', '#BF2E0F', '#BE7F72', '#E6A092'], 'MLP': ['#9AE692', '#2BB51D', '#26FE11', '#578653'],'mlp': ['#9AE692', '#2BB51D', '#26FE11', '#578653'], 'linear': ['#DDEA11'], 'FCN': ['#1166EA', '#5B93E9', '#526F9C', '#5898FA']}
     colors = {}
     for output_dir in res_dir:
         if os.path.exists(output_dir +  "/progress.csv"): # if already in folder and no looping required
@@ -232,22 +233,34 @@ def render(checkpoint, home_path):
     reward_hist = []
 
     done = False
+    step = 0
+
     for t in range(10000):
         # for some algorithms you can get the sample mean out, need to change the value on the index to match your env for now
         # mean_actions = out_dict['behaviour_logits'][:17]
         # actions = trainer.compute_action(obs.flatten())
         # sampled_actions, _ , out_dict = trainer.compute_action(obs.flatten(),full_fetch=True)
         sampled_actions = trainer.compute_action(obs.flatten())
+        # sampled_actions, _ , out_dict = trainer.compute_action(obs.flatten(),full_fetch=True)
         
         actions = sampled_actions
         
         obs, reward, done, _ = env.step(np.asarray(actions))
         
-        env.render()
+        
+        env.render(mode='human')
+        # env.render(mode='rgb_array', close = True)
+        p.computeViewMatrix(cameraEyePosition=[0,10,5], cameraTargetPosition=[0,0,0], cameraUpVector=[0,0,0])
+
+        # if step % 1000 == 0:
+        #     env.reset()
+        # step += 1
         
         action_hist.append(np.copy(actions))
         obs_hist.append(np.copy(obs))
         reward_hist.append(np.copy(reward))
+        if done:
+            obs = env.reset()
     # print(sum(reward_hist))
     # print((obs_hist))
     #plt.plot(action_hist)
@@ -257,4 +270,5 @@ def render(checkpoint, home_path):
     #plt.figure()
 
     # Reminder that the bahavior logits that come out are the mean and logstd (not log mean, despite the name logit)
-    trainer.compute_action(obs, full_fetch=True)
+    # trainer.compute_action(obs, full_fetch=True)
+    trainer.compute_action(obs)
