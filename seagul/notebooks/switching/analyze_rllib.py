@@ -26,7 +26,7 @@ import os
 
 
 #%% =====================================================================
-directory = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trial_smalls1/PPO/"
+directory = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trialsquare/PPO"
 df_list = []
 max_size = 0
 
@@ -52,7 +52,9 @@ ax.set_title('Smoothed reward curve, all seeds')
 plt.show()
 
 #%% =====================================================================
-checkpoint_path = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trial_smalls1/PPO/PPO_su_acroswitch-v0_1687df7a_2020-03-02_14-13-47t_s_0yp6/checkpoint_228/checkpoint-228"
+checkpoint_path = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trialsquare/PPO/PPO_su_acroswitch-v0_82b6e028_2020-03-02_18-34-304iv2jre5/checkpoint_228/checkpoint-228"
+
+
 config_path =  '/'.join(checkpoint_path.split('/')[:-2]) + '/params.pkl'
 config = dill.load(open(config_path, 'rb'))
 env_name = config['env']
@@ -60,6 +62,7 @@ env_name = config['env']
 csv_path = '/'.join(checkpoint_path.split('/')[:-2]) + '/progress.csv'
 df = pd.read_csv(csv_path)
 plt.plot(df['episode_reward_mean'], 'b')
+plt.show()
 
 ray.shutdown()
 ray.init()
@@ -72,7 +75,7 @@ trainer = ppo.PPOTrainer(config)
 trainer.restore(checkpoint_path)
 
 #%% =====================================================================
-def do_rollout(init_point):
+def do_rollout(init_point, render = False):
     env = gym.make(env_name, **config['env_config'])
     obs = env.reset(init_point)
 
@@ -86,7 +89,10 @@ def do_rollout(init_point):
     while not done:
         actions, _, out_dict = trainer.compute_action(obs, full_fetch=True)
         obs, reward, done, _ = env.step(np.asarray(actions))
-        # env.render()
+
+        if render:
+            env.render()
+
         action_hist.append(np.copy(actions))
         obs_hist.append(np.copy(obs))
         reward_hist.append(np.copy(reward))
@@ -127,23 +133,23 @@ def do_det_rollout(init_point):
 
 
 #%% =====================================================================
-obs_hist, action_hist, reward_hist = do_rollout(init_point=np.array([-pi / 2, 0, 0, 0]))
-print(sum(reward_hist))
-
-plt.plot(obs_hist, 'o--')
-plt.title('Observations')
-plt.legend(['th1', 'th1', 'th1d', 'th2d'])
-
-plt.figure()
-plt.plot(reward_hist, 'o--')
-plt.title('reward_hist from trial')
-
 
 def reward_fn(s, a):
     reward = -.1 * (np.sqrt((s[0] - pi / 2) ** 2 + .25 * s[1] ** 2))
     # reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
     return reward, False
 
+obs_hist, action_hist, reward_hist = do_rollout(init_point=np.array([-pi / 2, 0, 0, 0]), render=True)
+plt.plot(obs_hist, 'o--')
+plt.title('Observations')
+plt.legend(['th1', 'th1', 'th1d', 'th2d'])
+plt.show()
+
+print(sum(reward_hist))
+plt.figure()
+plt.plot(reward_hist, 'o--')
+plt.title('reward_hist from trial')
+plt.show()
 
 fn_rews = []
 for obs in obs_hist:
@@ -154,8 +160,10 @@ print(sum(fn_rews))
 plt.figure()
 plt.plot(fn_rews, 'o--')
 plt.title('reward_hist according to reference fn')
+plt.show()
 
 plt.figure()
 plt.step([t for t in range(action_hist.shape[0])], action_hist)
 plt.legend(['x', 'y'])
 plt.title('Actions')
+plt.show()

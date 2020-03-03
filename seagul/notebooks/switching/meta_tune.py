@@ -16,7 +16,6 @@ g = 9.8
 max_torque = 25
 max_t = 10
 
-
 trial_num = input("trial name / number please:\n")
 
 def control(q):
@@ -25,7 +24,7 @@ def control(q):
     return -k.dot(q - gs)
 
 def reward_fn(s, a):
-    reward = -.1*(np.sqrt((s[0] - pi/2)**2 + .25*s[1]**2))
+    reward = -.1*((s[0] - pi/2)**2 + .25*s[1]**2)
     #reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
     return reward, False
 
@@ -72,11 +71,18 @@ config["env_config"] = {
     "controller" : control
 }
 
+ray.init(
+    num_cpus=12,
+    memory=int(8e9),
+    object_store_memory=int(4e9),
+    driver_object_store_memory= int(2e9)
+)
+
 analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
     stop={"timesteps_total": 5e5},
-    num_samples=8,
+    num_samples=4,
     local_dir="./data6/tune/switch/trial" + trial_num + "/" ,
     checkpoint_at_end=True,
 )
