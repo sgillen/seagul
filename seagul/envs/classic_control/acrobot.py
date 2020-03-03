@@ -10,18 +10,18 @@ from seagul.integration import rk4, euler,wrap
 
 
 class SGAcroEnv(core.Env):
-    """ A simple acrobot environment implemented in drake
+    """ A simple acrobot environment
     """
 
     def __init__(self,
                  max_torque=25,
-                 init_state=np.array([0.0, 0.0, 0.0, 0.0]),
+                 init_state=np.array([-pi/2, 0.0, 0.0, 0.0]),
                  init_state_weights=np.array([0.0, 0.0, 0.0, 0.0]),
                  dt=.01,
                  max_t=5,
-                 act_hold=1,
+                 act_hold=20,
                  integrator=euler,
-                 reward_fn=lambda ns, a: (-(np.cos(ns[0]) + np.cos(ns[0] + ns[1])), False),
+                 reward_fn=lambda ns, a: ((np.sin(ns[0]) + np.sin(ns[0] + ns[1])), False),
                  th1_range=[0, 2 * pi],
                  th2_range=[-pi, pi],
                  max_th1dot=float('inf'),
@@ -30,9 +30,9 @@ class SGAcroEnv(core.Env):
                  m2=1,
                  l1=1,
                  lc1=.5,
-                 lc2=1,
-                 i1=.083,
-                 i2=.33
+                 lc2=.5,
+                 i1=.2,
+                 i2=.8
                  ):
         """
         Args:
@@ -227,5 +227,5 @@ class SGAcroEnv(core.Env):
     #         m2 * lc2 ** 2 + I2 - d2 ** 2 / d1
     #     )
     #     ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
-    #
+    
     #     return np.array([dtheta1, dtheta2, ddtheta1, ddtheta2])
