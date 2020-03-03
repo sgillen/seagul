@@ -9,61 +9,58 @@ from seagul.rl.models import PPOModel, SwitchedPPOModel, PPOModelActHold, Switch
 from seagul.nn import MLP, CategoricalMLP
 
 # init policy, valuefn
-input_size = 4
+input_size = 6
 output_size = 1
-layer_size = 16
+layer_size = 32
 num_layers = 1
 activation = nn.ReLU
 
 proc_list = []
 trial_num = input("What trial is this??\n")
 
-# m1 = 1; m2 = 1
-# l1 = 1; l2 = 1
-# lc1 = .5; lc2 = .5
-# I1 = .2; I2 = 1.0
-# g = 9.8
-
 m1 = 1; m2 = 1
-l1 = 1; l2 = 2
-lc1 = .5; lc2 = 1
-I1 = .083; I2 = .33
+l1 = 1; l2 = 1
+lc1 = .5; lc2 = .5
+I1 = .2; I2 = 1.0
 g = 9.8
+
+# m1 = 1; m2 = 1
+# l1 = 1; l2 = 2
+# lc1 = .5; lc2 = 1
+# I1 = .083; I2 = .33
+# g = 9.8
 
 def reward_fn(s, a):
     reward = 1e-2*(np.sin(s[0]) + np.sin(s[0] + s[1]))
     return reward, False
 
-max_torque = 5
-env_name = "su_acro_drake-v0"
+max_torque = 25
+env_name = "su_acrobot-v2"
 
-act_var = 1.0
-max_t = 5.0
 for seed in np.random.randint(0, 2**32, 4):
-    # for act_var in [1.0, 3.0]:
-    #     for max_t in [5, 10]:
-
+            max_t = 10
+            act_var = 3.0
             model = PPOModel(
                 policy=MLP(input_size, output_size, layer_size, num_layers),
                 value_fn=MLP(input_size, output_size, layer_size, num_layers),
             )
 
-            # env_config = {
-            #     "init_state": [-pi/2, 0, 0, 0],
-            #     "max_torque": max_torque,
-            #     "init_state_weights": [0, 0, 0, 0],
-            #     "dt": .01,
-            #     "reward_fn" : reward_fn,
-            #     "max_t" : max_t,
-            #     "m2": m2,
-            #     "m1": m1,
-            #     "l1": l1,
-            #     "lc1": lc1,
-            #     "lc2": lc2,
-            #     "i1": I1,
-            #     "i2": I2,
-            #     "act_hold" : 20
-            # }
+            env_config = {
+                "init_state": [-pi/2, 0, 0, 0],
+                "max_torque": max_torque,
+                "init_state_weights": [0, 0, 0, 0],
+                "dt": .01,
+                "reward_fn" : reward_fn,
+                "max_t" : max_t,
+                "m2": m2,
+                "m1": m1,
+                "l1": l1,
+                "lc1": lc1,
+                "lc2": lc2,
+                "i1": I1,
+                "i2": I2,
+                "act_hold" : 20
+            }
 
             alg_config = {
                 "env_name": env_name,
@@ -71,18 +68,20 @@ for seed in np.random.randint(0, 2**32, 4):
                 "act_var_schedule": [act_var],
                 "seed": int(seed),  # int((time.time() % 1)*1e8),
                 "total_steps" : 5e5,
-                "epoch_batch_size": 2048,
+                "epoch_batch_size": 256,
+                "pol_batch_size" : 256,
+                "val_batch_size" : 256,
                 "reward_stop" : None,
                 "gamma": 1,
                 "pol_epochs": 30,
-                "val_epochs": 10,
-#                "env_config" : env_config,
+                "val_epochs": 30,
+                "env_config" : env_config,
                 }
 
             run_name = "swingup" + str(seed)
 
             #run_sg(alg_config, ppo, run_name , "normal reward", "/data4/switching_sortof/trial" + str(trial_num) + "_t" +  str(act_var) + "/")
-            p = Process(target=run_sg, args=(alg_config, ppo, run_name , "warm_start", "/data5/warm_try/trial" + str(trial_num) + "_v" + str(act_var) + "t" + str(max_t) + "/"))
+            p = Process(target=run_sg, args=(alg_config, ppo, run_name , "warm_start", "/data5/acro2/trial" + str(trial_num) + "_v" + str(act_var) + "t" + str(max_t) + "/"))
             p.start()
             proc_list.append(p)
 

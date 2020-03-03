@@ -2,12 +2,13 @@ from multiprocessing import Process
 import seagul.envs
 
 import gym
-env_name = "su_acrobot-v0"
+env_name = "su_acroswitch-v0"
 env = gym.make(env_name)
 
 import torch
 import torch.nn as nn
 import numpy as np
+from numpy import pi
 
 # init policy, value fn
 input_size = 4
@@ -24,10 +25,19 @@ from seagul.nn import MLP, CategoricalMLP
 proc_list = []
 trial_num = input("What trial is this?\n")
 
+m1 = 1; m2 = 1
+l1 = 1; l2 = 1
+lc1 = .5; lc2 = .5
+I1 = .2; I2 = 1.0
+g = 9.8
+max_torque = 25
+max_t = 5
+
 for seed in np.random.randint(0, 2 ** 32, 8):
 
     max_torque = 5
-
+    max_t = 5
+    
     policy = MLP(input_size, output_size*2, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
     q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
@@ -50,32 +60,43 @@ for seed in np.random.randint(0, 2 ** 32, 8):
         act_limit = max_torque,
     )
 
-    def reward_fn(ns, act):
-        reward = -1e-2 * (np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+    
+    def control(q):
+        k = np.array([[-1649.86567367, -460.15780461, -716.07110032, -278.15312267]])
+        gs = np.array([pi / 2, 0, 0, 0])
+        return -k.dot(q - gs)
 
-        done = False
-        if abs(ns[0] - np.pi) < 1 and abs(ns[1]) < 1 and abs(ns[2]) < 3 and abs(ns[3]) < 3:
-            reward += 10
-            print("go zone")
-            done = True
+    
+    def reward_fn(s, a):
+        reward = -.1*(np.sqrt((s[0] - pi/2)**2 + s[1]**2))
+        #reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
+        return reward, False
 
-        return reward, done
-
+    
     env_config = {
+        "init_state": [-pi/2, 0, 0, 0],
         "max_torque": max_torque,
-        "init_state": [0.0, 0.0, 0.0, 0.0],
-        "init_state_weights": np.array([0, 0, 0, 0]),
+        "init_state_weights": [0, 0, 0, 0],
         "dt": .01,
-        "max_t": 10,
-        "act_hold": 20,
-        "reward_fn": reward_fn,
+        "reward_fn" : reward_fn,
+        "max_t" : max_t,
+        "m2": m2,
+        "m1": m1,
+        "l1": l1,
+        "lc1": lc1,
+        "lc2": lc2,
+        "i1": I1,
+        "i2": I2,
+        "act_hold" : 20,
+        "gate_fn" : torch.load("warm/lqr_gate_better"),
+        "controller" : control
     }
 
     alg_config = {
         "env_name": env_name,
         "model": model,
         "seed": seed,  # int((time.time() % 1)*1e8),
-        "total_steps" : 5e3,
+        "total_steps" : 5e5,
         "exploration_steps" : 1000,
         "min_steps_per_update" : 200,
         "reward_stop" : 1500,
@@ -85,7 +106,7 @@ for seed in np.random.randint(0, 2 ** 32, 8):
 
     p = Process(
         target=run_sg,
-        args=(alg_config, sac, "sac-test", "no act hold this time", "/data2_sac/trial" + trial_num + "/" + "seed" + str(seed)),
+        args=(alg_config, sac, "sac-test", "no act hold this time", "/data5_sac/trial" + trial_num + "/" + "seed" + str(seed)),
     )
     p.start()
     proc_list.append(p)

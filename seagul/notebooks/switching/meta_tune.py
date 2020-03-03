@@ -1,12 +1,35 @@
 import seagul.envs
 import gym
 
-env_name = "su_acrobot-v0"
-
 import ray
 from ray import tune
+import torch
 import ray.rllib.agents.ppo as ppo
 import numpy as np
+from numpy import pi
+
+m1 = 1; m2 = 1
+l1 = 1; l2 = 1
+lc1 = .5; lc2 = .5
+I1 = .2; I2 = 1.0
+g = 9.8
+max_torque = 25
+max_t = 10
+
+
+trial_num = input("trial name / number please:\n")
+
+def control(q):
+    k = np.array([[-1649.86567367, -460.15780461, -716.07110032, -278.15312267]])
+    gs = np.array([pi / 2, 0, 0, 0])
+    return -k.dot(q - gs)
+
+def reward_fn(s, a):
+    reward = -.1*(np.sqrt((s[0] - pi/2)**2 + .25*s[1]**2))
+    #reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
+    return reward, False
+
+env_name = "su_acroswitch-v0"
 
 config = ppo.DEFAULT_CONFIG.copy()
 config["num_workers"] = 1
@@ -26,33 +49,34 @@ config["sgd_minibatch_size"] = 512
 config["train_batch_size"] = 2048
 config["vf_clip_param"] = 10
 config["env"] = env_name
-config["model"]["fcnet_hiddens"] = [16]
+config["model"]["fcnet_hiddens"] = [32]
 config["no_done_at_end"] = True
-
-def reward_fn(ns, act):
-    # return -1e-4*(5*(ns[0] - np.pi)**2 + ns[1]**2 + .5*ns[2]**2 + .5*ns[3]**2)
-    return -1e-2 * (np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
-    # return -.1 * np.exp(np.sqrt(.1 * (ns[0] - np.pi) ** 2 + .1 * ns[1] ** 2 + .01 * ns[2] ** 2 + .01 * ns[3] ** 2))
-
-env_name = "su_acrobot-v0"
 
 
 config["env_config"] = {
-    "max_torque" : 25,
-    "init_state" : [0.0, 0.0, 0.0, 0.0],
-    "init_state_weights" : np.array([0, 0, 0, 0]),
-    "dt" : .01,
-    "max_t" : 10,
-    "act_hold" : 1,
-    "reward_fn" : reward_fn
+    "init_state": [-pi/2, 0, 0, 0],
+    "max_torque": max_torque,
+    "init_state_weights": [0, 0, 0, 0],
+    "dt": .01,
+    "reward_fn" : reward_fn,
+    "max_t" : max_t,
+    "m2": m2,
+    "m1": m1,
+    "l1": l1,
+    "lc1": lc1,
+    "lc2": lc2,
+    "i1": I1,
+    "i2": I2,
+    "act_hold" : 20,
+    "gate_fn" : torch.load("warm/lqr_gate_better"),
+    "controller" : control
 }
-
 
 analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
     stop={"timesteps_total": 5e5},
     num_samples=8,
-    local_dir="./data/sg_acro2/tune/trial1/",
+    local_dir="./data6/tune/switch/trial" + trial_num + "/" ,
     checkpoint_at_end=True,
 )
