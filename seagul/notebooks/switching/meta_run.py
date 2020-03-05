@@ -7,9 +7,10 @@ from seagul.rl.run_utils import run_sg, run_and_save_bs
 from seagul.rl.algos import ppo, ppo_switch
 from seagul.rl.models import PPOModel, SwitchedPPOModel, PPOModelActHold, SwitchedPPOModelActHold
 from seagul.nn import MLP, CategoricalMLP
+import torch
 
 # init policy, valuefn
-input_size = 6
+input_size = 4
 output_size = 1
 layer_size = 32
 num_layers = 1
@@ -30,28 +31,39 @@ g = 9.8
 # I1 = .083; I2 = .33
 # g = 9.8
 
+def control(q):
+    k = np.array([[-1649.86567367, -460.15780461, -716.07110032, -278.15312267]])
+    gs = np.array([pi / 2, 0, 0, 0])
+    return -k.dot(q - gs)
+
 def reward_fn(s, a):
     reward = 1e-2*(np.sin(s[0]) + np.sin(s[0] + s[1]))
     return reward, False
 
+def reward_fn_sin(s,a):
+    reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
+    return reward, False
+
 max_torque = 25
-env_name = "su_acrobot-v2"
+max_t = 10
+act_var = 3.0
+
+env_name = "su_acroswitch-v0"
 
 for seed in np.random.randint(0, 2**32, 4):
-            max_t = 10
-            act_var = 3.0
+
             model = PPOModel(
                 policy=MLP(input_size, output_size, layer_size, num_layers),
                 value_fn=MLP(input_size, output_size, layer_size, num_layers),
             )
 
             env_config = {
-                "init_state": [-pi/2, 0, 0, 0],
+                "init_state": [-pi / 2, 0, 0, 0],
                 "max_torque": max_torque,
                 "init_state_weights": [0, 0, 0, 0],
                 "dt": .01,
-                "reward_fn" : reward_fn,
-                "max_t" : max_t,
+                "reward_fn": reward_fn_sin,
+                "max_t": max_t,
                 "m2": m2,
                 "m1": m1,
                 "l1": l1,
@@ -59,7 +71,9 @@ for seed in np.random.randint(0, 2**32, 4):
                 "lc2": lc2,
                 "i1": I1,
                 "i2": I2,
-                "act_hold" : 20
+                "act_hold": 20,
+                "gate_fn": torch.load("warm/lqr_gate_better"),
+                "controller": control
             }
 
             alg_config = {
@@ -68,9 +82,6 @@ for seed in np.random.randint(0, 2**32, 4):
                 "act_var_schedule": [act_var],
                 "seed": int(seed),  # int((time.time() % 1)*1e8),
                 "total_steps" : 5e5,
-                "epoch_batch_size": 256,
-                "pol_batch_size" : 256,
-                "val_batch_size" : 256,
                 "reward_stop" : None,
                 "gamma": 1,
                 "pol_epochs": 30,

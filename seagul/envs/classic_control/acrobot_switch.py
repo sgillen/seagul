@@ -19,6 +19,7 @@ class SGAcroSwitchEnv(core.Env):
                  controller = None,
                  thresh = .9,
                  max_torque=25,
+                 lqr_max_torque = None,
                  init_state=np.array([-pi/2, 0.0, 0.0, 0.0]),
                  init_state_weights=np.array([0.0, 0.0, 0.0, 0.0]),
                  dt=.01,
@@ -75,6 +76,12 @@ class SGAcroSwitchEnv(core.Env):
         self.controller = controller
         self.sig = torch.nn.Sigmoid()
         self.thresh = thresh
+        self.lqr_on = False
+
+        if lqr_max_torque is None:
+            self.lqr_max_torque = max_torque
+        else:
+            self.lqr_max_torque = lqr_max_torque
 
         # These are only used for rendering
         self.render_length1 = .5
@@ -102,9 +109,12 @@ class SGAcroSwitchEnv(core.Env):
             init_state[2] = init_vec[2]
             init_state[3] = init_vec[3]
 
+        self.lqr_on = False
         self.t = 0
         self.state = init_state
         return self._get_obs()
+
+
 
     def step(self, a):
         a = np.clip(a, -self.max_torque, self.max_torque)
@@ -112,10 +122,12 @@ class SGAcroSwitchEnv(core.Env):
 
         path = self.sig(self.gate_fn(np.array(self._get_obs(), dtype=np.float32))) > self.thresh
 
-        if path:
+        if path or self.lqr_on:
             for _ in range(self.act_hold):
-                a = self.controller(self._get_obs())
+                a = np.clip(self.controller(self._get_obs()), -self.lqr_max_torque, self.lqr_max_torque)
+                #                a = self.controller(self._get_obs())
                 self.state = self.integrator(self._dynamics, a, self.t, self.dt, self.state)
+                self.lqr_on = True
 
         else:
             for _ in range(self.act_hold):

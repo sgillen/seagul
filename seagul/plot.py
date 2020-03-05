@@ -97,9 +97,9 @@ def smooth_bounded_curve(
     min_data = [np.min(data[i,:]) for i in range(data.shape[0])]
     max_data = [np.max(data[i,:]) for i in range(data.shape[0])]
 
-    min_smoothed = pd.Series(min_data).rolling(100, min_periods=10).mean()
-    max_smoothed = pd.Series(max_data).rolling(100, min_periods=10).mean()
-    data_smoothed = pd.Series(avg_data).rolling(100, min_periods=10).mean()
+    min_smoothed = pd.Series(min_data).rolling(window, min_periods=10).mean()
+    max_smoothed = pd.Series(max_data).rolling(window, min_periods=10).mean()
+    data_smoothed = pd.Series(avg_data).rolling(window, min_periods=10).mean()
 
     time_steps = [i for i in range(data.shape[0])]
     ax.plot(time_steps, data_smoothed, color=color)

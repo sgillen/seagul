@@ -13,8 +13,8 @@ l1 = 1; l2 = 1
 lc1 = .5; lc2 = .5
 I1 = .2; I2 = 1.0
 g = 9.8
-max_torque = 25
-max_t = 10
+max_torque = 5
+max_t = 10.0
 
 trial_num = input("trial name / number please:\n")
 
@@ -28,8 +28,11 @@ def reward_fn(s, a):
     #reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
     return reward, False
 
-env_name = "su_acroswitch-v0"
+def reward_fn_sin(s,a):
+    reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
+    return reward, False
 
+env_name = "su_acroswitch-v0"
 config = ppo.DEFAULT_CONFIG.copy()
 config["num_workers"] = 1
 config["num_envs_per_worker"] = 1
@@ -57,7 +60,7 @@ config["env_config"] = {
     "max_torque": max_torque,
     "init_state_weights": [0, 0, 0, 0],
     "dt": .01,
-    "reward_fn" : reward_fn,
+    "reward_fn" : reward_fn_sin,
     "max_t" : max_t,
     "m2": m2,
     "m1": m1,
@@ -81,7 +84,7 @@ ray.init(
 analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
-    stop={"timesteps_total": 5e5},
+    stop={"timesteps_total": 5e6},
     num_samples=4,
     local_dir="./data6/tune/switch/trial" + trial_num + "/" ,
     checkpoint_at_end=True,
