@@ -30,13 +30,11 @@ l1 = 1; l2 = 1
 lc1 = .5; lc2 = .5
 I1 = .2; I2 = 1.0
 g = 9.8
-max_torque = 25
+max_torque = 5
 max_t = 5
 
 for seed in np.random.randint(0, 2 ** 32, 8):
 
-    max_torque = 5
-    max_t = 5
     
     policy = MLP(input_size, output_size*2, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
@@ -67,10 +65,15 @@ for seed in np.random.randint(0, 2 ** 32, 8):
         return -k.dot(q - gs)
 
     
-    def reward_fn(s, a):
-        reward = -.1*(np.sqrt((s[0] - pi/2)**2 + s[1]**2))
-        #reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
+    def reward_fn_sin(s,a):
+        reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
         return reward, False
+
+    
+    # def reward_fn(s, a):
+    #     reward = -.1*(np.sqrt((s[0] - pi/2)**2 + s[1]**2))
+    #     #reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
+    #     return reward, False
 
     
     env_config = {
@@ -78,7 +81,7 @@ for seed in np.random.randint(0, 2 ** 32, 8):
         "max_torque": max_torque,
         "init_state_weights": [0, 0, 0, 0],
         "dt": .01,
-        "reward_fn" : reward_fn,
+        "reward_fn" : reward_fn_sin,
         "max_t" : max_t,
         "m2": m2,
         "m1": m1,
@@ -97,10 +100,11 @@ for seed in np.random.randint(0, 2 ** 32, 8):
         "model": model,
         "seed": seed,  # int((time.time() % 1)*1e8),
         "total_steps" : 5e5,
-        "exploration_steps" : 1000,
+        "exploration_steps" : 50000,
         "min_steps_per_update" : 200,
-        "reward_stop" : 1500,
+        "reward_stop" : 60,
         "gamma": 1,
+        "iters_per_update": float('inf'),
         "env_config": env_config
     }
 

@@ -26,7 +26,7 @@ import os
 
 
 #%% =====================================================================
-directory = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trialsquare/PPO"
+directory = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trialhyst_sin/PPO"
 df_list = []
 max_size = 0
 
@@ -43,16 +43,20 @@ for i, entry in enumerate(os.scandir(directory)):
 
 rewards = np.zeros((max_size, len(df_list)))
 
+plt.figure()
 for i, df in enumerate(df_list):
-    trial_length =df['episode_reward_mean'].shape[0]
+    plt.plot(df['episode_reward_mean'], 'ko--')
+    trial_length = df['episode_reward_mean'].shape[0]
     rewards[:trial_length, i] = df['episode_reward_mean']
 
-fig, ax = smooth_bounded_curve(rewards)
+plt.show()
+plt.figure()
+fig, ax = smooth_bounded_curve(rewards, window=10)
 ax.set_title('Smoothed reward curve, all seeds')
 plt.show()
 
 #%% =====================================================================
-checkpoint_path = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trialsquare/PPO/PPO_su_acroswitch-v0_82b6e028_2020-03-02_18-34-304iv2jre5/checkpoint_228/checkpoint-228"
+checkpoint_path = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trialhyst_sin/PPO/PPO_su_acroswitch-v0_be67a68e_2020-03-02_22-46-43rhfmnppk/checkpoint_228/checkpoint-228"
 
 
 config_path =  '/'.join(checkpoint_path.split('/')[:-2]) + '/params.pkl'
@@ -78,6 +82,7 @@ trainer.restore(checkpoint_path)
 def do_rollout(init_point, render = False):
     env = gym.make(env_name, **config['env_config'])
     obs = env.reset(init_point)
+    env.max_t = 20
 
     action_hist = []
     m_act_hist = []
@@ -107,11 +112,11 @@ def do_rollout(init_point, render = False):
 def do_det_rollout(init_point):
     env = gym.make(env_name, **config['env_config'])
     obs = env.reset(init_point)
-    obs[-1] = -10.0
     action_hist = []
     m_act_hist = []
     obs_hist = []
     reward_hist = []
+    env.max_t = 50
 
     done = False
 
@@ -139,7 +144,7 @@ def reward_fn(s, a):
     # reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
     return reward, False
 
-obs_hist, action_hist, reward_hist = do_rollout(init_point=np.array([-pi / 2, 0, 0, 0]), render=True)
+obs_hist, action_hist, reward_hist = do_det_rollout(init_point=np.array([-pi / 2, 0, 0, 0]))
 plt.plot(obs_hist, 'o--')
 plt.title('Observations')
 plt.legend(['th1', 'th1', 'th1d', 'th2d'])
