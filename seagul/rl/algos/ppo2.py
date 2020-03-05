@@ -1,12 +1,11 @@
 import numpy as np
 import torch
 from torch.utils import data
-import tqdm
+import tqdm.auto as tqdm
 import gym
 import pickle
 
 from seagul.rl.common import discount_cumsum, update_mean, update_var
-
 
 def ppo(
     env_name,
@@ -21,11 +20,13 @@ def ppo(
     pol_batch_size=1024,
     val_batch_size=1024,
     pol_lr=1e-4,
-    val_lr=1e-5,
+    val_lr=1e-4,
     pol_epochs=10,
     val_epochs=10,
+    target_kl = .01,
     use_gpu=False,
     reward_stop=None,
+    env_config = {}
 ):
 
     """
@@ -47,8 +48,10 @@ def ppo(
         val_lr: learning rate of value function pol_optimizer
         pol_epochs: how many epochs to use for each policy update
         val_epochs: how many epochs to use for each value update
+        target_kl: max KL before breaking
         use_gpu:  want to use the GPU? set to true
         reward_stop: reward value to stop if we achieve
+        env_config: dictionary containing kwargs to pass to your the environment
 
     Returns:
         model: trained model
@@ -76,7 +79,9 @@ def ppo(
 
     # init everything
     # ==============================================================================
-    env = gym.make(env_name)
+    torch.set_num_threads(1)
+
+    env = gym.make(env_name, **env_config)
     if isinstance(env.action_space, gym.spaces.Box):
         act_size = env.action_space.shape[0]
         act_dtype = torch.double
@@ -91,6 +96,8 @@ def ppo(
     obs_var = torch.ones(obs_size)
     adv_mean = torch.zeros(1)
     adv_var = torch.ones(1)
+    rew_mean = torch.zeros(1)
+    rew_var = torch.ones(1)
 
     old_model = pickle.loads(
         pickle.dumps(model)
@@ -107,10 +114,10 @@ def ppo(
     use_cuda = torch.cuda.is_available() and use_gpu
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
+    # init logging stuff
     raw_rew_hist = []
     val_loss_hist = []
     pol_loss_hist = []
-
     progress_bar = tqdm.tqdm(total=total_steps)
     cur_total_steps = 0
     progress_bar.update(0)
@@ -149,12 +156,14 @@ def ppo(
             )  # [:-1] because we appended the value function to the end as an extra reward
             batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
 
+            rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
+            rew_var = update_var(batch_discrew, rew_var, cur_total_steps)
+            batch_discrew = (batch_discrew - rew_mean) / (rew_var + 1e-6)
+
 
             # calculate this episodes advantages
             last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
-            # ep_rew = torch.cat((ep_rew, last_val)) # append value_fn to last reward
             ep_val = model.value_fn(ep_obs)
-            # ep_val = torch.cat((ep_val, last_val))
             ep_val[-1] = last_val
 
             deltas = ep_rew[:-1] + gamma * ep_val[1:] - ep_val[:-1]
@@ -172,27 +181,29 @@ def ppo(
         # policy update
         # ========================================================================
         training_data = data.TensorDataset(batch_obs, batch_act, batch_adv)
-        training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True)
+        training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True, num_workers=0, pin_memory=False)
 
         # Update the policy using the PPO loss
         for pol_epoch in range(pol_epochs):
             for local_obs, local_act, local_adv in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_states, local_actions, local_adv = (
+                local_obs, local_act, local_adv = (
                     local_obs.to(device),
                     local_act.to(device),
                     local_adv.to(device),
                 )
 
                 # Compute the loss
-                logp = model.get_logp(local_obs, local_act).reshape(-1, 1)
-                old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, 1)
+                logp = model.get_logp(local_obs, local_act).reshape(-1, act_size)
+                old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, act_size)
                 r = torch.exp(logp - old_logp)
-                pol_loss = (
-                    -torch.sum(torch.min(r * local_adv, local_adv * torch.clamp(r, (1 - eps), (1 + eps)))) / r.shape[0]
-                )
+                clip_r = torch.clamp(r, 1-eps, 1+eps)
+                pol_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
 
-                # do the normal pytorch update
+                approx_kl = (logp - old_logp).mean()
+                if approx_kl > target_kl:
+                    break
+                
                 pol_opt.zero_grad()
                 pol_loss.backward()
                 pol_opt.step()
@@ -200,9 +211,9 @@ def ppo(
         # value_fn update
         # ========================================================================
         training_data = data.TensorDataset(batch_obs, batch_discrew)
-        training_generator = data.DataLoader(training_data, batch_size=val_batch_size, shuffle=True)
+        training_generator = data.DataLoader(training_data, batch_size=val_batch_size, shuffle=True, num_workers=0, pin_memory=False)
 
-        # Upadte value function with the standard L2 Loss
+        # Update value function with the standard L2 Loss
         for val_epoch in range(val_epochs):
             for local_obs, local_val in training_generator:
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
@@ -210,14 +221,13 @@ def ppo(
 
                 # predict and calculate loss for the batch
                 val_preds = model.value_fn(local_obs)
-                val_loss = torch.sum(torch.pow(val_preds - local_val, 2)) / (val_preds.shape[0])
+                val_loss = ((val_preds - local_val)**2).mean()
 
                 # do the normal pytorch update
                 val_opt.zero_grad()
                 val_loss.backward()
                 val_opt.step()
 
-        old_model = pickle.loads(pickle.dumps(model))
 
         # update observation mean and variance
         obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
@@ -227,12 +237,15 @@ def ppo(
         model.policy.state_var = obs_var
         model.value_fn.state_var = obs_var
         model.action_var = actvar_lookup(cur_total_steps)
-
+        old_model = pickle.loads(pickle.dumps(model))
+                
         val_loss_hist.append(val_loss)
         pol_loss_hist.append(pol_loss)
 
         progress_bar.update(cur_batch_steps)
 
+        
+        
     progress_bar.close()
     return model, raw_rew_hist, locals()
 
@@ -245,15 +258,12 @@ def make_variance_schedule(var_schedule, model, num_steps):
     var_lookup = lambda epoch: np.interp(epoch, x_vals, var_schedule)
     return var_lookup
 
-
 def do_rollout(env, model):
-
     act_list = []
     obs_list = []
     rew_list = []
-    num_steps = 0
 
-    dtype = torch.get_default_dtype()
+    dtype = torch.float32
     obs = env.reset()
     done = False
 
@@ -273,4 +283,4 @@ def do_rollout(env, model):
     ep_rew = torch.tensor(rew_list)
     ep_rew = ep_rew.reshape(-1, 1)
 
-    return (ep_obs, ep_act, ep_rew, ep_length)
+    return ep_obs, ep_act, ep_rew, ep_length

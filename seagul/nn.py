@@ -1,9 +1,13 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn.parameter import Parameter
 from torch.utils import data
 
+import tqdm.auto as tqdm
 from tqdm import trange
+
+
 
 """
 Utility functions for seagul, all vaguely related to neural networks
@@ -102,77 +106,6 @@ def fit_model(
     return loss_hist
 
 
-def policy_render_loop(policy, env, select_action):
-
-    """
-        Will render the policy passed in in an infinite loop. You can send a keyboard interrupt (Ctrl-C) and it will
-        end the render loop without ending your interactive session.
-
-        Tries to close the window when you send the interrupt, doesn't actually work for Mujoco environments though.
-
-        Attributes:
-            policy: your (presumably neural network) function that maps states->actions
-            env: the environment you want to render actions in
-            select_action: function for actually picking an action from the policy, should be the same one you trained with
-
-        Returns:
-            Nothing
-
-        Example:
-            import torch
-            import torch.nn as nn
-            from torch.distributions import Normal
-            import gym
-            from utils.nn_utils import policy_render_loop
-
-            import os
-            print(os.getcwd())
-
-            policy = nn.Sequential(
-                nn.Linear(4, 12),
-                nn.LeakyReLU(),
-                nn.Linear(12, 12),
-                nn.LeakyReLU(),
-                nn.Linear(12, 1),
-            )
-
-            load_path = '/Users/sgillen/work_dir/ucsb/notebooks/rl/cont_working'
-            policy.load_state_dict(torch.load(load_path))
-
-
-            def select_action(policy, state):
-                # loc is the mean, scale is the variance
-                m = Normal(loc = policy(torch.tensor(state))[0], scale = torch.tensor(.7))
-                action = m.sample()
-                logprob = m.log_prob(action)
-                return action.detach().numpy(), logprob
-
-
-            env_name = 'InvertedPendulum-v2'
-            env = gym.make(env_name)
-
-
-            policy_render_loop(policy,env,select_action)
-
-            # Blocks until you give a Ctrl-C, then drops you back into the shell
-
-
-    """
-
-    try:
-        state = env.reset()
-        while True:
-            action, _ = select_action(policy, state)
-            state, reward, done, _ = env.step(action)
-            env.render()
-
-            if done:
-                state = env.reset()
-
-    except KeyboardInterrupt:
-        env.close()
-
-
 class MLP(nn.Module):
     """
     Policy designed to be used with seaguls rl module.
@@ -180,36 +113,50 @@ class MLP(nn.Module):
     """
 
     def __init__(
-            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, device="cpu"
-    ):
+            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity,input_bias=None):
         """
-         :param input_size: how many inputs
-         :param output_size: how many outputs
-         :param num_layers: how many HIDDEN layers
-         :param layer_size: how big each hidden layer should be
-         :param activation: which activation function to use
+         input_size: how many inputs
+         output_size: how many outputs
+         num_layers: how many HIDDEN layers
+         layer_size: how big each hidden layer should be
+         activation: which activation function to use
+         input_bias: can add an "input bias" such that the first layer computer activation([x+bi]*W^T + b0)
          """
         super(MLP, self).__init__()
 
+
+        
         self.activation = activation()
         self.output_activation = output_activation()
 
-        self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
-        self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers)])
-        self.output_layer = nn.Linear(layer_size, output_size)
+        if input_bias is not None:
+            self.input_bias = Parameter(torch.Tensor(input_size))
+        else:
+            self.input_bias = None
+            
+        if num_layers == 0:
+            self.layers = []
+            self.output_layer = nn.Linear(input_size, output_size)
 
-        self.state_means = torch.zeros(input_size,device=device)
-        self.state_var = torch.ones(input_size,device=device)
+        else:
+            self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
+            self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers-1)])
+            self.output_layer = nn.Linear(layer_size, output_size)
+
+        self.state_means = torch.zeros(input_size)
+        self.state_var = torch.ones(input_size)
 
     def forward(self, data):
 
-#        data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
+        if self.input_bias is not None:
+            data += self.input_bias
+
+        data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
 
         for layer in self.layers:
             data = self.activation(layer(data))
 
-        return self.activation(self.output_layer(data))
-        #return self.output_activation(self.output_layer(data))
+        return self.output_activation(self.output_layer(data))
 
 
 class CategoricalMLP(nn.Module):

@@ -1,128 +1,98 @@
-import gym
 import seagul.envs
+import gym
 
-env_name = "su_acro_drake-v0"
+env_name = "su_acrobot-v0"
 env = gym.make(env_name)
-
-
-from seagul.rl.run_utils import run_sg, run_and_save_bs
-from seagul.rl.algos import ppo, ppo_switch
-from seagul.rl.models import PPOModel, SwitchedPPOModel, SwitchedPPOModelActHold
-from seagul.nn import MLP, CategoricalMLP, DummyNet
-
 
 import torch
 import torch.nn as nn
-
-
 import numpy as np
 from numpy import pi
-
 from multiprocessing import Process
+from seagul.rl.run_utils import run_sg
+from seagul.rl.algos import ppo_switch
+from seagul.rl.models import SwitchedPPOModelActHold
+from seagul.nn import MLP
 
-## init policy, valuefn
+# init policy, valuefn
 input_size = 4
 output_size = 1
-layer_size = 12
-num_layers = 2
+layer_size = 16
+num_layers = 1
 activation = nn.ReLU
 
-#torch.set_default_dtype(torch.double)
 proc_list = []
+trial_num = input("What trial is this?\n")
 
-for seed in [0]:
+m1 = 1; m2 = 1
+l1 = 1; l2 = 1
+lc1 = .5; lc2 = .5
+I1 = .2; I2 = 1.0
+g = 9.8
+max_torque = 25
 
-    env_name = "su_acro_drake-v0"
-    env = gym.make(env_name)
+def control(q):
+    k = np.array([[-1649.86567367, -460.15780461, -716.07110032, -278.15312267]])
+    gs = np.array([pi / 2, 0, 0, 0])
+    return -k.dot(q - gs)
 
-    # # hard coded gate for debugging
-    # def gate(state):
-    #     if len(state.shape) == 1:
-    #         return (((140 * pi / 180 < state[0] < pi) and state[1] <= 0) or (
-    #                 (pi < state[0] < 220 * pi / 180) and state[1] >= 0))
-    #     else:
-    #         ret  = ((((140 * pi / 180 < state[:,0]) & (state[:,0] < pi)) & (state[:,1] <= 0))
-    #                | ((pi < state[:,0]) & (state[:,0] < 220 * pi / 180) & (state[:,1] >= 0)))
-    #         return torch.as_tensor(ret,dtype=torch.double).reshape(-1,1)
+def reward_fn(s, a):
+    reward = 1e-2*(np.sin(s[0]) + np.sin(s[0] + s[1]))
+    return reward, False
 
-    # hard coded gate for debugging
-    # def gate(state):
-    #     if len(state.shape) == 1:
-    #         return ((140 * pi / 180 < state[0] < pi) or (pi < state[0] < 220 * pi / 180))
-    #     else:
-    #         ret  = ( ((140 * pi / 180 < state[:,0]) & (state[:,0] < pi)) | ((pi < state[:,0]) & (state[:,0] < 220 * pi / 180)))
+for seed in np.random.randint(0, 2**32, 4):
+    for act_var in [.5, 1.0, 3.0]:
+        max_t = 10.0
 
-    #         return torch.as_tensor(ret,dtype=torch.double).reshape(-1,1)
+        model = SwitchedPPOModelActHold(
+            # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
+            policy=MLP(input_size, output_size, layer_size, num_layers),
+            value_fn=MLP(input_size, output_size, layer_size, num_layers),
+            gate_fn=torch.load("warm/lqr_gate_better"),
+            nominal_policy=control,
+            hold_count=20,
+            thresh=.9,
+        )
 
-    #    gate_fn.net_fn = gate
+        env_config = {
+            "init_state": [-pi/2, 0, 0, 0],
+            "max_torque": max_torque,
+            "init_state_weights": [0, 0, 0, 0],
+            "dt": .01,
+            "reward_fn" : reward_fn,
+            "max_t" : max_t,
+            "m2": m2,
+            "m1": m1,
+            "l1": l1,
+            "lc1": lc1,
+            "lc2": lc2,
+            "i1": I1,
+            "i2": I2,
+            "act_hold" : 1
+        }
 
-    # def control(env,q):
-    #     k = np.array([-1000, 1000, -10, -10])
-    #     goal = np.copy(env.state)
-    #     goal[0] -= pi
-    #     return -k.dot(goal)
+        alg_config = {
+            "env_name": env_name,
+            "model": model,
+            "act_var_schedule": [act_var],
+            "seed": seed,  # int((time.time() % 1)*1e8),
+            "total_steps" : 1e6,
+            "epoch_batch_size": 2048,
+            "reward_stop" : None,
+            "gamma": 1,
+            "pol_epochs": 30,
+            "val_epochs": 10,
+            "env_config" : env_config,
+            "target_kl" : .005
+        }
 
-    def control(q):
-        k = np.array([[1316.85000612, 555.41763935, 570.32667002, 272.57631536]],dtype=np.float32)
-        # k = np.array([[278.44223126, 112.29125985, 119.72457377,  56.82824017]])
-        gs = np.array([pi, 0, 0, 0],dtype=np.float32)
-        # return 0
-        return (-k.dot(gs - np.asarray(q)))
+        run_name = "swingup" + str(seed)
 
-    model = SwitchedPPOModelActHold(
-        # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-        policy=torch.load("ppo2_warm_pol"),
-        value_fn=torch.load("ppo2_warm_val"),
-        # MLP(input_size, 1, num_layers, layer_size, activation),
-        gate_fn=torch.load("gate_fn_ppo2"),
-        nominal_policy=control,
-        hold_count=200,
-    )
-
-    # model = SwitchedPPOModel(
-    #     policy = torch.load("warm_policy_dr"),
-    #     value_fn = torch.load("warm_value_dr"),
-    #     gate_fn  = torch.load("gate_fn_dr"),
-    #     # policy = MLP(input_size, output_size, num_layers, layer_size, activation),
-    #     # value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
-    #     # gate_fn = CategoricalMLP(input_size, 1, num_layers, layer_size, activation),
-    #     nominal_policy=control,
-    #     env=None
-    # )
-
-    arg_dict = {
-        "env_name": env_name,
-        "model": model,
-        "total_steps": 500*2048,
-        "epoch_batch_size": 2048,
-        "act_var_schedule": [2, 2],
-        "gate_var_schedule": [0.1, 0.1],
-        "gamma": 1,
-        "seed": seed,
-        "reward_stop" : 1500,
-    }
-
-    run_name = "1000_ppo2" + str(seed)
-
-    #  import ipdb; ipdb.set_trace()
-    run_sg(arg_dict, ppo_switch, run_name, 'trying to replicate earlier work that kinda of worked ', "/data/data1/switch4/")
-
-#     p = Process(
-#         target=run_sg,
-#         args=(
-#             arg_dict,
-#             ppo_switch,
-#             run_name,
-#             "trying to replicate earlier results that use ppo with ppo2",
-#             "/data/data2/drake_ppo2/",
-#         ),
-#     )
-#     p.start()
-#     proc_list.append(p)
-
-# for p in proc_list:
-#     print("joining")
-#     p.join()
+        #run_sg(alg_config, ppo, run_name , "normal reward", "/data4/switching_sortof/trial" + str(trial_num) + "_t" +  str(act_var) + "/")
+        p = Process(target=run_sg, args=(alg_config, ppo_switch, run_name , "normal reward", "/data4/switching_sortof/trial" + str(trial_num) + "_t" + str(act_var) + "/"))
+        p.start()
+        proc_list.append(p)
 
 
-print("finished run ", run_name)
+for p in proc_list:
+    p.join()
