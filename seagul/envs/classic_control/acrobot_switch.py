@@ -84,7 +84,7 @@ class SGAcroSwitchEnv(core.Env):
             self.lqr_max_torque = lqr_max_torque
 
         # These are only used for rendering
-        self.render_length1 = .5
+        self.render_length1 = 1.0
         self.render_length2 = 1.0
         self.viewer = None
 
@@ -113,8 +113,6 @@ class SGAcroSwitchEnv(core.Env):
         self.t = 0
         self.state = init_state
         return self._get_obs()
-
-
 
     def step(self, a):
         a = np.clip(a, -self.max_torque, self.max_torque)
@@ -152,8 +150,6 @@ class SGAcroSwitchEnv(core.Env):
         obs[1] = wrap(obs[1], self.th2_range[0], self.th2_range[1])
         return obs
 
-
-
     def render(self, mode='human'):
         from gym.envs.classic_control import rendering
 
@@ -188,7 +184,6 @@ class SGAcroSwitchEnv(core.Env):
             circ.add_attr(jtransform)
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
-
 
     def close(self):
         if self.viewer:
