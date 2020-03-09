@@ -363,8 +363,7 @@ for ind, res in enumerate(pool.imap(do_rollout,range(num_trials))):
         state_hist[ind, :,:] = obs
         reward_hist[ind, :,:] = rews
         gate_hist[ind, :,:] = gate
-
-            good_list.append(ind)
+        good_list.append(ind)
 
 print(time.time() - start)
 

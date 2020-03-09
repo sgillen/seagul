@@ -11,7 +11,6 @@ env_name = "su_acroswitchsin-v0"
 
 trial_num = input("trial name / number please:\n")
 
-
 m1 = 1; m2 = 1
 l1 = 1; l2 = 1
 lc1 = .5; lc2 = .5
@@ -19,7 +18,6 @@ I1 = .2; I2 = 1.0
 g = 9.8
 max_torque = 5.0; lqr_max_torque = 5.0
 max_t = 10.0
-
 
 def lqr(q):
     k = np.array([[-1649.86567367, -460.15780461, -716.07110032, -278.15312267]])

@@ -26,13 +26,14 @@ dtype = np.float32
 
 import os
 jup_dir = "/home/sgillen/work/"
-directory = jup_dir + "seagul/seagul/notebooks/switching/data5/acro2/trialgyst_v3.0t10/"
+directory = "/home/sgillen/work/seagul/seagul/notebooks/switching/data_needle/"
 ws_list = []
 model_list = []
 max_size = 0
 for entry in os.scandir(directory):
     model, env, args, ws = load_workspace(entry.path)
     plt.plot(ws["raw_rew_hist"])
+    plt.show()
     if len(ws["raw_rew_hist"]) > max_size:
         max_size = len(ws["raw_rew_hist"])
 
@@ -66,9 +67,10 @@ plt.show()
 
 
 plt.plot(ws['pol_loss_hist'])
-plt.figure()
+
+plt.figure(); plt.show()
 plt.plot(ws['val_loss_hist'])
-plt.figure()
+plt.figure(); plt.show()
 plt.plot(ws['raw_rew_hist'])
 plt.show()
 
@@ -77,7 +79,6 @@ plt.show()
 
 #torch.save(model.value_fn, open('./warm/ppo2_warm_valh2','wb'))
 #torch.save(model.policy, open('./warm/ppo2_warm_polh2','wb'))
-plt.show()
 
 # In[3]:
 
@@ -98,21 +99,23 @@ reward_hist = np.zeros((env.num_steps, 1))
 logp_hist = np.zeros((env.num_steps, 1))
 gate_mean = np.zeros((env.num_steps,1))
 means_hist = np.zeros((env.num_steps,1))
+#obs = env.reset(init_vec = np.array([-1.5707964,  1.       ,  0.       ,  0.], dtype=np.float32))
 obs = env.reset()
-env.state = np.array([1.5707964,  0.       ,  0.       ,  0.], dtype=np.float32)
-
+import time
 for i in range(env.num_steps):
-    obs = torch.as_tensor(obs, dtype=torch.float32)
+    obs = torch.as_tensor(obs, dtype=torch.float32).reshape(1,-1)
     actions, value, _, logp = model.step(obs)
+    actions = actions.detach()
     actions = np.clip(actions, -max_torque, max_torque)
     actions = torch.as_tensor(actions, dtype=torch.float32)
     #noise = torch.randn(1, 1)
     #actions, logp = model.select_action(obs, noise)
 
-    obs, reward, done, _ = env.step(actions.detach().numpy())
+    obs, reward, done, _ = env.step(actions.detach().numpy().reshape(1,-1))
 
 
     env.render()
+    time.sleep(.1)
     action_hist[i,:] = np.copy(actions.detach())
     state_hist[i,:] = np.copy(obs)
     reward_hist[i,:] = np.copy(reward)
@@ -121,6 +124,10 @@ for i in range(env.num_steps):
 
     if done:
         break
+
+print(env.lqr_on)
+print(sum(reward_hist))
+in_goal = np.sum(np.sqrt((state_hist[-ws['goal_lookback']:] - ws['goal_state']) ** 2), axis=1) < ws['goal_thresh']
 
 # for _ in range(1000):
 #     obs = env.reset()
@@ -154,6 +161,7 @@ for i in range(env.num_steps):
 t = np.array([i*env.dt*env.act_hold for i in range(action_hist.shape[0])])
 
 plt.step(t, action_hist)
+plt.show()
 plt.figure()
 plt.plot(t, state_hist)
 plt.legend(['th1', 'th2', 'th1dot', 'th2dot'])

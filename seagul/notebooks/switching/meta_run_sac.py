@@ -35,7 +35,6 @@ max_t = 5
 
 for seed in np.random.randint(0, 2 ** 32, 8):
 
-    
     policy = MLP(input_size, output_size*2, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
     q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
@@ -58,13 +57,11 @@ for seed in np.random.randint(0, 2 ** 32, 8):
         act_limit = max_torque,
     )
 
-    
     def control(q):
         k = np.array([[-1649.86567367, -460.15780461, -716.07110032, -278.15312267]])
         gs = np.array([pi / 2, 0, 0, 0])
         return -k.dot(q - gs)
 
-    
     def reward_fn_sin(s,a):
         reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
         return reward, False
