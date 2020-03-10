@@ -346,8 +346,6 @@ def do_rollout(env, model):
             path_list.append(path)
             obs_list.append(last_obs)
             last_act = act
-        else:
-            pass
 
     ep_length = len(rew_list)
     ep_obs = torch.stack(obs_list)
