@@ -129,6 +129,108 @@ class SACModelActHold:
         return acts, logp
 
 
+class SACModelSwitch:
+    """
+    Model for use with seagul's sac algorithm
+    """
+
+    LOG_STD_MAX = 2
+    LOG_STD_MIN = -20
+
+    def __init__(self, policy, value_fn, q1_fn, q2_fn, act_limit, gate_fn, balance_controller, thresh_on=.9, thresh_off=.5, hold_count=20):
+        self.policy = policy
+        self.value_fn = value_fn
+        self.q1_fn = q1_fn
+        self.q2_fn = q2_fn
+        self.gate_fn = gate_fn
+        self.balance_controller = balance_controller
+        self.sig = torch.nn.Sigmoid()
+
+        self.num_acts = int(policy.output_layer.out_features / 2)
+        self.act_limit = act_limit
+        self.hold_count = hold_count
+        self.cur_hold_count = 0
+        self.thresh_on = thresh_on
+        self.thresh_off = thresh_off
+        self.thresh = thresh_on
+
+        self.cur_action = None
+        self.cur_logp = None
+
+    # Step is the deterministic evaluation of the policy
+    def step(self, state):
+        # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
+        action, logp = self.select_action_serial(state, torch.zeros(1, 1))
+        value = self.value_fn(torch.as_tensor(state))
+        return action, value, None, logp
+
+    # Select action is used internally and is the stochastic evaluation
+    def select_action(self, state, noise):
+        path = self.sig(self.gate_fn(np.array(state, dtype=np.float32))) > self.thresh
+
+        if path:
+            self.thresh = self.thresh_off
+            acts = self.balance_controller(state).reshape(-1, self.num_acts)
+            logp = 0
+        else:
+            self.thresh = self.thresh_on
+            if self.cur_hold_count == 0:
+                out = self.policy(state)
+                means = out[:, : self.num_acts]
+                logstd = torch.clamp(out[:, self.num_acts :], self.LOG_STD_MIN, self.LOG_STD_MAX)
+                std = torch.exp(logstd)
+
+                # we can speed this up by reusing the same buffer but this is more readable
+                samples = means + std * noise
+                squashed_samples = torch.tanh(samples)
+                acts = squashed_samples * self.act_limit
+
+                # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
+                m = torch.distributions.normal.Normal(means, std)
+                logp = m.log_prob(samples)
+                logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(-1, 1)
+
+                self.cur_action = acts
+                self.cur_logp = logp
+                self.cur_hold_count += 1
+            else:
+                acts = self.cur_action
+                logp = self.cur_logp
+                self.cur_hold_count += 1
+                self.cur_hold_count %= self.hold_count
+
+        return acts, logp
+
+    # Select action is used internally and is the stochastic evaluation
+    def select_action_parallel(self, state, noise):
+        path = self.sig(self.gate_fn(np.array(state, dtype=np.float32))) > self.thresh_on
+        path = torch.as_tensor(path, dtype=torch.float32)
+
+        balance_acts = self.balance_controller(state).reshape(-1, self.num_acts)
+        balance_logp = 0
+
+        out = self.policy(state)
+        means = out[:, :self.num_acts]
+        logstd = torch.clamp(out[:, self.num_acts :], self.LOG_STD_MIN, self.LOG_STD_MAX)
+        std = torch.exp(logstd)
+
+        # we can speed this up by reusing the same buffer but this is more readable
+        samples = means + std * noise
+        squashed_samples = torch.tanh(samples)
+        swingup_acts = squashed_samples * self.act_limit
+
+        # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
+        m = torch.distributions.normal.Normal(means, std)
+        swingup_logp = m.log_prob(samples)
+        swingup_logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(-1, 1)
+
+        acts = path*balance_acts + (1 - path)*swingup_acts
+        logp = path*balance_logp + (1 - path)*swingup_acts
+
+        return acts, logp
+
+
+
 class PPOModel:
     """
     Model for use with seagul's ppo algorithm

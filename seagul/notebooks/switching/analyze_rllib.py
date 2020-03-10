@@ -26,7 +26,7 @@ import os
 
 
 #%% =====================================================================
-directory = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trialhyst_sin/PPO"
+directory = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/sac/params_sweep2_10/SAC"
 df_list = []
 max_size = 0
 
@@ -56,7 +56,7 @@ ax.set_title('Smoothed reward curve, all seeds')
 plt.show()
 
 #%% =====================================================================
-checkpoint_path = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/switch/trialhyst_sin/PPO/PPO_su_acroswitch-v0_be67a68e_2020-03-02_22-46-43rhfmnppk/checkpoint_228/checkpoint-228"
+checkpoint_path = "/home/sgillen/work/seagul/seagul/notebooks/switching/data6/tune/sac/params_sweep2_10/SAC/SAC_su_acroswitch-v0_09c96804_2020-03-04_12-02-12d4e7vz9t/checkpoint_2499/checkpoint-2499"
 
 
 config_path =  '/'.join(checkpoint_path.split('/')[:-2]) + '/params.pkl'
@@ -71,10 +71,10 @@ plt.show()
 ray.shutdown()
 ray.init()
 
-trainer = ppo.PPOTrainer(config)
+#trainer = ppo.PPOTrainer(config)
 #trainer = td3.TD3Trainer(config)
 #trainer = ddpg.DDPGTrainer(config)
-#trainer = sac.SACTrainer(config)
+trainer = sac.SACTrainer(config)
 
 trainer.restore(checkpoint_path)
 
