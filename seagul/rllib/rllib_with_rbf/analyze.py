@@ -3,18 +3,20 @@ import numpy as np
 import analysis_functions
 
 # path can be to multiple samples or inside a specific one:
-checkpoint = "20" # only needed for rendering
-# res_dir = ['./data/HalfCheetahBulletEnv-0/debug_ddpg/DDPG/DDPG_HalfCheetahBulletEnv-v0_fa22b113_2020-02-18_13-45-28q4lgdx2f/']
-res_dir = ["./data/HalfCheetahBulletEnv-v0/PPO/"] #ES_HumanoidBulletEnv-v0_dd3a4f36_2020-02-19_13-36-18xbj0wfpg/"]
+checkpoint = "746" # only needed for rendering
+# res_dir = ["./Results/HalfCheetah/PPO/FCN_1/PPO_HalfCheetahBulletEnv-v0_6dee9f88_2020-03-01_19-03-4581ly820s/"] # 180
+# res_dir = ["./data/HalfCheetahBulletEnv-v0/PPO/"] # 10
+res_dir = ["./data/Humanoid-v2/ARS/"] # 31
 
 entries = analysis_functions.outputs_to_df(res_dir, cutoff=-1)
 analysis_functions.plot_outputs(entries)
-env, alg = analysis_functions.get_params(res_dir)
+env, alg = analysis_functions.get_params(res_dir)  
 plt.title("Environment: " + env + ",  Algorithm: " + alg)
 
-plot = True
+plot = False
 if plot:
     plt.show()
+    x=1
 else:
     name = env + "_" + alg
     plt.savefig("./Results/" + name + ".png")

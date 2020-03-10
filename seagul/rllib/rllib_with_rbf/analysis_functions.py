@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import json
 import ray
+import time
 import os
 import ray.rllib.agents.ppo as ppo
 import ray.rllib.agents.ppo.appo as appo
@@ -25,6 +26,7 @@ from ray.rllib.models import ModelCatalog
 from random import shuffle
 import tensorflow as tf
 import pickle
+from scipy.interpolate import interp1d
 import re
 from seagul.plot import smooth_bounded_curve
 import pybullet as p
@@ -71,6 +73,9 @@ def get_params(res_dir):
                         pass
 
 def add(subdir, dir, cutoff, colors, all_colors):
+    """
+    subfuction used in outputs_to_df function
+    """
     try:
         df = pd.read_csv(subdir + dir + "/progress.csv")
     except Exception as e:
@@ -116,6 +121,8 @@ def add(subdir, dir, cutoff, colors, all_colors):
         print("Redefine cutoff index. It might be too high. \n" + str(e))
         cutoff_idx = -1
     return model, df['timesteps_total'][:cutoff_idx], df['episode_reward_mean'][:cutoff_idx], line_color
+    # return model, df['timesteps_total'][:cutoff_idx], df['episode_reward_max'][:cutoff_idx], line_color
+    # return model, df['timesteps_total'][:cutoff_idx], df['time_total_s'][:cutoff_idx], line_color
     
 def outputs_to_df(res_dir, cutoff = -1):
     """
@@ -156,7 +163,7 @@ def outputs_to_df(res_dir, cutoff = -1):
                     model, ts, rewards, color = add(subdir, dir, cutoff, colors, all_colors)
                     all_results.loc[len(all_results)] = [model, ts, rewards, color]
                 break
-        return all_results
+    return all_results
 
 def plot_outputs(entries):
     """
@@ -168,12 +175,17 @@ def plot_outputs(entries):
         entries_of_model = entries.loc[entries['model'] == model]
         for i in range(len(entries_of_model['ts'])):
             cutoff = entries_of_model['ts'].iloc[i].shape[0] if 'cutoff' not in locals() or entries_of_model['ts'].iloc[i].shape[0] < cutoff else cutoff
+            ts_min = entries_of_model['ts'].iloc[i].iloc[0] if 'ts_min' not in locals() or entries_of_model['ts'].iloc[i].iloc[0] > ts_min else ts_min
+            ts_max = entries_of_model['ts'].iloc[i].iloc[-1] if 'ts_max' not in locals() or entries_of_model['ts'].iloc[i].iloc[-1] < ts_max else ts_max
         for i in range(len(entries_of_model['ts'])):
+            rew_f = interp1d(entries_of_model['ts'].iloc[i].to_numpy(dtype=float), entries_of_model['rewards'].iloc[i].to_numpy(dtype=float))
+            ts = np.linspace(ts_min, ts_max, num=1000)
             try:
-                rew = np.vstack((rew, entries_of_model['rewards'].iloc[i].to_numpy(dtype=float)[:cutoff]))
+                # rew = np.vstack((rew, entries_of_model['rewards'].iloc[i].to_numpy(dtype=float)[:cutoff]))
+                rew = np.vstack((rew, rew_f(ts)))
             except:
-                rew = entries_of_model['rewards'].iloc[i].to_numpy(dtype=float)[:cutoff]
-        ts = entries_of_model['ts'].iloc[0].to_numpy(dtype=float)[:cutoff]
+                rew = rew_f(ts)
+        # ts = entries_of_model['ts'].iloc[0].to_numpy(dtype=float)[:cutoff]
         col = entries_of_model['color'].iloc[0]
         where_is_nan = np.isnan(rew)
         rew[where_is_nan] = 0
@@ -182,10 +194,11 @@ def plot_outputs(entries):
         except:
             rew = np.expand_dims(rew,0)
         fig, ax = smooth_bounded_curve(data=np.transpose(rew), time_steps=ts, label=model, ax=ax, color = col, alpha=0.1)
+        rew = 0
 
 def render(checkpoint, home_path):
     """
-    Renders pybullet environments.
+    Renders pybullet and mujoco environments.
     """
     alg = re.match('.+?(?=_)', os.path.basename(os.path.normpath(home_path))).group(0)
     current_env = re.search("(?<=_).*?(?=_)", os.path.basename(os.path.normpath(home_path))).group(0)
@@ -200,7 +213,7 @@ def render(checkpoint, home_path):
     ModelCatalog.register_custom_model("linear", Linear)
 
     if alg == "PPO":
-        trainer = ppo.PPOTrainer(config)
+        trainer = ppo.PPOTrainer(config_bin)
     if alg == "SAC":
         trainer = sac.SACTrainer(config)
     if alg == "DDPG":
@@ -246,11 +259,12 @@ def render(checkpoint, home_path):
         actions = sampled_actions
         
         obs, reward, done, _ = env.step(np.asarray(actions))
-        
-        
+        # env.camera_adjust()
         env.render(mode='human')
+        time.sleep(0.01)
+        # env.render()
         # env.render(mode='rgb_array', close = True)
-        p.computeViewMatrix(cameraEyePosition=[0,10,5], cameraTargetPosition=[0,0,0], cameraUpVector=[0,0,0])
+        # p.computeViewMatrix(cameraEyePosition=[0,10,5], cameraTargetPosition=[0,0,0], cameraUpVector=[0,0,0])
 
         # if step % 1000 == 0:
         #     env.reset()
