@@ -2,6 +2,7 @@
 from gym import core, spaces
 from gym.utils import seeding
 
+import torch
 import numpy as np
 from numpy import pi
 from numpy import sin, cos, pi
@@ -9,17 +10,21 @@ from numpy import sin, cos, pi
 from seagul.integration import rk4, euler,wrap
 
 
-class SGAcroEnv(core.Env):
+class SGAcroSwitchSinEnv(core.Env):
     """ A simple acrobot environment
     """
 
     def __init__(self,
+                 gate_fn = None,
+                 controller = None,
+                 thresh = .9,
                  max_torque=25,
+                 lqr_max_torque = None,
                  init_state=np.array([-pi/2, 0.0, 0.0, 0.0]),
                  init_state_weights=np.array([0.0, 0.0, 0.0, 0.0]),
                  dt=.01,
                  max_t=5,
-                 act_hold=1,
+                 act_hold=20,
                  integrator=euler,
                  reward_fn=lambda ns, a: ((np.sin(ns[0]) + np.sin(ns[0] + ns[1])), False),
                  th1_range=[0, 2 * pi],
@@ -32,7 +37,7 @@ class SGAcroEnv(core.Env):
                  lc1=.5,
                  lc2=.5,
                  i1=.2,
-                 i2=.8
+                 i2=.8,
                  ):
         """
         Args:
@@ -44,7 +49,7 @@ class SGAcroEnv(core.Env):
             reward_fn: lambda that defines the reward function as a function of only the state variables
 
         """
-        self.init_state = np.asarray(init_state, dtype=np.float64)
+        self.init_state = np.asarray(init_state, dtype=np.float32)
         self.init_state_weights = np.asarray(init_state_weights, dtype=np.float64)
         self.dt = dt
         self.max_t = max_t
@@ -67,13 +72,24 @@ class SGAcroEnv(core.Env):
         self.i1 = i1
         self.i2 = i2
 
+        self.gate_fn = gate_fn
+        self.controller = controller
+        self.sig = torch.nn.Sigmoid()
+        self.thresh = thresh
+        self.lqr_on = False
+
+        if lqr_max_torque is None:
+            self.lqr_max_torque = max_torque
+        else:
+            self.lqr_max_torque = lqr_max_torque
+
         # These are only used for rendering
-        self.render_length1 = .5
+        self.render_length1 = 1.0
         self.render_length2 = 1.0
         self.viewer = None
 
-        low = np.array([th1_range[0], th2_range[0], -max_th1dot, -max_th2dot], dtype=np.float32)
-        high = np.array([th1_range[1], th2_range[1], max_th1dot, max_th2dot], dtype=np.float32)
+        low = np.array([-1, -1, -1, -1, -max_th1dot, -max_th2dot], dtype=np.float32)
+        high = -low
 
         self.observation_space = spaces.Box(low=low-1, high=high+1, dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([-max_torque],dtype=np.float32), high=np.array([max_torque], dtype=np.float32), dtype=np.float32)
@@ -93,6 +109,7 @@ class SGAcroEnv(core.Env):
             init_state[2] = init_vec[2]
             init_state[3] = init_vec[3]
 
+        self.lqr_on = False
         self.t = 0
         self.state = init_state
         return self._get_obs()
@@ -101,33 +118,46 @@ class SGAcroEnv(core.Env):
         a = np.clip(a, -self.max_torque, self.max_torque)
         self.t += self.dt * self.act_hold
 
-        for _ in range(self.act_hold):
-            self.state = self.integrator(self._dynamics, a, self.t, self.dt, self.state)
+        path = self.sig(self.gate_fn(np.array(self._get_state(), dtype=np.float32))) > self.thresh
+
+        if path or self.lqr_on:
+            for _ in range(self.act_hold):
+                a = np.clip(self.controller(self._get_state()), -self.lqr_max_torque, self.lqr_max_torque)
+                #                a = self.controller(self._get_obs())
+                self.state = self.integrator(self._dynamics, a, self.t, self.dt, self.state)
+                self.lqr_on = True
+
+        else:
+            for _ in range(self.act_hold):
+                self.state = self.integrator(self._dynamics, a, self.t, self.dt, self.state)
 
         done = False
-        reward, done = self.reward_fn(self.state, a)
+        reward, done = self.reward_fn(self._get_state(), a)
 
         # I should probably do this with a wrapper...
         if self.t > self.max_t:
             done = True
 
-        if abs(self.state[2]) > self.max_th1dot or abs(self.state[2] > self.max_th2dot):
-            reward -= 5
-            done = True
+ #        if abs(self.state[2]) > self.max_th1dot or abs(self.state[2] > self.max_th2dot):
+# #            reward -= 5
+#             done = True
 
         return self._get_obs(), reward, done, {}
 
-    def _get_obs(self):
+    def _get_state(self):
         obs = self.state.copy()
         obs[0] = wrap(obs[0], self.th1_range[0], self.th1_range[1])
         obs[1] = wrap(obs[1], self.th2_range[0], self.th2_range[1])
         return obs
 
-    # Shamelessly pulled from openAI's Acrobot-v1 env
+    def _get_obs(self):
+        s = self.state.copy()
+        return np.array([cos(s[0]), sin(s[0]), cos(s[1]), sin(s[1]), s[2], s[3]])
+    
     def render(self, mode='human'):
         from gym.envs.classic_control import rendering
 
-        s = self.state
+        s = self._get_state()
 
         if self.viewer is None:
             self.viewer = rendering.Viewer(500,500)

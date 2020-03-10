@@ -27,7 +27,11 @@ def sac(
         replay_buf_size=int(100000),
         use_gpu=False,
         reward_stop=None,
-        env_config = {},
+        goal_state = np.array([np.pi/2, 0, 0 ,0]),
+        goal_lookback = 10,
+        goal_thresh = 1,
+        needle_lookup_prob = .5,
+        env_config={},
 ):
     """
     Implements soft actor critic
@@ -53,7 +57,7 @@ def sac(
         use_gpu: determines if we try to use a GPU or not
         reward_stop: reward value to bail at
         env_config: dictionary containing kwargs to pass to your the environment
-    
+
     Returns:
         model: trained model
         avg_reward_hist: list with the average reward per episode at each epoch
@@ -92,6 +96,7 @@ def sac(
 
     random_model = RandModel(model.act_limit, act_size)
     replay_buf = ReplayBuffer(obs_size, act_size, replay_buf_size)
+    needle_buf = ReplayBuffer(obs_size, act_size, replay_buf_size)
     target_value_fn = dill.loads(dill.dumps(model.value_fn))
 
     pol_opt = torch.optim.Adam(model.policy.parameters(), lr=sgd_lr)
@@ -119,8 +124,16 @@ def sac(
     progress_bar.update(0)
     early_stop = False
 
+    needle_count = 0
+    not_needle_count = 0
     while cur_total_steps < exploration_steps:
         ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
+        in_goal = torch.sum(torch.sqrt((ep_obs2[-goal_lookback:] - goal_state) ** 2), axis=1) < goal_thresh
+
+        if in_goal.all():
+            print("adding needle states")
+            needle_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+
         replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
         ep_steps = ep_rews.shape[0]
@@ -141,6 +154,17 @@ def sac(
         # ========================================================================
         while cur_batch_steps < min_steps_per_update:
             ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, model, env_steps)
+
+            in_goal = torch.sum(torch.sqrt((ep_obs2[-goal_lookback:] - goal_state) ** 2), axis=1) < goal_thresh
+            
+            if in_goal.all():
+                needle_count += 1
+                print("adding needle states, now: " + str(needle_count) + " " + str(not_needle_count))
+                needle_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+
+            else:
+                not_needle_count += 1
+                
             replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
             ep_steps = ep_rews.shape[0]
@@ -154,7 +178,12 @@ def sac(
         for _ in range(min(int(ep_steps), iters_per_update)):
             # compute targets for Q and V
             # ========================================================================
-            replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)
+
+            p = np.random.random_sample(1)
+            if p > needle_lookup_prob and needle_buf.size > 0:
+                replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = needle_buf.sample_batch(replay_batch_size)
+            else:
+                replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)
 
             q_targ = replay_rews + gamma * (1 - replay_done) * target_value_fn(replay_obs2)
             q_targ = q_targ.detach()
@@ -163,6 +192,7 @@ def sac(
             sample_acts, sample_logp = model.select_action(replay_obs1, noise)
 
             q_in = torch.cat((replay_obs1, sample_acts), dim=1)
+
             q_preds = torch.cat((model.q1_fn(q_in), model.q2_fn(q_in)), dim=1)
             q_min, q_min_idx = torch.min(q_preds, dim=1)
             q_min = q_min.reshape(-1, 1)
@@ -198,10 +228,10 @@ def sac(
                 q2_loss = torch.pow(q2_preds - local_qtarg, 2).mean()
                 q_loss = q1_loss + q2_loss
 
-                q1_opt.zero_grad();
+                q1_opt.zero_grad()
                 q2_opt.zero_grad()
                 q_loss.backward()
-                q1_opt.step();
+                q1_opt.step()
                 q2_opt.step()
 
             # val_fn update
@@ -261,11 +291,13 @@ def sac(
             # model.q2_fn.state_means = model.q1_fn.state_means
             # model.q2_fn.state_var = model.q1_fn.state_var
 
+
             # Transfer back to CPU, which is faster for rollouts
             model.policy = model.policy.to('cpu')
             model.value_fn = model.value_fn.to('cpu')
             model.q1_fn = model.q1_fn.to('cpu')
             model.q2_fn = model.q2_fn.to('cpu')
+
 
             val_sd = model.value_fn.state_dict()
             tar_sd = target_value_fn.state_dict()
@@ -275,6 +307,7 @@ def sac(
             target_value_fn.load_state_dict(tar_sd)
 
     return model, raw_rew_hist, locals()
+
 
 def do_rollout(env, model, num_steps):
     acts_list = []
