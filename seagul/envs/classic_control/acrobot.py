@@ -19,7 +19,7 @@ class SGAcroEnv(core.Env):
                  init_state_weights=np.array([0.0, 0.0, 0.0, 0.0]),
                  dt=.01,
                  max_t=5,
-                 act_hold=20,
+                 act_hold=1,
                  integrator=euler,
                  reward_fn=lambda ns, a: ((np.sin(ns[0]) + np.sin(ns[0] + ns[1])), False),
                  th1_range=[0, 2 * pi],
@@ -123,6 +123,7 @@ class SGAcroEnv(core.Env):
         obs[1] = wrap(obs[1], self.th2_range[0], self.th2_range[1])
         return obs
 
+    # Shamelessly pulled from openAI's Acrobot-v1 env
     def render(self, mode='human'):
         from gym.envs.classic_control import rendering
 

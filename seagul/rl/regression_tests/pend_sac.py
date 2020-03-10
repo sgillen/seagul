@@ -22,7 +22,7 @@ t_model, rewards, var_dict = sac(**arg_dict)  # Should get to -200 reward
 
 input_size = 3
 output_size = 1
-layer_size = 64
+layer_size = 256
 num_layers = 2
 activation = nn.ReLU
 
@@ -52,7 +52,8 @@ arg_dict = {
     "env_name" : "Pendulum-v0",
     "model" : model,
     "total_steps" : 20000,
-    "reward_stop" : -200
+    "reward_stop" : -200,
+    "use_gpu" : False,
     }
 
 if __name__ == "__main__" :

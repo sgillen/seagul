@@ -192,10 +192,6 @@ def sac(
             sample_acts, sample_logp = model.select_action(replay_obs1, noise)
 
             q_in = torch.cat((replay_obs1, sample_acts), dim=1)
-            q_in = q_in.to(device)
-            # print(q_in.device)
-            # a = model.q1_fn(q_in)
-            # b = model.q2_fn(q_in)
 
             q_preds = torch.cat((model.q1_fn(q_in), model.q2_fn(q_in)), dim=1)
             q_min, q_min_idx = torch.min(q_preds, dim=1)
@@ -203,6 +199,13 @@ def sac(
 
             v_targ = q_min - alpha * sample_logp
             v_targ = v_targ.detach()
+
+
+            # For training, transfer model to GPU
+            model.policy = model.policy.to(device)
+            model.value_fn = model.value_fn.to(device)
+            model.q1_fn = model.q1_fn.to(device)
+            model.q2_fn = model.q2_fn.to(device)
 
             # q_fn update
             # ========================================================================
@@ -260,7 +263,7 @@ def sac(
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
                 local_obs = local_obs[0].to(device)
 
-                noise = torch.randn(local_obs.shape[0], act_size)
+                noise = torch.randn(local_obs.shape[0], act_size).to(device)
                 local_acts, local_logp = model.select_action(local_obs, noise)
 
                 q_in = torch.cat((local_obs, local_acts), dim=1)
@@ -287,6 +290,14 @@ def sac(
             # model.q1_fn.state_var = update_var(torch.cat((replay_obs1, replay_acts.detach()), dim=1), model.q1_fn.state_var, cur_total_steps)
             # model.q2_fn.state_means = model.q1_fn.state_means
             # model.q2_fn.state_var = model.q1_fn.state_var
+
+
+            # Transfer back to CPU, which is faster for rollouts
+            model.policy = model.policy.to('cpu')
+            model.value_fn = model.value_fn.to('cpu')
+            model.q1_fn = model.q1_fn.to('cpu')
+            model.q2_fn = model.q2_fn.to('cpu')
+
 
             val_sd = model.value_fn.state_dict()
             tar_sd = target_value_fn.state_dict()

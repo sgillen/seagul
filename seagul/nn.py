@@ -7,12 +7,9 @@ from torch.utils import data
 import tqdm.auto as tqdm
 from tqdm import trange
 
-
-
 """
 Utility functions for seagul, all vaguely related to neural networks
 """
-
 
 def fit_model(
     model,
@@ -24,6 +21,7 @@ def fit_model(
     shuffle=True,
     loss_fn=torch.nn.MSELoss(),
     use_tqdm=True,
+    use_cuda = True,
 ):
     """
     Trains a pytorch module model to predict actions from states for num_epochs passes through the dataset.
@@ -63,14 +61,15 @@ def fit_model(
     """
     # Check if GPU is available , else fall back to CPU
     # TODO this might belong in module body
-    use_cuda = torch.cuda.is_available()
+    if use_cuda:
+        assert(torch.cuda.is_available())
+
     if use_tqdm:
         range_fn = trange
     else:
         range_fn = range
 
-    # device = torch.device("cuda:0" if use_cuda else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda:0" if use_cuda else "cpu")
     state_tensor = torch.as_tensor(state_train)  # make sure that our input is a tensor
     action_tensor = torch.as_tensor(action_train)
     training_data = data.TensorDataset(state_tensor, action_tensor)
@@ -101,7 +100,8 @@ def fit_model(
             optimizer.step()
 
         # after each epoch append the average loss
-        loss_hist.append(epoch_loss.numpy() / len(state_train))
+
+        loss_hist.append(epoch_loss.cpu().numpy() / len(state_train))
 
     return loss_hist
 
@@ -113,7 +113,7 @@ class MLP(nn.Module):
     """
 
     def __init__(
-            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity,input_bias=None):
+            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, input_bias=None):
         """
          input_size: how many inputs
          output_size: how many outputs
@@ -124,8 +124,6 @@ class MLP(nn.Module):
          """
         super(MLP, self).__init__()
 
-
-        
         self.activation = activation()
         self.output_activation = output_activation()
 
@@ -143,8 +141,9 @@ class MLP(nn.Module):
             self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers-1)])
             self.output_layer = nn.Linear(layer_size, output_size)
 
-        self.state_means = torch.zeros(input_size)
-        self.state_var = torch.ones(input_size)
+        self.state_means = Parameter(torch.zeros(input_size), requires_grad=False)
+        self.state_var = Parameter(torch.ones(input_size), requires_grad=False)
+
 
     def forward(self, data):
 
