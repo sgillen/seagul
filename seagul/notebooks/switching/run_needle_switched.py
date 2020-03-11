@@ -80,7 +80,7 @@ for seed in np.random.randint(0, 2**32, 8):
         "env_config" : env_config,
         }
 
-    sac_switched(**alg_config)
+#    sac_switched(**alg_config)
 
     p = Process(
         target=run_sg,
