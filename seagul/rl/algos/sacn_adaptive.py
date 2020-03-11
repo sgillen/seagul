@@ -6,6 +6,7 @@ import gym
 import dill
 
 from seagul.rl.common import ReplayBuffer, update_mean, update_var
+from seagul.nn import fit_model
 from seagul.rl.models import RandModel
 
 
@@ -31,6 +32,7 @@ def sac_switched(
         goal_lookback=10,
         goal_thresh=1,
         needle_lookup_prob=.5,
+        gate_update_freq=500,
         env_config={},
 ):
     """
@@ -121,11 +123,12 @@ def sac_switched(
     q1_loss_hist = []
     q2_loss_hist = []
 
-    gate_obs_list = []
-    gate_correct_list = []
+    gate_x_list = []
+    gate_y_list = []
 
     progress_bar = tqdm.tqdm(total=total_steps)
     cur_total_steps = 0
+    gate_update_counter = 0
     progress_bar.update(0)
     early_stop = False
 
@@ -166,38 +169,44 @@ def sac_switched(
                 needle_count += 1
                 print("adding needle states, now: " + str(needle_count) + " " + str(not_needle_count))
                 needle_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
-
             else:
                 not_needle_count += 1
+                replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
-            # if ep_path.sum() != 0:
-            #     reverse_obs = np.flip(ep_obs1.numpy(), 0).copy()
-            #     reverse_obs = torch.from_numpy(reverse_obs)
-            #
-            #     reverse_path = np.flip(ep_path.numpy(), 0).copy()
-            #     reverse_path = torch.from_numpy(reverse_path)
-            #
-            #     ep_err = ((ep_obs1[-1, :] - goal_state) ** 2).sqrt()
-            #
-            #     for path, obs in zip(reverse_path, reverse_obs):
-            #         if not path:
-            #             break
-            #         else:
-            #             gate_obs_list.append(obs)
-            #             if ep_err < goal_thresh:
-            #                 gate_correct_list.append(torch.ones(1, dtype=torch.float32))
-            #             else:
-            #                 gate_correct_list.append(torch.zeros(0, dtype=torch.float32))
+            if ep_path.sum() != 0:
+                reverse_obs = np.flip(ep_obs1.numpy(), 0).copy()
+                reverse_obs = torch.from_numpy(reverse_obs)
 
-            replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+                reverse_path = np.flip(ep_path.numpy(), 0).copy()
+                reverse_path = torch.from_numpy(reverse_path)
+
+                if in_goal.all():
+                    for path, obs in zip(reverse_path, reverse_obs):
+                        if not path:
+                            break
+                        else:
+                            gate_x_list.append(obs)
+                            gate_y_list.append(torch.ones(1, dtype=torch.float32))
+                else:
+                    for path, obs in zip(reverse_path, reverse_obs):
+                        if not path:
+                            pass
+                        else:
+                            gate_x_list.append(obs)
+                            gate_y_list.append(torch.zeros(1, dtype=torch.float32))
 
             ep_steps = ep_rews.shape[0]
             cur_batch_steps += ep_steps
             cur_total_steps += ep_steps
+            gate_update_counter += ep_steps
 
             raw_rew_hist.append(torch.sum(ep_rews))
 
         progress_bar.update(cur_batch_steps)
+
+        if (gate_update_counter > gate_update_freq and len(gate_x_list)):
+            fit_model(model.gate_fn, torch.stack(gate_x_list), torch.stack(gate_y_list), 15, use_tqdm=False)
+            gate_update_counter = 0
 
         for _ in range(min(int(ep_steps), iters_per_update)):
             # compute targets for Q and V
