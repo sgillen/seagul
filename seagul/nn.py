@@ -21,7 +21,7 @@ def fit_model(
     shuffle=True,
     loss_fn=torch.nn.MSELoss(),
     use_tqdm=True,
-    use_cuda = True,
+    use_cuda = False,
 ):
     """
     Trains a pytorch module model to predict actions from states for num_epochs passes through the dataset.
