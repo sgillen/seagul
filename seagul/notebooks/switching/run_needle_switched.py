@@ -1,7 +1,7 @@
 from multiprocessing import Process
 from seagul.rl.run_utils import run_sg
 import seagul.envs
-from seagul.rl.algos.sac_needle_switch import sac_switched
+from seagul.rl.algos.sacn_adaptive import sac_switched
 import torch
 import torch.nn as nn
 from seagul.nn import MLP
@@ -27,6 +27,7 @@ lqr_max_torque = 25
 max_t = 10.0
 
 def control(q):
+    q = torch.as_tensor(q,dtype=torch.float32)
     k = torch.tensor([[-1649.86567367, -460.15780461, -716.07110032, -278.15312267]])
     gs = torch.tensor([np.pi / 2, 0, 0, 0])
     return (-k*(q - gs)).sum(dim=1).detach()
@@ -65,7 +66,7 @@ proc_list = []
 for seed in np.random.randint(0, 2**32, 8):
     alg_config = {
         "env_name" : "su_acrobot-v0",
-        "total_steps" : 1e6,
+        "total_steps" : 5e5,
         "model" : model,
         "seed" : seed,
         "goal_state" : np.array([np.pi/2,0,0,0]),
@@ -74,11 +75,11 @@ for seed in np.random.randint(0, 2**32, 8):
         "alpha" : .05,
         "needle_lookup_prob" : .5,
         "iters_per_update" : float('inf'),
-        "exploration_steps" : 500,
+        "exploration_steps" : 50000,
         "env_config" : env_config,
         }
 
-    sac_switched(**alg_config)
+    ##sac_switched(**alg_config)
 
     p = Process(
         target=run_sg,

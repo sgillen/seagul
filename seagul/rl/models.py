@@ -128,7 +128,6 @@ class SACModelActHold:
 
         return acts, logp
 
-
 class SACModelSwitch:
     """
     Model for use with seagul's sac algorithm
@@ -160,7 +159,7 @@ class SACModelSwitch:
     # Step is the deterministic evaluation of the policy
     def step(self, state):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
-        action, logp = self.select_action_serial(state, torch.zeros(1, 1))
+        action, logp = self.select_action(state, torch.zeros(1, 1))
         value = self.value_fn(torch.as_tensor(state))
         return action, value, None, logp
 
@@ -172,34 +171,50 @@ class SACModelSwitch:
             self.thresh = self.thresh_off
             acts = self.balance_controller(state).reshape(-1, self.num_acts)
             logp = 0
+
         else:
             self.thresh = self.thresh_on
-            if self.cur_hold_count == 0:
-                out = self.policy(state)
-                means = out[:, : self.num_acts]
-                logstd = torch.clamp(out[:, self.num_acts :], self.LOG_STD_MIN, self.LOG_STD_MAX)
-                std = torch.exp(logstd)
 
-                # we can speed this up by reusing the same buffer but this is more readable
-                samples = means + std * noise
-                squashed_samples = torch.tanh(samples)
-                acts = squashed_samples * self.act_limit
+            out = self.policy(state)
+            means = out[:, : self.num_acts]
+            logstd = torch.clamp(out[:, self.num_acts :], self.LOG_STD_MIN, self.LOG_STD_MAX)
+            std = torch.exp(logstd)
 
-                # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
-                m = torch.distributions.normal.Normal(means, std)
-                logp = m.log_prob(samples)
-                logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(-1, 1)
+            # we can speed this up by reusing the same buffer but this is more readable
+            samples = means + std * noise
+            squashed_samples = torch.tanh(samples)
+            acts = squashed_samples * self.act_limit
 
-                self.cur_action = acts
-                self.cur_logp = logp
-                self.cur_hold_count += 1
-            else:
-                acts = self.cur_action
-                logp = self.cur_logp
-                self.cur_hold_count += 1
-                self.cur_hold_count %= self.hold_count
+            # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
+            m = torch.distributions.normal.Normal(means, std)
+            logp = m.log_prob(samples)
+            logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(-1, 1)
 
         return acts, logp
+
+    # Really just here for rollouts
+    def swingup_controller(self, state):
+        state = torch.as_tensor(state, dtype=torch.float32)
+        noise = torch.randn(self.num_acts)
+        self.thresh = self.thresh_on
+
+        out = self.policy(state)
+        means = out[:, : self.num_acts]
+        logstd = torch.clamp(out[:, self.num_acts:], self.LOG_STD_MIN, self.LOG_STD_MAX)
+        std = torch.exp(logstd)
+
+        # we can speed this up by reusing the same buffer but this is more readable
+        samples = means + std * noise
+        squashed_samples = torch.tanh(samples)
+        acts = squashed_samples * self.act_limit
+
+        # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
+        m = torch.distributions.normal.Normal(means, std)
+        logp = m.log_prob(samples)
+        logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(
+            -1, 1)
+
+        return acts.detach()
 
     # Select action is used internally and is the stochastic evaluation
     def select_action_parallel(self, state, noise):
@@ -228,7 +243,6 @@ class SACModelSwitch:
         logp = path*balance_logp + (1 - path)*swingup_acts
 
         return acts, logp
-
 
 
 class PPOModel:
