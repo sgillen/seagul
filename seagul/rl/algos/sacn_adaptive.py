@@ -340,6 +340,7 @@ def do_rollout(env, model, num_steps):
     cur_step = 0
 
     obs = env.reset()
+    model.thresh = model.thresh_on
 
     while not done:
         obs1_list.append(obs)
@@ -351,6 +352,7 @@ def do_rollout(env, model, num_steps):
                 acts = model.balance_controller(obs).reshape(-1, model.num_acts)
                 obs, rew, done, _ = env.step(acts.numpy())
         else:
+            model.thresh = model.thresh_on
             acts = model.swingup_controller(obs.reshape(-1, obs_size)).reshape(-1, model.num_acts)
             for _ in range(model.hold_count):
                 obs, rew, done, _ = env.step(acts.numpy().reshape(-1))

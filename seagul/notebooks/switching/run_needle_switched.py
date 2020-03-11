@@ -43,7 +43,8 @@ policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
-model = SACModelSwitch(policy, value_fn, q1_fn, q2_fn, 25, balance_controller=control, hold_count=20, gate_fn=torch.load("warm/lqr_gate_better"))
+model = SACModelSwitch(policy, value_fn, q1_fn, q2_fn, 25, balance_controller=control
+                       , hold_count=20, gate_fn=torch.load("warm/lqr_gate_better"))
 
 
 env_config = {
@@ -79,7 +80,7 @@ for seed in np.random.randint(0, 2**32, 8):
         "env_config" : env_config,
         }
 
-    ##sac_switched(**alg_config)
+    sac_switched(**alg_config)
 
     p = Process(
         target=run_sg,
