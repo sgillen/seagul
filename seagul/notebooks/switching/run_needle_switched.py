@@ -9,7 +9,7 @@ from seagul.rl.models import SACModelSwitch
 import numpy as np
 from scipy.stats import multivariate_normal
 
-trial_name = "poop" #input('Trial name please:\n')
+trial_name = input('Trial name please:\n')
 
 input_size = 4
 output_size = 1
@@ -76,11 +76,12 @@ for seed in np.random.randint(0, 2**32, 8):
         "alpha" : .05,
         "needle_lookup_prob" : .5,
         "iters_per_update" : float('inf'),
-        "exploration_steps" : 500,
+        "exploration_steps" : 50000,
+        "gate_update_freq" : 5000,
         "env_config" : env_config,
         }
 
-    sac_switched(**alg_config)
+#    sac_switched(**alg_config)
 
     p = Process(
         target=run_sg,
