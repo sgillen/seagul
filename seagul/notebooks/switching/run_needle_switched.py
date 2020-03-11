@@ -17,40 +17,47 @@ layer_size = 32
 num_layers = 4
 activation = nn.ReLU
 
-m1 = 1; m2 = 1
-l1 = 1; l2 = 1
-lc1 = .5; lc2 = .5
-I1 = .2; I2 = 1.0
+m1 = 1;
+m2 = 1
+l1 = 1;
+l2 = 1
+lc1 = .5;
+lc2 = .5
+I1 = .2;
+I2 = 1.0
 g = 9.8
 max_torque = 25
 lqr_max_torque = 25
 max_t = 10.0
 
+
 def control(q):
-    q = torch.as_tensor(q,dtype=torch.float32)
+    q = torch.as_tensor(q, dtype=torch.float32)
     k = torch.tensor([[-1649.86567367, -460.15780461, -716.07110032, -278.15312267]])
     gs = torch.tensor([np.pi / 2, 0, 0, 0])
-    return (-k*(q - gs)).sum(dim=1).detach()
+    return (-k * (q - gs)).sum(dim=1).detach()
+
 
 def reward_fn_sin(s, a):
     reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
     return reward, False
 
-def reward_fn_gauss(s,a):
-    return multivariate_normal.pdf(s, mean=[np.pi/2,0,0,0], cov=[1,1,1,1]), False
+
+def reward_fn_gauss(s, a):
+    return multivariate_normal.pdf(s, mean=[np.pi / 2, 0, 0, 0], cov=[1, 1, 1, 1]), False
+
 
 policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 model = SACModelSwitch(policy, value_fn, q1_fn, q2_fn, 25, balance_controller=control
-                       , hold_count=20, gate_fn=torch.load("warm/lqr_gate_better"))
-
+                       , hold_count=20, gate_fn=torch.load("warm/gate_big"))
 
 env_config = {
     "init_state": [-np.pi / 2, 0, 0, 0],
     "max_torque": max_torque,
-    "init_state_weights": [np.pi, np.pi,0,0],
+    "init_state_weights": [np.pi, np.pi, 0, 0],
     "dt": .01,
     "reward_fn": reward_fn_sin,
     "max_t": max_t,
@@ -64,32 +71,37 @@ env_config = {
 }
 
 proc_list = []
-for seed in np.random.randint(0, 2**32, 8):
+for seed in np.random.randint(0, 2 ** 32, 8):
     alg_config = {
-        "env_name" : "su_acrobot-v0",
-        "total_steps" : 5e5,
-        "model" : model,
-        "seed" : seed,
-        "goal_state" : np.array([np.pi/2,0,0,0]),
-        "goal_lookback" : 10,
-        "goal_thresh" : .1,
-        "alpha" : .05,
-        "needle_lookup_prob" : .5,
-        "iters_per_update" : float('inf'),
-        "exploration_steps" : 50000,
-        "gate_update_freq" : 5000,
-        "env_config" : env_config,
-        }
+        "env_name": "su_acrobot-v0",
+        "total_steps": 5e5,
+        "model": model,
+        "seed": seed,
+        "goal_state": np.array([np.pi / 2, 0, 0, 0]),
+        "goal_lookback": 10,
+        "goal_thresh": .1,
+        "alpha": .05,
+        "needle_lookup_prob": .5,
+        "exploration_steps": 50000,
+        "gate_update_freq": float('inf'),
+        "gate_x": torch.as_tensor(torch.load('warm/X_big')),
+        "gate_y": torch.as_tensor(torch.load('warm/Y_big')),
+        "env_config": env_config,
+        "min_steps_per_update" : 1000,
+        "sgd_batch_size": 1024,
+        "replay_batch_size" : 4096*4,
+        "iters_per_update": 5,
+        "use_gpu": True,
+    }
 
-#    sac_switched(**alg_config)
+    #sac_switched(**alg_config)
 
     p = Process(
         target=run_sg,
-        args=(alg_config,sac_switched, "smoke_test" + str(seed), "", "/data_needle/" + trial_name + "/"),
+        args=(alg_config, sac_switched, "smoke_test" + str(seed), "", "/data_needle/" + trial_name + "/"),
     )
     p.start()
     proc_list.append(p)
-
 
 for p in proc_list:
     print("joining")
