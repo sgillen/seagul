@@ -218,11 +218,6 @@ class SACModelSwitch:
 
     # Select action is used internally and is the stochastic evaluation
     def select_action_parallel(self, state, noise):
-        path = self.sig(self.gate_fn(np.array(state, dtype=np.float32))) > self.thresh_on
-        path = torch.as_tensor(path, dtype=torch.float32)
-
-        balance_acts = self.balance_controller(state).reshape(-1, self.num_acts)
-        balance_logp = 0
 
         out = self.policy(state)
         means = out[:, :self.num_acts]
@@ -232,15 +227,12 @@ class SACModelSwitch:
         # we can speed this up by reusing the same buffer but this is more readable
         samples = means + std * noise
         squashed_samples = torch.tanh(samples)
-        swingup_acts = squashed_samples * self.act_limit
+        acts = squashed_samples * self.act_limit
 
         # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
         m = torch.distributions.normal.Normal(means, std)
-        swingup_logp = m.log_prob(samples)
-        swingup_logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(-1, 1)
-
-        acts = path*balance_acts + (1 - path)*swingup_acts
-        logp = path*balance_logp + (1 - path)*swingup_acts
+        logp = m.log_prob(samples)
+        logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(-1, 1)
 
         return acts, logp
 
