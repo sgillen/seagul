@@ -33,6 +33,8 @@ def sac_switched(
         goal_thresh=1,
         needle_lookup_prob=.5,
         gate_update_freq=500,
+        gate_x = None,
+        gate_y = None,
         env_config={},
 ):
     """
@@ -117,14 +119,13 @@ def sac_switched(
     use_cuda = torch.cuda.is_available() and use_gpu
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
+
+
     raw_rew_hist = []
     val_loss_hist = []
     pol_loss_hist = []
     q1_loss_hist = []
     q2_loss_hist = []
-
-    gate_x_list = []
-    gate_y_list = []
 
     progress_bar = tqdm.tqdm(total=total_steps)
     cur_total_steps = 0
@@ -158,6 +159,14 @@ def sac_switched(
                 early_stop = True
                 break
 
+        # Transfer back to CPU, which is faster for rollouts
+        model.policy = model.policy.to('cpu')
+        model.value_fn = model.value_fn.to('cpu')
+        model.q1_fn = model.q1_fn.to('cpu')
+        model.q2_fn = model.q2_fn.to('cpu')
+        model.gate_fn = model.gate_fn.to('cpu')
+        target_value_fn = target_value_fn.to('cpu')
+
         # collect data with the current policy
         # ========================================================================
         while cur_batch_steps < min_steps_per_update:
@@ -185,15 +194,15 @@ def sac_switched(
                         if not path:
                             break
                         else:
-                            gate_x_list.append(obs)
-                            gate_y_list.append(torch.ones(1, dtype=torch.float32))
+                            gate_x = torch.cat((gate_x, obs.reshape(1, -1)))
+                            gate_y = torch.cat((gate_y, torch.ones((1,1), dtype=torch.float32)))
                 else:
                     for path, obs in zip(reverse_path, reverse_obs):
                         if not path:
                             pass
                         else:
-                            gate_x_list.append(obs)
-                            gate_y_list.append(torch.zeros(1, dtype=torch.float32))
+                            gate_x = torch.cat((gate_x, obs.reshape(1, -1)))
+                            gate_y = torch.cat((gate_y, torch.zeros((1,1), dtype=torch.float32)))
 
             ep_steps = ep_rews.shape[0]
             cur_batch_steps += ep_steps
@@ -202,11 +211,27 @@ def sac_switched(
 
             raw_rew_hist.append(torch.sum(ep_rews))
 
-        progress_bar.update(cur_batch_steps)
+            progress_bar.update(ep_steps)
 
-        if (gate_update_counter > gate_update_freq and len(gate_x_list)):
-            fit_model(model.gate_fn, torch.stack(gate_x_list), torch.stack(gate_y_list), 15, use_tqdm=False)
+
+        # For training, transfer model to GPU
+        model.policy = model.policy.to(device)
+        model.value_fn = model.value_fn.to(device)
+        model.q1_fn = model.q1_fn.to(device)
+        model.q2_fn = model.q2_fn.to(device)
+        model.gate_fn = model.gate_fn.to(device)
+        target_value_fn = target_value_fn.to(device)
+
+
+
+        if gate_update_counter > gate_update_freq:
+            w = 1e-2  # Weighting parameter to encourage learning a conservative region of attraction
+            class_weight = torch.tensor(gate_y.shape[0] / sum(gate_y) * w, dtype=torch.float32).to(device)
+            fit_model(model.gate_fn, gate_x, gate_y, 1, use_tqdm=False, use_cuda=True, batch_size=4096,
+                      loss_fn=torch.nn.BCEWithLogitsLoss(pos_weight=class_weight))
+
             gate_update_counter = 0
+            print("gate updated BB")
 
         for _ in range(min(int(ep_steps), iters_per_update)):
             # compute targets for Q and V
@@ -219,6 +244,13 @@ def sac_switched(
             else:
                 replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(
                     replay_batch_size)
+
+            replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = \
+            [replay_obs1.to(device),
+             replay_obs2.to(device),
+             replay_acts.to(device),
+             replay_rews.to(device),
+             replay_done.to(device)]
 
             q_targ = replay_rews + gamma * (1 - replay_done) * target_value_fn(replay_obs2)
             q_targ = q_targ.detach()
@@ -234,12 +266,6 @@ def sac_switched(
 
             v_targ = q_min - alpha * sample_logp
             v_targ = v_targ.detach()
-
-            # For training, transfer model to GPU
-            model.policy = model.policy.to(device)
-            model.value_fn = model.value_fn.to(device)
-            model.q1_fn = model.q1_fn.to(device)
-            model.q2_fn = model.q2_fn.to(device)
 
             # q_fn update
             # ========================================================================
@@ -308,18 +334,6 @@ def sac_switched(
                 pol_loss.backward()
                 pol_opt.step()
 
-            # Record losses and transfer model back to CPU for rollouts
-            # ========================================================================
-            val_loss_hist.append(val_loss.item())
-            pol_loss_hist.append(pol_loss.item())
-            q1_loss_hist.append(q1_loss.item())
-            q2_loss_hist.append(q2_loss.item())
-
-            # Transfer back to CPU, which is faster for rollouts
-            model.policy = model.policy.to('cpu')
-            model.value_fn = model.value_fn.to('cpu')
-            model.q1_fn = model.q1_fn.to('cpu')
-            model.q2_fn = model.q2_fn.to('cpu')
 
             # Update target networks
             # ========================================================================
