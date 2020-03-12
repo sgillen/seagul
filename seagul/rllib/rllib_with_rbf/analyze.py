@@ -3,10 +3,10 @@ import numpy as np
 import analysis_functions
 
 # path can be to multiple samples or inside a specific one:
-checkpoint = "746" # only needed for rendering
+checkpoint = "3544" # only needed for rendering
 # res_dir = ["./Results/HalfCheetah/PPO/FCN_1/PPO_HalfCheetahBulletEnv-v0_6dee9f88_2020-03-01_19-03-4581ly820s/"] # 180
 # res_dir = ["./data/HalfCheetahBulletEnv-v0/PPO/"] # 10
-res_dir = ["./Results/Pendulum-v0/PPO/"] # 31
+res_dir = ["./data/Humanoid-v2/PPO/"] # 31
 
 entries = analysis_functions.outputs_to_df(res_dir, cutoff=-1)
 analysis_functions.plot_outputs(entries)

@@ -6,8 +6,8 @@ import re
 # copies the params and result files (csv/json etc) AND the last checkpoint folder
 # useful for copying results from the cluster to a local results directory
 
-copy_from_dir = "./data/Humanoid-v2/ARS/"
-copy_to_dir = "./Results/Humanoid-v2/ARS/"
+copy_from_dir = "./data/Humanoid-v2/PPO/"
+copy_to_dir = "./Results/Humanoid-v2/PPO/"
 
 for subdir, dirs, files in os.walk(copy_from_dir):
     for dir in dirs:

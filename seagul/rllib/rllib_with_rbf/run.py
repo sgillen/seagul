@@ -54,10 +54,10 @@ envs = {
     5: {"name": "Walker2d-v2", "stop": 9000},
     6: {"name": "Humanoid-v2", "stop": 6000}}
 
-ray.init(num_cpus=18)
+ray.init(num_cpus=20)
 
 #---- adjust parameters: -------------------------------------
-algorithm = "ARS" # algos["gradient-based"][a]
+algorithm = "PPO" # algos["gradient-based"][a]
 # algorithm = algos["0"]
 environment = envs[6]["name"]
 output_dir = "./data/" + environment + "/"
@@ -133,7 +133,7 @@ analysis = tune.run(
     algorithm,
     local_dir=output_dir,
     # name="test",
-    stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": int(2e7)},
+    stop={"episode_reward_mean": [envs[x]["stop"] for x in envs if envs[x]["name"] == environment][0], "timesteps_total": int(1e7)},
     checkpoint_freq=10,
     max_failures=5,
     checkpoint_at_end=True,
