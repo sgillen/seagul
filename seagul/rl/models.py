@@ -193,9 +193,9 @@ class SACModelSwitch:
         return acts, logp
 
     # Really just here for rollouts
-    def swingup_controller(self, state):
+    def swingup_controller(self, state, noise_c=1):
         state = torch.as_tensor(state, dtype=torch.float32)
-        noise = torch.randn(self.num_acts)
+        noise = torch.randn(self.num_acts)*noise_c
         self.thresh = self.thresh_on
 
         out = self.policy(state)
@@ -215,6 +215,15 @@ class SACModelSwitch:
             -1, 1)
 
         return acts.detach()
+
+    def to(self, device):
+        self.policy = self.policy.to(device)
+        self.value_fn = self.value_fn.to(device)
+        self.q1_fn = self.q1_fn.to(device)
+        self.q2_fn = self.q2_fn.to(device)
+        self.gate_fn = self.gate_fn.to(device)
+        return self
+
 
     # Select action is used internally and is the stochastic evaluation
     def select_action_parallel(self, state, noise):

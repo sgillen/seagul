@@ -35,6 +35,9 @@ def sac_switched(
         gate_update_freq=500,
         gate_x = None,
         gate_y = None,
+        gate_lr = 1e-5,
+        gate_w = 1e-2,
+        gate_epochs = 1,
         env_config={},
 ):
     """
@@ -87,6 +90,8 @@ def sac_switched(
 
         model, rews, var_dict = sac("Pendulum-v0", 10000, model)
     """
+
+    args = locals() 
     torch.set_num_threads(1)
 
     env = gym.make(env_name, **env_config)
@@ -119,8 +124,6 @@ def sac_switched(
     use_cuda = torch.cuda.is_available() and use_gpu
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
-
-
     raw_rew_hist = []
     val_loss_hist = []
     pol_loss_hist = []
@@ -140,7 +143,6 @@ def sac_switched(
         in_goal = torch.sum(torch.sqrt((ep_obs2[-goal_lookback:] - goal_state) ** 2), axis=1) < goal_thresh
 
         if in_goal.all():
-            print("adding needle states")
             needle_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
         replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
@@ -160,11 +162,7 @@ def sac_switched(
                 break
 
         # Transfer back to CPU, which is faster for rollouts
-        model.policy = model.policy.to('cpu')
-        model.value_fn = model.value_fn.to('cpu')
-        model.q1_fn = model.q1_fn.to('cpu')
-        model.q2_fn = model.q2_fn.to('cpu')
-        model.gate_fn = model.gate_fn.to('cpu')
+        model = model.to('cpu')
         target_value_fn = target_value_fn.to('cpu')
 
         # collect data with the current policy
@@ -176,7 +174,6 @@ def sac_switched(
 
             if in_goal.all():
                 needle_count += 1
-                print("adding needle states, now: " + str(needle_count) + " " + str(not_needle_count))
                 needle_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
             else:
                 not_needle_count += 1
@@ -214,24 +211,22 @@ def sac_switched(
             progress_bar.update(ep_steps)
 
 
-        # For training, transfer model to GPU
-        model.policy = model.policy.to(device)
-        model.value_fn = model.value_fn.to(device)
-        model.q1_fn = model.q1_fn.to(device)
-        model.q2_fn = model.q2_fn.to(device)
-        model.gate_fn = model.gate_fn.to(device)
-        target_value_fn = target_value_fn.to(device)
-
-
+        print("needle/normal: ", str(needle_buf.size), str(replay_buf.size))
 
         if gate_update_counter > gate_update_freq:
-            w = 1e-2  # Weighting parameter to encourage learning a conservative region of attraction
-            class_weight = torch.tensor(gate_y.shape[0] / sum(gate_y) * w, dtype=torch.float32).to(device)
-            fit_model(model.gate_fn, gate_x, gate_y, 1, use_tqdm=False, use_cuda=True, batch_size=4096,
-                      loss_fn=torch.nn.BCEWithLogitsLoss(pos_weight=class_weight))
+            # For training, transfer model to GPU
+            model = model.to('cuda:0')
+            target_value_fn = target_value_fn.to('cuda:0')
 
+            class_weight = (gate_y.shape[0] / sum(gate_y) * gate_w).to('cuda:0')
+            gate_loss = fit_model(model.gate_fn, gate_x, gate_y, gate_epochs, use_tqdm=False, use_cuda=True, batch_size=8192,
+                                  loss_fn=torch.nn.BCEWithLogitsLoss(pos_weight=class_weight), learning_rate=gate_lr)
+
+            print("gate updated: " + str(gate_y.shape[0]) + "  " + str(sum(gate_y)))
+
+            model = model.to('cpu')
+            target_value_fn = target_value_fn.to('cpu')
             gate_update_counter = 0
-            print("gate updated BB")
 
         for _ in range(min(int(ep_steps), iters_per_update)):
             # compute targets for Q and V

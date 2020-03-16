@@ -108,7 +108,7 @@ class SGAcroEnv(core.Env):
         reward, done = self.reward_fn(self.state, a)
 
         # I should probably do this with a wrapper...
-        if self.t > self.max_t:
+        if self.t >= self.max_t:
             done = True
 
         if abs(self.state[2]) > self.max_th1dot or abs(self.state[2] > self.max_th2dot):
