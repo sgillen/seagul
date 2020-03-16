@@ -44,11 +44,12 @@ def reward_fn_sin(s, a):
 def reward_fn_gauss(s, a):
     return multivariate_normal.pdf(s, mean=[np.pi/2, 0, 0, 0], cov=[1, 1, 1, 1]), False
 
+
+
 env_config = {
     "init_state": [-np.pi / 2, 0, 0, 0],
     "max_torque": max_torque,
-    "lqr_max_torque" : 25,
-    "init_state_weights": [np.pi, np.pi,0,0],
+    "init_state_weights": [np.pi, np.pi, 0, 0],
     "dt": .01,
     "reward_fn": reward_fn_sin,
     "max_t": max_t,
@@ -59,16 +60,13 @@ env_config = {
     "lc2": lc2,
     "i1": I1,
     "i2": I2,
-    "act_hold": 20,
-    "gate_fn": torch.load("warm/lqr_gate_better"),
-    "controller": control
 }
 
 proc_list = []
 for seed in np.random.randint(0, 2**32, 8):
     alg_config = {
         "env_name" : "su_acroswitch-v0",
-        "total_steps" : 1e6,
+        "total_steps" : 5e5,
         "model" : model,
         "seed" : seed,
         "goal_state" : np.array([np.pi/2,0,0,0]),

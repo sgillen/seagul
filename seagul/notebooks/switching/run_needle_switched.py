@@ -8,6 +8,7 @@ from seagul.nn import MLP
 from seagul.rl.models import SACModelSwitch
 import numpy as np
 from scipy.stats import multivariate_normal
+from seagul.integration import rk4
 
 trial_name = input('Trial name please:\n')
 
@@ -17,17 +18,13 @@ layer_size = 32
 num_layers = 4
 activation = nn.ReLU
 
-m1 = 1;
-m2 = 1
-l1 = 1;
-l2 = 1
-lc1 = .5;
-lc2 = .5
-I1 = .2;
-I2 = 1.0
+m1 = 1; m2 = 1
+l1 = 1; l2 = 1
+lc1 = .5; lc2 = .5
+I1 = .2; I2 = 1.0
 g = 9.8
-max_torque = 25
-lqr_max_torque = 25
+max_torque = 5
+lqr_max_torque = 5
 max_t = 10.0
 
 
@@ -37,11 +34,9 @@ def control(q):
     gs = torch.tensor([np.pi / 2, 0, 0, 0])
     return (-k * (q - gs)).sum(dim=1).detach()
 
-
 def reward_fn_sin(s, a):
     reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
     return reward, False
-
 
 def reward_fn_gauss(s, a):
     return multivariate_normal.pdf(s, mean=[np.pi / 2, 0, 0, 0], cov=[1, 1, 1, 1]), False
@@ -52,7 +47,7 @@ value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 model = SACModelSwitch(policy, value_fn, q1_fn, q2_fn, 25, balance_controller=control
-                       , hold_count=20, gate_fn=torch.load("warm/gate_big"))
+                       , hold_count=1, gate_fn=torch.load("warm/gate5_rk"))
 
 env_config = {
     "init_state": [-np.pi / 2, 0, 0, 0],
@@ -68,37 +63,40 @@ env_config = {
     "lc2": lc2,
     "i1": I1,
     "i2": I2,
+    "integrator" : rk4
 }
 
 proc_list = []
 for seed in np.random.randint(0, 2 ** 32, 8):
     alg_config = {
         "env_name": "su_acrobot-v0",
-        "total_steps": 5e5,
+        "total_steps": 2e6,
         "model": model,
         "seed": seed,
         "goal_state": np.array([np.pi / 2, 0, 0, 0]),
         "goal_lookback": 10,
-        "goal_thresh": .1,
+        "goal_thresh": .25,
         "alpha": .05,
-        "needle_lookup_prob": .5,
+        "needle_lookup_prob": .8,
         "exploration_steps": 50000,
         "gate_update_freq": float('inf'),
-        "gate_x": torch.as_tensor(torch.load('warm/X_big')),
-        "gate_y": torch.as_tensor(torch.load('warm/Y_big')),
+        "gate_x": torch.as_tensor(torch.load('warm/X5_rk')),
+        "gate_y": torch.as_tensor(torch.load('warm/Y5_rk')),
         "env_config": env_config,
-        "min_steps_per_update" : 1000,
-        "sgd_batch_size": 1024,
-        "replay_batch_size" : 4096*4,
-        "iters_per_update": 5,
-        "use_gpu": True,
+        "min_steps_per_update" : 500,
+        "sgd_batch_size": 128,
+        "replay_batch_size" : 4096,
+        "iters_per_update": 16,
+        "use_gpu": False,
+        "gamma" : .99,
+        "replay_buf_size" : int(500000),
     }
 
-    #sac_switched(**alg_config)
+    # sac_switched(**alg_config)
 
     p = Process(
         target=run_sg,
-        args=(alg_config, sac_switched, "smoke_test" + str(seed), "", "/data_needle/" + trial_name + "/"),
+        args=(alg_config, sac_switched, "trial" + str(seed), "", "/data_needle/" + trial_name + "/"),
     )
     p.start()
     proc_list.append(p)

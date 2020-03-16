@@ -47,6 +47,7 @@ def smooth_bounded_curve(
     window=100,
     color='k',
     alpha=.2,
+    time_steps = None
 ):
     """
     Plots the (smoothed) average for many time series plots, as well as plotting the min/max on the same figure
@@ -78,6 +79,7 @@ def smooth_bounded_curve(
          window: How large of a window to use for the moving average smoothing
          color: what color to make the curve
          alpha: alpha to use for the fillin between min and max values
+         time_steps: list or np array labeling the x axis, must be same size as reward curves
 
     Returns:
         fig: figure object if we created one, else None
@@ -101,7 +103,9 @@ def smooth_bounded_curve(
     max_smoothed = pd.Series(max_data).rolling(window, min_periods=10).mean()
     data_smoothed = pd.Series(avg_data).rolling(window, min_periods=10).mean()
 
-    time_steps = [i for i in range(data.shape[0])]
+    if time_steps is None:
+        time_steps = [i for i in range(data.shape[0])]
+
     ax.plot(time_steps, data_smoothed, color=color)
     ax.fill_between(time_steps, min_smoothed, max_smoothed, color=color, alpha=.2)
     ax.set_xlabel('Time Steps')

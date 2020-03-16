@@ -24,6 +24,8 @@ register(id="su_cartpole_push-v0", entry_point="seagul.envs.classic_control:SUCa
 register(id="su_cartpole_discrete-v0", entry_point="seagul.envs.classic_control:SUCartPoleDiscEnv")
 register(id="su_pendulum-v0", entry_point="seagul.envs.classic_control:SUPendulumEnv")
 register(id="su_acrobot-v0", entry_point="seagul.envs.classic_control:SGAcroEnv")
+
+
 register(id="su_acrobot-v2", entry_point="seagul.envs.classic_control:SGAcroEnv2")
 register(id="su_acroswitch-v0", entry_point="seagul.envs.classic_control:SGAcroSwitchEnv")
 register(id="su_acroswitchsin-v0", entry_point="seagul.envs.classic_control:SGAcroSwitchSinEnv")

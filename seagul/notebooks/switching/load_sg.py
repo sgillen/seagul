@@ -26,7 +26,7 @@ dtype = np.float32
 
 import os
 jup_dir = "/home/sgillen/work/"
-directory = "/home/sgillen/work/seagul/seagul/notebooks/switching/data_needle/less_hack/"
+directory = "/home/sgillen/work/seagul/seagul/notebooks/switching/data_needle/50k/"
 ws_list = []
 model_list = []
 max_size = 0
