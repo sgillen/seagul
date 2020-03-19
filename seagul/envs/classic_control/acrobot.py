@@ -97,12 +97,15 @@ class SGAcroEnv(core.Env):
         self.state = init_state
         return self._get_obs()
 
+
     def step(self, a):
         a = np.clip(a, -self.max_torque, self.max_torque)
         self.t += self.dt * self.act_hold
+        full_state = []
 
         for _ in range(self.act_hold):
             self.state = self.integrator(self._dynamics, a, self.t, self.dt, self.state)
+            full_state.append(self.state)
 
         done = False
         reward, done = self.reward_fn(self.state, a)
@@ -115,7 +118,8 @@ class SGAcroEnv(core.Env):
             reward -= 5
             done = True
 
-        return self._get_obs(), reward, done, {}
+        full_state = np.array(full_state).reshape(-1, 4)
+        return self._get_obs(), reward, done, {"full_state": full_state}
 
     def _get_obs(self):
         obs = self.state.copy()

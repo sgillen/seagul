@@ -89,7 +89,7 @@ for seed in np.random.randint(0, 2 ** 32, 8):
         "i1": I1,
         "i2": I2,
         "act_hold" : 20,
-#        "integrator": rk4,
+        "integrator": rk4,
     }
 
     alg_config = {

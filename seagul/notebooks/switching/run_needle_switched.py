@@ -47,7 +47,7 @@ value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
 q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 model = SACModelSwitch(policy, value_fn, q1_fn, q2_fn, 25, balance_controller=control
-                       , hold_count=1, gate_fn=torch.load("warm/gate5_rk"))
+                       , hold_count=20, gate_fn=torch.load("warm/gate25_rk"))
 
 env_config = {
     "init_state": [-np.pi / 2, 0, 0, 0],
@@ -80,13 +80,13 @@ for seed in np.random.randint(0, 2 ** 32, 8):
         "needle_lookup_prob": .8,
         "exploration_steps": 50000,
         "gate_update_freq": float('inf'),
-        "gate_x": torch.as_tensor(torch.load('warm/X5_rk')),
-        "gate_y": torch.as_tensor(torch.load('warm/Y5_rk')),
+        "gate_x": torch.as_tensor(torch.load('warm/X25_rk')),
+        "gate_y": torch.as_tensor(torch.load('warm/Y25_rk')),
         "env_config": env_config,
         "min_steps_per_update" : 500,
         "sgd_batch_size": 128,
         "replay_batch_size" : 4096,
-        "iters_per_update": 16,
+        "iters_per_update": 4,
         "use_gpu": False,
         "gamma" : .99,
         "replay_buf_size" : int(500000),
