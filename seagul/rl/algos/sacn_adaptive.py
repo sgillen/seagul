@@ -6,10 +6,11 @@ import gym
 import dill
 
 from seagul.rl.common import ReplayBuffer, update_mean, update_var
+from seagul.nn import fit_model
 from seagul.rl.models import RandModel
 
 
-def sac(
+def sac_switched(
         env_name,
         total_steps,
         model,
@@ -27,7 +28,17 @@ def sac(
         replay_buf_size=int(100000),
         use_gpu=False,
         reward_stop=None,
-        env_config = {},
+        goal_state=np.array([np.pi / 2, 0, 0, 0]),
+        goal_lookback=10,
+        goal_thresh=1,
+        needle_lookup_prob=.5,
+        gate_update_freq=500,
+        gate_x = None,
+        gate_y = None,
+        gate_lr = 1e-5,
+        gate_w = 1e-2,
+        gate_epochs = 1,
+        env_config={},
 ):
     """
     Implements soft actor critic
@@ -53,7 +64,7 @@ def sac(
         use_gpu: determines if we try to use a GPU or not
         reward_stop: reward value to bail at
         env_config: dictionary containing kwargs to pass to your the environment
-    
+
     Returns:
         model: trained model
         avg_reward_hist: list with the average reward per episode at each epoch
@@ -79,6 +90,8 @@ def sac(
 
         model, rews, var_dict = sac("Pendulum-v0", 10000, model)
     """
+
+    args = locals() 
     torch.set_num_threads(1)
 
     env = gym.make(env_name, **env_config)
@@ -90,8 +103,11 @@ def sac(
 
     obs_size = env.observation_space.shape[0]
 
-    random_model = RandModel(model.act_limit, act_size)
+    random_model = dill.loads(dill.dumps(model))
+    random_model.swingup_controller = lambda x: torch.rand(model.num_acts) * 2 * model.act_limit - model.act_limit
+
     replay_buf = ReplayBuffer(obs_size, act_size, replay_buf_size)
+    needle_buf = ReplayBuffer(obs_size, act_size, replay_buf_size)
     target_value_fn = dill.loads(dill.dumps(model.value_fn))
 
     pol_opt = torch.optim.Adam(model.policy.parameters(), lr=sgd_lr)
@@ -116,11 +132,19 @@ def sac(
 
     progress_bar = tqdm.tqdm(total=total_steps)
     cur_total_steps = 0
+    gate_update_counter = 0
     progress_bar.update(0)
     early_stop = False
 
+    needle_count = 0
+    not_needle_count = 0
     while cur_total_steps < exploration_steps:
-        ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
+        ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done, ep_path = do_rollout(env, random_model, env_steps)
+        in_goal = torch.sum(torch.sqrt((ep_obs2[-goal_lookback:] - goal_state) ** 2), axis=1) < goal_thresh
+
+        if in_goal.all():
+            needle_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+
         replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
         ep_steps = ep_rews.shape[0]
@@ -137,45 +161,106 @@ def sac(
                 early_stop = True
                 break
 
+        # Transfer back to CPU, which is faster for rollouts
+        model = model.to('cpu')
+        target_value_fn = target_value_fn.to('cpu')
+
         # collect data with the current policy
         # ========================================================================
         while cur_batch_steps < min_steps_per_update:
-            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, model, env_steps)
-            replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done, ep_path = do_rollout(env, model, env_steps)
+
+            in_goal = torch.sum(torch.sqrt((ep_obs2[-goal_lookback:] - goal_state) ** 2), axis=1) < goal_thresh
+
+            if in_goal.all():
+                needle_count += 1
+                needle_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+            else:
+                not_needle_count += 1
+                replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+
+            if ep_path.sum() != 0:
+                reverse_obs = np.flip(ep_obs1.numpy(), 0).copy()
+                reverse_obs = torch.from_numpy(reverse_obs)
+
+                reverse_path = np.flip(ep_path.numpy(), 0).copy()
+                reverse_path = torch.from_numpy(reverse_path)
+
+                if in_goal.all():
+                    for path, obs in zip(reverse_path, reverse_obs):
+                        if not path:
+                            break
+                        else:
+                            gate_x = torch.cat((gate_x, obs.reshape(1, -1)))
+                            gate_y = torch.cat((gate_y, torch.ones((1,1), dtype=torch.float32)))
+                else:
+                    for path, obs in zip(reverse_path, reverse_obs):
+                        if not path:
+                            pass
+                        else:
+                            gate_x = torch.cat((gate_x, obs.reshape(1, -1)))
+                            gate_y = torch.cat((gate_y, torch.zeros((1,1), dtype=torch.float32)))
 
             ep_steps = ep_rews.shape[0]
             cur_batch_steps += ep_steps
             cur_total_steps += ep_steps
+            gate_update_counter += ep_steps
 
             raw_rew_hist.append(torch.sum(ep_rews))
 
-        progress_bar.update(cur_batch_steps)
+            progress_bar.update(ep_steps)
+
+
+        print("needle/normal: ", str(needle_buf.size), str(replay_buf.size))
+
+        if gate_update_counter > gate_update_freq:
+            # For training, transfer model to GPU
+            model = model.to('cuda:0')
+            target_value_fn = target_value_fn.to('cuda:0')
+
+            class_weight = (gate_y.shape[0] / sum(gate_y) * gate_w).to('cuda:0')
+            gate_loss = fit_model(model.gate_fn, gate_x, gate_y, gate_epochs, use_tqdm=False, use_cuda=True, batch_size=8192,
+                                  loss_fn=torch.nn.BCEWithLogitsLoss(pos_weight=class_weight), learning_rate=gate_lr)
+
+            print("gate updated: " + str(gate_y.shape[0]) + "  " + str(sum(gate_y)))
+
+            model = model.to('cpu')
+            target_value_fn = target_value_fn.to('cpu')
+            gate_update_counter = 0
 
         for _ in range(min(int(ep_steps), iters_per_update)):
             # compute targets for Q and V
             # ========================================================================
-            replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(replay_batch_size)
+
+            p = np.random.random_sample(1)
+            if p > needle_lookup_prob and needle_buf.size > 0:
+                replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = needle_buf.sample_batch(
+                    replay_batch_size)
+            else:
+                replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = replay_buf.sample_batch(
+                    replay_batch_size)
+
+            replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = \
+            [replay_obs1.to(device),
+             replay_obs2.to(device),
+             replay_acts.to(device),
+             replay_rews.to(device),
+             replay_done.to(device)]
 
             q_targ = replay_rews + gamma * (1 - replay_done) * target_value_fn(replay_obs2)
             q_targ = q_targ.detach()
 
-            noise = torch.randn(replay_batch_size, act_size)
-            sample_acts, sample_logp = model.select_action(replay_obs1, noise)
+            noise = torch.randn(replay_batch_size, act_size).to(device)
+            sample_acts, sample_logp = model.select_action_parallel(replay_obs1, noise)
 
             q_in = torch.cat((replay_obs1, sample_acts), dim=1)
+
             q_preds = torch.cat((model.q1_fn(q_in), model.q2_fn(q_in)), dim=1)
             q_min, q_min_idx = torch.min(q_preds, dim=1)
             q_min = q_min.reshape(-1, 1)
 
             v_targ = q_min - alpha * sample_logp
             v_targ = v_targ.detach()
-
-
-            # For training, transfer model to GPU
-            model.policy = model.policy.to(device)
-            model.value_fn = model.value_fn.to(device)
-            model.q1_fn = model.q1_fn.to(device)
-            model.q2_fn = model.q2_fn.to(device)
 
             # q_fn update
             # ========================================================================
@@ -198,10 +283,10 @@ def sac(
                 q2_loss = torch.pow(q2_preds - local_qtarg, 2).mean()
                 q_loss = q1_loss + q2_loss
 
-                q1_opt.zero_grad();
+                q1_opt.zero_grad()
                 q2_opt.zero_grad()
                 q_loss.backward()
-                q1_opt.step();
+                q1_opt.step()
                 q2_opt.step()
 
             # val_fn update
@@ -234,7 +319,7 @@ def sac(
                 local_obs = local_obs[0].to(device)
 
                 noise = torch.randn(local_obs.shape[0], act_size).to(device)
-                local_acts, local_logp = model.select_action(local_obs, noise)
+                local_acts, local_logp = model.select_action_parallel(local_obs, noise)
 
                 q_in = torch.cat((local_obs, local_acts), dim=1)
                 pol_loss = torch.sum(alpha * local_logp - model.q1_fn(q_in)) / replay_batch_size
@@ -244,29 +329,9 @@ def sac(
                 pol_loss.backward()
                 pol_opt.step()
 
-            # Update target value fn with polyak average
+
+            # Update target networks
             # ========================================================================
-            val_loss_hist.append(val_loss.item())
-            pol_loss_hist.append(pol_loss.item())
-            q1_loss_hist.append(q1_loss.item())
-            q2_loss_hist.append(q2_loss.item())
-            #
-            # model.policy.state_means = update_mean(replay_obs1, model.policy.state_means, cur_total_steps)
-            # model.policy.state_var  =  update_var(replay_obs1, model.policy.state_var, cur_total_steps)
-            # model.value_fn.state_means = model.policy.state_means
-            # model.policy.state_var = model.policy.state_var
-            #
-            # model.q1_fn.state_means = update_mean(torch.cat((replay_obs1, replay_acts.detach()), dim=1), model.q1_fn.state_means, cur_total_steps)
-            # model.q1_fn.state_var = update_var(torch.cat((replay_obs1, replay_acts.detach()), dim=1), model.q1_fn.state_var, cur_total_steps)
-            # model.q2_fn.state_means = model.q1_fn.state_means
-            # model.q2_fn.state_var = model.q1_fn.state_var
-
-            # Transfer back to CPU, which is faster for rollouts
-            model.policy = model.policy.to('cpu')
-            model.value_fn = model.value_fn.to('cpu')
-            model.q1_fn = model.q1_fn.to('cpu')
-            model.q2_fn = model.q2_fn.to('cpu')
-
             val_sd = model.value_fn.state_dict()
             tar_sd = target_value_fn.state_dict()
             for layer in tar_sd:
@@ -276,45 +341,57 @@ def sac(
 
     return model, raw_rew_hist, locals()
 
+
 def do_rollout(env, model, num_steps):
     acts_list = []
     obs1_list = []
     obs2_list = []
     rews_list = []
+    path_list = []
     done_list = []
 
     dtype = torch.float32
     act_size = env.action_space.shape[0]
-    obs = env.reset()
+    obs_size = env.observation_space.shape[0]
+
     done = False
     cur_step = 0
 
+    obs = env.reset()
+    model.thresh = model.thresh_on
+
     while not done:
-        obs = torch.as_tensor(obs, dtype=dtype).detach()
-        obs1_list.append(obs.clone())
+        obs1_list.append(obs)
+        path = model.sig(model.gate_fn(np.array(obs, dtype=np.float32))) > model.thresh
 
-        noise = torch.randn(1, act_size)
-        act, _ = model.select_action(obs.reshape(1, -1), noise)
-        act = act.detach()
-
-        obs, rew, done, _ = env.step(act.numpy().reshape(-1))
-        obs = torch.as_tensor(obs, dtype=dtype).detach()
-
-        acts_list.append(torch.as_tensor(act.clone(), dtype=dtype))
-        rews_list.append(torch.as_tensor(rew, dtype=dtype))
-        obs2_list.append(obs.clone())
+        if path:
+            model.thresh = model.thresh_off
+            for _ in range(model.hold_count):
+                acts = model.balance_controller(obs).reshape(-1, model.num_acts)
+                obs, rew, done, _ = env.step(acts.numpy())
+        else:
+            model.thresh = model.thresh_on
+            acts = model.swingup_controller(obs.reshape(-1, obs_size)).reshape(-1, model.num_acts)
+            for _ in range(model.hold_count):
+                obs, rew, done, _ = env.step(acts.numpy().reshape(-1))
 
         if cur_step < num_steps:
             done_list.append(torch.as_tensor(done))
         else:
             done_list.append(torch.as_tensor(False))
 
+        acts_list.append(torch.as_tensor(acts.clone()))
+        rews_list.append(torch.as_tensor(rew, dtype=dtype))
+        path_list.append(path.clone())
+        obs2_list.append(obs)
+
         cur_step += 1
 
-    ep_obs1 = torch.stack(obs1_list)
+    ep_obs1 = torch.tensor(obs1_list, dtype=dtype)
     ep_acts = torch.stack(acts_list).reshape(-1, act_size)
     ep_rews = torch.stack(rews_list).reshape(-1, 1)
-    ep_obs2 = torch.stack(obs2_list)
+    ep_obs2 = torch.tensor(obs2_list, dtype=dtype)
     ep_done = torch.stack(done_list).reshape(-1, 1)
+    ep_path = torch.tensor(path_list).reshape(-1,1)
 
-    return (ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+    return ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done, ep_path
