@@ -1,5 +1,6 @@
 from gym.envs.registration import register
 
+
 register(id="mj_su_cartpole-v0", entry_point="seagul.envs.mujoco:MJSUCartPoleEnv")
 register(id="mj_su_cartpole_sparse-v0", entry_point="seagul.envs.mujoco:MJSUCartPoleSparseEnv")
 register(id="mj_su_cartpole_et-v0", entry_point="seagul.envs.mujoco:MJSUCartPoleEtEnv")
@@ -12,7 +13,6 @@ register(id="lorenz-v0", entry_point="seagul.envs.simple_nonlinear:LorenzEnv")
 register(id="linear_z-v0", entry_point="seagul.envs.simple_nonlinear:LinearEnv")
 register(id="gen_nonlin-v0", entry_point="seagul.envs.simple_nonlinear:GenEnv")
 
-
 register(id="dyn_car-v0", entry_point="seagul.envs.car:DynCarEnv")
 register(id="bullet_car-v0", entry_point="seagul.envs.bullet:RacecarGymEnv_v1")
 register(id="bullet_car_ast-v0", entry_point="seagul.envs.bullet:RacecarGymEnvAst_v1")
@@ -23,21 +23,36 @@ register(id="sg_cartpole-v0", entry_point="seagul.envs.classic_control:SGCartPol
 register(id="su_cartpole_push-v0", entry_point="seagul.envs.classic_control:SUCartPolePushEnv")
 register(id="su_cartpole_discrete-v0", entry_point="seagul.envs.classic_control:SUCartPoleDiscEnv")
 register(id="su_pendulum-v0", entry_point="seagul.envs.classic_control:SUPendulumEnv")
-register(id="su_acrobot-v0", entry_point="seagul.envs.classic_control:AcrobotEnv")
-register(id="su_acrobot-v1", entry_point="seagul.envs.classic_control:AcrobotEnv2")
+register(id="su_acrobot-v0", entry_point="seagul.envs.classic_control:SGAcroEnv")
+
+
+register(id="su_acrobot-v2", entry_point="seagul.envs.classic_control:SGAcroEnv2")
+register(id="su_acroswitch-v0", entry_point="seagul.envs.classic_control:SGAcroSwitchEnv")
+register(id="su_acroswitchsin-v0", entry_point="seagul.envs.classic_control:SGAcroSwitchSinEnv")
 register(id="su_cartpole_gym-v0", entry_point="seagul.envs.classic_control:CartPoleEnv")
 register(id="sym_pendulum-v0", entry_point="seagul.envs.classic_control:PendulumSymEnv", max_episode_steps=200)
 register(id="dt_pendulum-v0", entry_point="seagul.envs.classic_control:PendulumDtEnv", max_episode_steps=200)
 register(id="su_acro_drake-v0", entry_point="seagul.envs.drake:DrakeAcroEnv")
 
 # Also go ahead and try to register environments for rllib as well
+
 try:
+    import pybullet_envs
+except:
+    import warnings
+    warnings.warn("Warning, pybullet envs not installed")
+
+try:
+    import switched_rl.dm_gym
+except:
+    import warnings
+    warnings.warn("Warning, pybullet envs not installed")
+
+try:    
     # Ray requires it's own registry, can't rely on the normal mechanisms that gym uses
     
     #    from seagul.envs.mujoco.five_link import FiveLinkWalkerEnv
     import gym
-    import pybullet_envs
-
     from ray.tune.registry import register_env
 
     #   def five_link_creator(env_config):
@@ -76,7 +91,19 @@ try:
 
     def drake_creator(env_config):
         return gym.make("su_acro_drake-v0", **env_config)
+
+    def acro_creator(env_config):
+        return gym.make("su_acrobot-v0", **env_config)
+
+    def acroswitch_creator(env_config):
+        return gym.make("su_acroswitch-v0", **env_config)
     
+    def dm_creator(env_config):
+        return gym.make("dm_acrobot-v0", **env_config)
+
+
+    
+
     #  register_env("five_link-v3", five_link_creator)
     register_env("Walker2DBulletEnv-v0", bullet_walker_creator)
     register_env("HumanoidBulletEnv-v0", bullet_humanoid_creator)
@@ -89,8 +116,10 @@ try:
     register_env("linear_z-v0", linear_creator)
     register_env("gen_nonlin-v0", generic_creator)
     register_env("su_acro_drake-v0", drake_creator)
+    register_env("su_acrobot-v0", acro_creator)
+    register_env("su_acroswitch-v0", acroswitch_creator)
+    register_env("dm_acrobot-v0", dm_creator)
 
 except:
     import warnings
-
-    warnings.warn("Warning, registering environments for rllib failed!")
+    warnings.warn("Warning, rllib environments not registered")

@@ -4,7 +4,7 @@ from seagul.nn import MLP
 import torch
 from seagul.rl.models import PPOModel
 from multiprocessing import Process, Manager
-
+import numpy as np
 #torch.set_default_dtype(torch.double)
 
 
@@ -21,8 +21,8 @@ t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 
 input_size = 3
 output_size = 1
-layer_size = 64
-num_layers = 2
+layer_size = 16
+num_layers = 1
 activation = nn.ReLU
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
@@ -66,8 +66,8 @@ if __name__ == "__main__":
     manager = Manager()
     ret_dict = manager.dict()
 
-    for seed in [0, 1, 2, 3]:
-        arg_dict["seed"] = seed
+    for seed in np.random.randint(0,2**32,8):
+        arg_dict["seed"] = int(seed)
         p = Process(target=run_and_test, args=(arg_dict,ret_dict))
         p.start()
         proc_list.append(p)
