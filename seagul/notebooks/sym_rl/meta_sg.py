@@ -49,10 +49,9 @@ for seed in [4, 5, 6, 7]:
         "env_timesteps": 200,
         "epoch_batch_size": 1024,
         "gamma": 0.95,
-        "p_epochs": 10,
-        "v_epochs": 10,
-        "policy_batch_size": 2048,
-        "value_batch_size": 2048,
+        # "v_epochs": 10,
+        # "policy_batch_size": 2048,
+        # "value_batch_size": 2048,
     }
 
     run_name = "sym_mean" + str(seed)
@@ -78,8 +77,7 @@ for p in proc_list:
 #     #     value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
 #     #     discrete=False,
 #     #     hold_count = 200
-#     # )
-
+3
 #     model = PPOModel(
 #         policy=policy,
 #         value_fn=MLP(input_size, output_size, num_layers, layer_size, activation),

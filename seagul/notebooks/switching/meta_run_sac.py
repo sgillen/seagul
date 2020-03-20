@@ -1,22 +1,19 @@
 from multiprocessing import Process
 import seagul.envs
 
-# import time
-
 import gym
-
-env_name = "su_acro_drake-v0"
-
+env_name = "su_acrobot-v0"
 env = gym.make(env_name)
 
 import torch
 import torch.nn as nn
+import numpy as np
+from numpy import pi
 
-
-# init policy, valuefn
+# init policy, value fn
 input_size = 4
 output_size = 1
-layer_size = 24
+layer_size = 32
 num_layers = 2
 activation = nn.ReLU
 
@@ -24,59 +21,102 @@ from seagul.rl.run_utils import run_sg, run_and_save_bs
 from seagul.rl.algos import sac
 from seagul.rl.models import SACModel, SACModelActHold
 from seagul.nn import MLP, CategoricalMLP
-
-torch.set_num_threads(1)
+from seagul.integration import euler, rk4
 
 proc_list = []
+trial_num = input("What trial is this?\n")
 
-#torch.set_default_dtype(torch.double)
-seed = 0
+m1 = 1; m2 = 1
+l1 = 1; l2 = 1
+lc1 = .5; lc2 = .5
+I1 = .2; I2 = 1.0
+g = 9.8
+max_torque = 25
+max_t = 10
 
-policy = MLP(input_size, output_size*2, num_layers, layer_size, activation)
-value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
-q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
+for seed in np.random.randint(0, 2 ** 32, 8):
 
-# model = SACModelActHold(
-#     policy=policy,
-#     value_fn = value_fn,
-#     q1_fn = q1_fn,
-#     q2_fn = q2_fn,
-#     act_limit = 5,
-#     hold_count = 200,
-# )
+    policy = MLP(input_size, output_size*2, num_layers, layer_size, activation)
+    value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
+    q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
+    q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
 
-model = SACModel(
-    policy=policy,
-    value_fn = value_fn,
-    q1_fn = q1_fn,
-    q2_fn = q2_fn,
-    act_limit = 5,
-)
-
-
-arg_dict = {
-    "env_name": env_name,
-    "model": model,
-    "seed": seed,  # int((time.time() % 1)*1e8),
-    "total_steps" : 5e5,
-    "exploration_steps" : 10000,
-    "min_steps_per_update" : 200,
-    "reward_stop" : 1500,
-    "gamma": 1,
-}
-
-
-run_sg(arg_dict, sac, None, 'back to 200 ah', "/data/data2/sac/")
-
-    # p = Process(
-    #     target=run_sg,
-    #     args=(arg_dict, ppo, None, "ppo2 drake acrobot with an act hold of 20, to see if Nans go away..", "/data2/ppo2_test/"),
+    # model = SACModelActHold(
+    #     policy=policy,
+    #     value_fn = value_fn,
+    #     q1_fn = q1_fn,
+    #     q2_fn = q2_fn,
+    #     act_limit = 25,
+    #     hold_count = 20,
     # )
-    # p.start()
-    # proc_list.append(p)
+
+    model = SACModel(
+        policy=policy,
+        value_fn = value_fn,
+        q1_fn = q1_fn,
+        q2_fn = q2_fn,
+        act_limit = max_torque,
+    )
+
+    def control(q):
+        k = np.array([[-1649.86567367, -460.15780461, -716.07110032, -278.15312267]])
+        gs = np.array([pi / 2, 0, 0, 0])
+        return -k.dot(q - gs)
+
+    def reward_fn_sin(s,a):
+        reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
+        return reward, False
+
+    
+    # def reward_fn(s, a):
+    #     reward = -.1*(np.sqrt((s[0] - pi/2)**2 + s[1]**2))
+    #     #reward = (np.sin(s[0]) + np.sin(s[0] + s[1]))
+    #     return reward, False
+
+    
+    env_config = {
+        "init_state": [-pi/2, 0, 0, 0],
+        "max_torque": max_torque,
+        "init_state_weights": [np.pi, np.pi, 0, 0],
+        "dt": .01,
+        "reward_fn" : reward_fn_sin,
+        "max_t" : max_t,
+        "m2": m2,
+        "m1": m1,
+        "l1": l1,
+        "lc1": lc1,
+        "lc2": lc2,
+        "i1": I1,
+        "i2": I2,
+        "act_hold" : 20,
+        "integrator": rk4,
+    }
+
+    alg_config = {
+        "env_name": env_name,
+        "model": model,
+        "seed": seed,  # int((time.time() % 1)*1e8),
+        "total_steps" : 2e6,
+        "alpha" : .05,
+        "exploration_steps" : 50000,
+        "min_steps_per_update" : 500,
+        "gamma": 1,
+        "min_steps_per_update" : 500,
+        "sgd_batch_size": 128,
+        "replay_batch_size" : 4096,
+        "iters_per_update": 4,
+        #"iters_per_update": float('inf'),
+        "env_config": env_config
+    }
+
+    p = Process(
+        target=run_sg,
+        args=(alg_config, sac, "sac-test", "no act hold this time", "/data_needle/" + trial_num + "/" + "seed" + str(seed)),
+    )
+    p.start()
+    proc_list.append(p)
 
 
-# for p in proc_list:
-#     print("joining")
-#     p.join()
+for p in proc_list:
+    print("joining")
+    p.join()

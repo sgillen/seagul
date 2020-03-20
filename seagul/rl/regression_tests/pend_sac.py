@@ -61,7 +61,8 @@ arg_dict = {
     "env_name" : "Pendulum-v0",
     "model" : model,
     "total_steps" : 20000,
-    "reward_stop" : -200
+    "reward_stop" : -200,
+    "use_gpu" : False,
     }
 
 if __name__ == "__main__" :
