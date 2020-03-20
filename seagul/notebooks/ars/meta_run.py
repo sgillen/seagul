@@ -5,15 +5,11 @@ import seagul.envs
 
 import gym
 
-
 env_name = "Walker2d-v2"
-
 env = gym.make(env_name)
-
 
 import torch
 import torch.nn as nn
-
 
 # init policy, valuefn
 input_size = 17
@@ -29,7 +25,6 @@ from seagul.nn import MLP, CategoricalMLP
 
 torch.set_default_dtype(torch.double)
 proc_list = []
-
 
 for seed in [0]:
 

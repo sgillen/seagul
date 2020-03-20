@@ -48,7 +48,7 @@ def smooth_bounded_curve(
     ax=None,
     window=100,
     color='k',
-    alpha=.2,
+    alpha=.2
 ):
     """
     Plots the (smoothed) average for many time series plots, as well as plotting the min/max on the same figure
@@ -82,6 +82,7 @@ def smooth_bounded_curve(
          window: How large of a window to use for the moving average smoothing
          color: what color to make the curve
          alpha: alpha to use for the fillin between min and max values
+         time_steps: list or np array labeling the x axis, must be same size as reward curves
 
     Returns:
         fig: figure object if we created one, else None
@@ -117,7 +118,7 @@ def smooth_bounded_curve(
         plt.legend(by_label.values(), by_label.keys())
 
     ax.set_xlabel('Time Steps')
-    ax.set_ylabel('Average data')
+    ax.set_ylabel('Average return')
     ax.set_title('Reward curve')
 
     return fig, ax

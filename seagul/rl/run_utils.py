@@ -108,11 +108,19 @@ def run_and_save_bs(arg_dict, run_name=None, description=None, base_path="/data/
         )
 
 
-def run_sg(arg_dict, algo, run_name=None, run_desc=None, base_path="/data/"):
+def run_sg(arg_dict, algo, run_name=None, run_desc=None, base_path="/data/", append_time=True):
     """
     Launches seaguls ppo2 and save the results without clutter
 
     If you don't pass run_name or description this function will call input, blocking execution
+
+    Arguments:
+        arg_dict: dictionary with arguments for algo
+        algo: the algorithm from seagul.algos to use
+        run_name: string for the name of the run, if None we will ask you for one
+        run_desc: short description to save with the run, if None we will ask you for one, can pass an empty string
+        base_path: directory where you want the runs stored
+        append_time: bool, if true will append the current time to the run name
     """
 
     if run_name is None:
@@ -124,8 +132,15 @@ def run_sg(arg_dict, algo, run_name=None, run_desc=None, base_path="/data/"):
     git_sha = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
 
     save_base_path = os.getcwd() + base_path
-    save_dir = save_base_path + run_name + "/"
-    
+    save_dir = save_base_path + run_name
+
+    if append_time:
+        now = datetime.datetime.now()
+        date_str = str(now.month) + "-" + str(now.day) + "_" + str(now.hour) + "-" + str(now.minute)
+        save_dir = save_dir + "--" + date_str
+
+    save_dir = save_dir + "/"
+
     start_time = time.time()
     t_model, rewards, var_dict = algo(**arg_dict)
     runtime = time.time() - start_time

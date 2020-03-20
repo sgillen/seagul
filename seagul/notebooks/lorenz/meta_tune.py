@@ -2,6 +2,7 @@ import ray
 from ray import tune
 import ray.rllib.agents.ppo as ppo
 import seagul.envs
+from seagul.integration import euler,rk4
 
 config = ppo.DEFAULT_CONFIG.copy()
 config["num_workers"] = 1
@@ -23,7 +24,7 @@ config["vf_clip_param"] = 10
 env_name = "linear_z-v0"
 config["env"] = env_name
 config["env_config"]["xyz_max"] = float("inf")
-config["model"]["fcnet_hiddens"] = [32, 32]
+config["model"]["fcnet_hiddens"] = [16, 16]
 config["no_done_at_end"] = True
 
 def reward_fn(s):
@@ -43,13 +44,12 @@ def reward_fn(s):
 
     return reward, s
 
-
 config["env_config"]["reward_fn"] = reward_fn
-config["env_config"]["num_steps"] = 100
-config["env_config"]["act_hold"] = 10
+config["env_config"]["num_steps"] = 300
 config["env_config"]["xyz_max"] = float('inf')
-
-
+config["env_config"]["integrator"] = euler
+config["env_config"]["act_hold"] = 1
+config["env_config"]["dt"] = .01
 
 # import pprint
 # pprint.pprint(config)
@@ -57,8 +57,8 @@ config["env_config"]["xyz_max"] = float('inf')
 analysis = tune.run(
     ppo.PPOTrainer,
     config=config,
-    stop={"timesteps_total": 2e6},
+    stop={"timesteps_total": 8e6},
     num_samples=4,
-    local_dir="./data/tune/custom_reward",
+    local_dir="./data/tune/euler_250_long",
     checkpoint_at_end=True,
 )

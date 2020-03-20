@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils import data
-import tqdm
+import tqdm.auto as tqdm
 import gym
 import pickle
 
@@ -20,7 +20,7 @@ def ppo(
     pol_batch_size=1024,
     val_batch_size=1024,
     pol_lr=1e-4,
-    val_lr=1e-5,
+    val_lr=1e-4,
     pol_epochs=10,
     val_epochs=10,
     target_kl = .01,
@@ -258,14 +258,12 @@ def make_variance_schedule(var_schedule, model, num_steps):
     var_lookup = lambda epoch: np.interp(epoch, x_vals, var_schedule)
     return var_lookup
 
-
 def do_rollout(env, model):
     act_list = []
     obs_list = []
     rew_list = []
-    num_steps = 0
 
-    dtype = torch.get_default_dtype()
+    dtype = torch.float32
     obs = env.reset()
     done = False
 
@@ -285,4 +283,4 @@ def do_rollout(env, model):
     ep_rew = torch.tensor(rew_list)
     ep_rew = ep_rew.reshape(-1, 1)
 
-    return (ep_obs, ep_act, ep_rew, ep_length)
+    return ep_obs, ep_act, ep_rew, ep_length

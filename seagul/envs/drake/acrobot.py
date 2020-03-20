@@ -9,7 +9,7 @@ import numpy as np
 from numpy import pi
 import math
 
-from underactuated import FindResource
+from seagul.resources import getResourcePath
 
 from pydrake.all import (
     DiagramBuilder,
@@ -57,7 +57,11 @@ class DrakeAcroEnv(core.Env):
                  act_hold = 1,
                  fixed_step = True,
                  int_accuracy = .01,
-                 reward_fn = lambda ns: -(np.cos(ns[0]) + np.cos(ns[0] + ns[1]))
+                 reward_fn = lambda ns, a: -(np.cos(ns[0]) + np.cos(ns[0] + ns[1])),
+                 th1_range = [0, 2*pi],
+                 th2_range = [-pi, pi],
+                 max_th1dot = float('inf'),
+                 max_th2dot = float('inf')
     ):
         
         """ 
@@ -81,9 +85,17 @@ class DrakeAcroEnv(core.Env):
         self.int_accuracy = .01
         self.reward_fn = reward_fn
 
-        
-        high = np.array([2 * pi, pi, float('inf'), float('inf')])
-        low = np.array([0, -pi, -float('inf'), -float('inf')])
+        self.max_th1dot = max_th1dot
+        self.max_th2dot = max_th2dot
+
+        # These are only used for rendering
+        self.LINK_LENGTH_1 = 1.0
+        self.LINK_LENGTH_2 = 1.0
+        self.viewer = None
+
+        low = np.array([th1_range[0], th2_range[0], -max_th1dot, -max_th2dot])
+        high = np.array([th1_range[1], th2_range[1], max_th1dot, max_th2dot])
+
 
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([-max_torque]), high=np.array([max_torque]), dtype=np.float32)
@@ -91,15 +103,15 @@ class DrakeAcroEnv(core.Env):
 
         builder = DiagramBuilder()
 
-        tree = RigidBodyTree(FindResource("acrobot/acrobot.urdf"), FloatingBaseType.kFixed)
+        tree = RigidBodyTree(getResourcePath() + "acrobot.urdf", FloatingBaseType.kFixed)
         acrobot = builder.AddSystem(RigidBodyPlant(tree))
 
         saturation = builder.AddSystem(Saturation(min_value=[-max_torque], max_value=[max_torque]))
         builder.Connect(saturation.get_output_port(0), acrobot.get_input_port(0))
 
         wrapangles = WrapToSystem(4)
-        wrapangles.set_interval(0, 0, 2.0 * math.pi)
-        wrapangles.set_interval(1, -math.pi, math.pi)
+        wrapangles.set_interval(0, th1_range[0], th1_range[1])
+        wrapangles.set_interval(1, th2_range[0], th2_range[1])
         wrapto = builder.AddSystem(wrapangles)
         builder.Connect(acrobot.get_output_port(0), wrapto.get_input_port(0))
 
@@ -137,8 +149,6 @@ class DrakeAcroEnv(core.Env):
         return [seed]
 
     def reset(self, init_vec = None):
-
-        
         self.simulator = Simulator(self.diagram)
         self.simulator.set_publish_every_time_step(False)
         self.simulator.get_integrator().set_fixed_step_mode(self.fixed_step)
@@ -146,10 +156,10 @@ class DrakeAcroEnv(core.Env):
         self.simulator.get_integrator().set_target_accuracy(self.int_accuracy)
         
         self.context = self.simulator.get_mutable_context()
-        
-        
+
         init_state = self.InitialState().CopyToVector()
-        init_state += np.random.random(4)*self.init_state_weights
+
+        init_state += np.random.random(4)*(self.init_state_weights*2) - self.init_state_weights
 
         if init_vec is not None:
             init_state[0] = init_vec[0]
@@ -178,11 +188,51 @@ class DrakeAcroEnv(core.Env):
         done = False
         if self.t > self.max_t:
             done = True
-            
+
+        if abs(ns[2]) > self.max_th1dot or abs(ns[2] > self.max_th2dot):
+            reward -= 5
+            done = True
+
         return (ns, reward, done, {})
 
-    def render(self):
-        pass
+    def render(self, mode="human"):
+        from gym.envs.classic_control import rendering
+
+        s = self.state_logger.data()[:, -1]
+
+        if self.viewer is None:
+            self.viewer = rendering.Viewer(500, 500)
+            bound = self.LINK_LENGTH_1 + self.LINK_LENGTH_2 + 0.2  # 2.2 for default
+            self.viewer.set_bounds(-bound, bound, -bound, bound)
+
+        if s is None:
+            return None
+
+        p1 = [-self.LINK_LENGTH_1 * np.cos(s[0]), self.LINK_LENGTH_1 * np.sin(s[0])]
+
+        p2 = [p1[0] - self.LINK_LENGTH_2 * np.cos(s[0] + s[1]), p1[1] + self.LINK_LENGTH_2 * np.sin(s[0] + s[1])]
+
+        xys = np.array([[0, 0], p1, p2])[:, ::-1]
+        thetas = [s[0] - np.pi / 2, s[0] + s[1] - np.pi / 2]
+        link_lengths = [self.LINK_LENGTH_1, self.LINK_LENGTH_2]
+
+        self.viewer.draw_line((-2.2, 1), (2.2, 1))
+        for ((x, y), th, llen) in zip(xys, thetas, link_lengths):
+            l, r, t, b = 0, llen, 0.1, -0.1
+            jtransform = rendering.Transform(rotation=th, translation=(x, y))
+            link = self.viewer.draw_polygon([(l, b), (l, t), (r, t), (r, b)])
+            link.add_attr(jtransform)
+            link.set_color(0, 0.8, 0.8)
+            circ = self.viewer.draw_circle(0.1)
+            circ.set_color(0.8, 0.8, 0)
+            circ.add_attr(jtransform)
+
+        return self.viewer.render(return_rgb_array=mode == "rgb_array")
+
+    def close(self):
+        if self.viewer:
+            self.viewer.close()
+            self.viewer = None
             
      
     def InitialState(self):

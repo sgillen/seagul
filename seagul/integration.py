@@ -5,7 +5,7 @@ Utility functions for seagul, mostly fixed step integrators
 import numpy as np
 
 
-def wrap(x, m, M):
+def wrap(x, low, high):
     """
     :param x: a scalar
     :param m: minimum possible value in range
@@ -17,14 +17,7 @@ def wrap(x, m, M):
 
     #    return x
     # x = (x + np.pi) % (2 * np.pi) - np.pi
-
-    diff = M - m
-    while x > M:
-        x = x - diff
-    while x < m:
-        x = x + diff
-    return x
-
+    return (x - low) % (high - low) + low
 
 def rk4(derivs, a, t0, dt, s0):
     """
