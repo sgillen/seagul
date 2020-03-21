@@ -142,9 +142,8 @@ class MLP(nn.Module):
             self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers-1)])
             self.output_layer = nn.Linear(layer_size, output_size)
 
-        self.state_means = Parameter(torch.zeros(input_size), requires_grad=False)
-        self.state_var = Parameter(torch.ones(input_size), requires_grad=False)
-
+        self.state_means = torch.zeros(input_size, requires_grad=False)
+        self.state_var = torch.ones(input_size, requires_grad=False)
 
     def forward(self, data):
 
@@ -157,6 +156,12 @@ class MLP(nn.Module):
             data = self.activation(layer(data))
 
         return self.output_activation(self.output_layer(data))
+    
+    def to(self, place):
+        super(MLP, self).to(place)
+        self.state_means = self.state_means.to(place)
+        self.state_var = self.state_var.to(place)
+
 
 
 class CategoricalMLP(nn.Module):
