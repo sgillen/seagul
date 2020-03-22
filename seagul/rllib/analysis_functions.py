@@ -31,8 +31,8 @@ import re
 from seagul.plot import smooth_bounded_curve
 import pybullet as p
 
-from rbf_net import RBFModel
-from mlp_net import MLP, Linear
+from custom_models.rbf_net import RBFModel
+from custom_models.mlp_net import MLP, Linear
 
 def get_params(res_dir):
     """
@@ -175,8 +175,8 @@ def plot_outputs(entries):
         entries_of_model = entries.loc[entries['model'] == model]
         for i in range(len(entries_of_model['ts'])):
             cutoff = entries_of_model['ts'].iloc[i].shape[0] if 'cutoff' not in locals() or entries_of_model['ts'].iloc[i].shape[0] < cutoff else cutoff
-            ts_min = entries_of_model['ts'].iloc[i].iloc[0] if 'ts_min' not in locals() or entries_of_model['ts'].iloc[i].iloc[0] > ts_min else ts_min
-            ts_max = entries_of_model['ts'].iloc[i].iloc[-1] if 'ts_max' not in locals() or entries_of_model['ts'].iloc[i].iloc[-1] < ts_max else ts_max
+            ts_min = int(entries_of_model['ts'].iloc[i].iloc[0]) if 'ts_min' not in locals() or int(entries_of_model['ts'].iloc[i].iloc[0]) > ts_min else ts_min
+            ts_max = int(entries_of_model['ts'].iloc[i].iloc[-1]) if 'ts_max' not in locals() or int(entries_of_model['ts'].iloc[i].iloc[-1]) < ts_max else ts_max
         for i in range(len(entries_of_model['ts'])):
             rew_f = interp1d(entries_of_model['ts'].iloc[i].to_numpy(dtype=float), entries_of_model['rewards'].iloc[i].to_numpy(dtype=float))
             ts = np.linspace(ts_min, ts_max, num=1000)
