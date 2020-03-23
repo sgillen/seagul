@@ -34,6 +34,8 @@ import pybullet as p
 from custom_models.rbf_net import RBFModel
 from custom_models.mlp_net import MLP, Linear
 
+# HELPER functions for analyzing rllib results (called in analyze.py)
+
 def get_params(res_dir):
     """
     Returns the environment and algorithm of the first config file it finds.

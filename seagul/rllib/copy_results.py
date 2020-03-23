@@ -4,7 +4,7 @@ import time
 import re
 
 # copies the params and result files (csv/json etc) AND the last checkpoint folder
-# useful for copying results from the cluster to a local results directory
+# useful for copying results from the cluster to a local results directory (or for just saving the latest checkpoints and deletinig the other files)
 
 copy_from_dir = "./rllib_with_rbf/data/Pendulum-v0/SAC/"
 copy_to_dir = "./rllib_with_rbf/Results/Pendulum-v0/SAC/"

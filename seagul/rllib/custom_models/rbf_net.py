@@ -1,3 +1,6 @@
+
+# Radial Basis Function Network for Tensorflow with RLLIB 
+
 import ray
 from ray import tune
 import ray.rllib.agents.ppo as ppo
@@ -13,8 +16,6 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.models.tf.visionnet_v2 import VisionNetwork as MyVisionNetwork
 import datetime
 from gym import envs
-
-
 
 
 class RBFLayer(Layer):
