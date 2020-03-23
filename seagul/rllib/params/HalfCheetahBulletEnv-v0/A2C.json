@@ -1,0 +1,5 @@
+{
+    "sample_batch_size": 256,
+    "num_workers": 0,
+    "num_gpus": 0
+}
