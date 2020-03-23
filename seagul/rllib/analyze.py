@@ -19,7 +19,7 @@ if plot:
     plt.show()
 else:
     name = env + "_" + alg
-    plt.savefig("./Results/" + name + ".png")
+    plt.savefig("./data/" + name + ".png")
 
 # Rendering a specific checkpoint: (comment out to compare multiple trials)
 analysis_functions.render(checkpoint, res_dir[0])
