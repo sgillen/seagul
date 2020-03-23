@@ -1,3 +1,6 @@
+
+# MLP with one or two layers and Linear Network for Tensorflow with rllib 
+
 import ray
 from ray import tune
 import ray.rllib.agents.ppo as ppo

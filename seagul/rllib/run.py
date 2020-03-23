@@ -140,11 +140,6 @@ analysis = tune.run(
     config=config,
     num_samples=3
 )
-# except Exception as e:
-#             Path(output_dir + algorithm).mkdir(parents=True, exist_ok=True)
-#             file = open(output_dir + algorithm  + "/" + "exception.txt", "w")
-#             file.write(str(e))
-#             file.close()
-
+	    # RUN ON CLUSTER:
             # sbatch ./seagul/seagul/notebooks/pod/run_with_singularity.bash seagul/seagul/rllib/rllib_with_rbf/run.py -p short
             # ./seagul/seagul/notebooks/pod/run_with_singularity.bash seagul/seagul/rllib/rllib_with_rbf/analyze.py
