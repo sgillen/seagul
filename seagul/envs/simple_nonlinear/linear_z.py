@@ -54,6 +54,7 @@ class LinearEnv(gym.Env):
         self.action_max = np.array([u_max, u_max])
         self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float32)
 
+        self.reward_fn = reward_fn
         self.reward_state = 10
         self.seed()
         self.state = None

@@ -23,10 +23,11 @@ def ppo(
     val_lr=1e-4,
     pol_epochs=10,
     val_epochs=10,
-    target_kl = .01,
+    target_kl=.01,
     use_gpu=False,
     reward_stop=None,
-    env_config = {}
+    normalize_return=True,
+    env_config={}
 ):
 
     """
@@ -51,6 +52,7 @@ def ppo(
         target_kl: max KL before breaking
         use_gpu:  want to use the GPU? set to true
         reward_stop: reward value to stop if we achieve
+        normalize_return: should we normalize the return?
         env_config: dictionary containing kwargs to pass to your the environment
 
     Returns:
@@ -156,10 +158,10 @@ def ppo(
             )  # [:-1] because we appended the value function to the end as an extra reward
             batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
 
-            rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
-            rew_var = update_var(batch_discrew, rew_var, cur_total_steps)
-            batch_discrew = (batch_discrew - rew_mean) / (rew_var + 1e-6)
-
+            if normalize_return:
+                rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
+                rew_var = update_var(batch_discrew, rew_var, cur_total_steps)
+                batch_discrew = (batch_discrew - rew_mean) / (rew_var + 1e-6)
 
             # calculate this episodes advantages
             last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
