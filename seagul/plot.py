@@ -43,11 +43,12 @@ def add_arrow(line, position=None, direction="right", size=15, color=None):
 
 def smooth_bounded_curve(
     data,
+    time_steps=np.array([]),
+    label=None,
     ax=None,
     window=100,
     color='k',
-    alpha=.2,
-    time_steps = None
+    alpha=.2
 ):
     """
     Plots the (smoothed) average for many time series plots, as well as plotting the min/max on the same figure
@@ -60,7 +61,7 @@ def smooth_bounded_curve(
         from seagul.plot import smooth_bounded_curve
 
         random_data = np.random.random((1000,10))
-        ax, fig = smooth_bounded_curve(random_data)
+        fig, ax = smooth_bounded_curve(random_data)
         ax.set_xlabel("My label") # Can modify whatever you want about the plot afterwards
         plt.show() # not needed in jupyter
 
@@ -68,13 +69,15 @@ def smooth_bounded_curve(
         from seagul.plot import smooth_bounded_curve
 
         random_data = np.random.random((1000,10))
-        axs,fig = plt.subplot(5,5,figsize=(15,15)
-        ax, fig = smooth_bounded_curve(random_data,axs[0,0]) # will only plot on the passed subplot
+        fig, ax = plt.subplot(5,5,figsize=(15,15)
+        fig, ax = smooth_bounded_curve(random_data,axs[0,0]) # will only plot on the passed subplot
         ax.set_xlabel("My label") # Can modify whatever you want about the plot afterwards
         plt.show() # not needed in jupyter
 
     Arguments:
          data: np.array of shape (t,n) where t is the number of timesteps in your data, and n is the number of curves you have
+         time_steps: np.array of shape (t,1) containing the timesteps corresponding to the data, if None every datapoint is assigned to one timestep
+         label: string containing the name of the model etc. viewed in the legend, if None no legend is displayed
          ax: matplotlib.Axes object to draw the curves on, if None we will make a new object for you
          window: How large of a window to use for the moving average smoothing
          color: what color to make the curve
@@ -99,15 +102,21 @@ def smooth_bounded_curve(
     min_data = [np.min(data[i,:]) for i in range(data.shape[0])]
     max_data = [np.max(data[i,:]) for i in range(data.shape[0])]
 
-    min_smoothed = pd.Series(min_data).rolling(window, min_periods=10).mean()
-    max_smoothed = pd.Series(max_data).rolling(window, min_periods=10).mean()
-    data_smoothed = pd.Series(avg_data).rolling(window, min_periods=10).mean()
+    if len(avg_data) > 100:
+        min_data = pd.Series(min_data).rolling(100, min_periods=10).mean()
+        max_data = pd.Series(max_data).rolling(100, min_periods=10).mean()
+        avg_data = pd.Series(avg_data).rolling(100, min_periods=10).mean()
 
-    if time_steps is None:
+    if time_steps.any() == False:
         time_steps = [i for i in range(data.shape[0])]
+    ax.plot(time_steps, avg_data, color=color, label=label)
+    ax.fill_between(time_steps, min_data, max_data, color=color, alpha=.2)
 
-    ax.plot(time_steps, data_smoothed, color=color)
-    ax.fill_between(time_steps, min_smoothed, max_smoothed, color=color, alpha=.2)
+    if label != None: # add a legend without multiple labels
+        handles, labels = plt.gca().get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        plt.legend(by_label.values(), by_label.keys())
+
     ax.set_xlabel('Time Steps')
     ax.set_ylabel('Average return')
     ax.set_title('Reward curve')
