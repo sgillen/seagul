@@ -279,7 +279,7 @@ if __name__ == "__main__":
     from seagul.rl.run_utils import run_sg
     from seagul.rl.models import PPOModel
     from seagul.nn import MLP
-    from seagul.rl.algos.ppo import ppo
+    from seagul.rl.algos.ppo2 import ppo
 
     import torch
     import torch.nn as nn
