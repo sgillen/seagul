@@ -1,7 +1,6 @@
 from multiprocessing import Process
 from seagul.rl.run_utils import run_sg
-import seagul.envs
-from seagul.rl.algos.sacn_adaptive import sac_switched
+from seagul.rl.sac.sacn_adaptive import sac_switched
 import torch
 import torch.nn as nn
 from seagul.nn import MLP

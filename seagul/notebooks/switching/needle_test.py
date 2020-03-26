@@ -1,7 +1,5 @@
-from multiprocessing import Process
 from seagul.rl.run_utils import run_sg
-import seagul.envs
-from seagul.rl.algos.sac_needle import sac
+from seagul.old.sac.sac_needle import sac
 import torch
 import torch.nn as nn
 from seagul.nn import MLP

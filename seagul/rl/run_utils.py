@@ -19,9 +19,6 @@ except:
     warnings.warn("baselines install not found, only seagul loads will work", ImportWarning)
 
 import gym
-import seagul.envs
-
-import torch
 
 import dill
 import subprocess
@@ -279,7 +276,7 @@ if __name__ == "__main__":
     from seagul.rl.run_utils import run_sg
     from seagul.rl.models import PPOModel
     from seagul.nn import MLP
-    from seagul.rl.algos.ppo2 import ppo
+    from seagul.rl.ppo.ppo2 import ppo
 
     import torch
     import torch.nn as nn
