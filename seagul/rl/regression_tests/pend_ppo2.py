@@ -1,5 +1,5 @@
 import torch.nn as nn
-from seagul.rl.algos.ppo2 import ppo
+from seagul.rl.ppo.ppo2 import ppo
 from seagul.nn import MLP
 import torch
 from seagul.rl.models import PPOModel

@@ -1,13 +1,10 @@
-import torch
 import torch.nn as nn
-from seagul.rl.algos.sac import sac
-from seagul.nn import MLP, RBF
+from seagul.rl.sac.sac import sac
+from seagul.nn import RBF
 import torch
 from seagul.rl.models import SACModel
 import time
 from multiprocessing import Process, Manager
-import sys
-
 
 """
 Basic smoke test for SAC. This file contains an arg_dict that contains hyper parameters known to work with 
