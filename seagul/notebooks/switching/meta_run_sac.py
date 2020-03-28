@@ -18,8 +18,7 @@ num_layers = 2
 activation = nn.ReLU
 
 from seagul.rl.run_utils import run_sg, run_and_save_bs
-from seagul.rl.algos import sac
-from seagul.rl.models import SACModel, SACModelActHold
+from seagul.rl.sac import sac, SACModel, SACModelActHold
 from seagul.nn import MLP, CategoricalMLP
 from seagul.integration import euler, rk4
 

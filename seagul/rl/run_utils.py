@@ -19,13 +19,11 @@ except:
     warnings.warn("baselines install not found, only seagul loads will work", ImportWarning)
 
 import gym
-
 import dill
 import subprocess
-
-
 import time, datetime, json
 import os
+import torch
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -274,7 +272,7 @@ def load_workspace(save_path):
 
 if __name__ == "__main__":
     from seagul.rl.run_utils import run_sg
-    from seagul.rl.models import PPOModel
+    from seagul.rl.ppo import PPOModel
     from seagul.nn import MLP
     from seagul.rl.ppo.ppo2 import ppo
 

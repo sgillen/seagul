@@ -7,7 +7,7 @@ import dill
 
 from seagul.rl.common import ReplayBuffer, update_mean, update_var
 from seagul.nn import fit_model
-from seagul.rl.models import RandModel
+from seagul.rl.sac.models import RandModel
 
 
 def sac_switched(

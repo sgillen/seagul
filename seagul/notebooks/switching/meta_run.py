@@ -3,10 +3,9 @@ import torch.nn as nn
 import numpy as np
 from numpy import pi
 from multiprocessing import Process
-from seagul.rl.run_utils import run_sg, run_and_save_bs
-from seagul.rl.algos import ppo, ppo_switch
-from seagul.rl.models import PPOModel, SwitchedPPOModel, PPOModelActHold, SwitchedPPOModelActHold
-from seagul.nn import MLP, CategoricalMLP
+from seagul.rl.run_utils import run_sg
+from seagul.rl.ppo import ppo, PPOModel
+from seagul.nn import MLP
 import torch
 
 # init policy, valuefn
