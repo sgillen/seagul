@@ -6,7 +6,7 @@ import gym
 import dill
 
 from seagul.rl.common import ReplayBuffer, update_mean, update_var
-from seagul.rl.models import RandModel
+from seagul.rl.sac.models import RandModel
 
 
 def sac(
