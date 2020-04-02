@@ -5,7 +5,7 @@ import tqdm.auto as tqdm
 import gym
 import pickle
 
-from seagul.rl.common import discount_cumsum, update_mean, update_var
+from seagul.rl.common import update_mean, update_var
 
 
 def ppo_switch(
@@ -355,3 +355,14 @@ def do_rollout(env, model):
     ep_path = torch.tensor(path_list).reshape(-1, 1)
 
     return ep_obs, ep_act, ep_rew, ep_length, ep_path
+
+
+# can make this faster I think?
+def discount_cumsum(rewards, discount):
+    future_cumulative_reward = 0
+    cumulative_rewards = torch.empty_like(torch.as_tensor(rewards))
+    for i in range(len(rewards) - 1, -1, -1):
+        cumulative_rewards[i] = rewards[i] + discount * future_cumulative_reward
+        future_cumulative_reward = cumulative_rewards[i]
+    return cumulative_rewards
+
