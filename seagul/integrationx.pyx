@@ -60,6 +60,21 @@ def rk4(derivs, a, t0, dt, s0):
 
 def euler(derivs, a, t0, dt, s0):
     """
-    Single step of an euler integration, exactly the same parameters and usage as rk4 above
+    Single step of an euler integtation, exactly the same parameters and usage as rk4 above
     """
     return s0 + dt * derivs(t0 + dt, s0, a)
+
+
+cdef euler32(float (*derivs)(float,float,float), float a, float t0, float dt, float s0):
+    """
+    Single step of an euler integration, exactly the same parameters and usage as rk4 above
+    """
+    cdef float ds = derivs(t0 + dt, s0, a)
+    return s0 + dt * ds
+
+
+# def euler64(void (*derivs)(double,double,double), double a, double t0, double dt, double s0):
+#     """
+#     Single step of an euler integration, exactly the same parameters and usage as rk4 above
+#     """
+#     return s0 + dt * (double)derivs(t0 + dt, s0, a)
