@@ -181,25 +181,18 @@ def ppo(
 
         # policy update
         # ========================================================================
-        training_data = data.TensorDataset(batch_obs, batch_act, batch_adv)
-        training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True, num_workers=0, pin_memory=False)
+        num_mbatch = int(batch_obs.shape[0]/pol_batch_size)
 
         # Update the policy using the PPO loss
         for pol_epoch in range(pol_epochs):
-            for local_obs, local_act, local_adv in training_generator:
-                # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_obs, local_act, local_adv = (
-                    local_obs.to(device),
-                    local_act.to(device),
-                    local_adv.to(device),
-                )
+            for i in range(num_mbatch):
+                cur_sample = i*pol_batch_size
 
-                # Compute the loss
-                logp = model.get_logp(local_obs, local_act).reshape(-1, act_size)
-                old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, act_size)
+                logp = model.get_logp(batch_obs[cur_sample:cur_sample + pol_batch_size], batch_act[cur_sample:cur_sample + pol_batch_size]).reshape(-1, act_size)
+                old_logp = old_model.get_logp(batch_obs[cur_sample:cur_sample + pol_batch_size], batch_act[cur_sample:cur_sample + pol_batch_size]).reshape(-1, act_size)
                 r = torch.exp(logp - old_logp)
                 clip_r = torch.clamp(r, 1-eps, 1+eps)
-                pol_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
+                pol_loss = -torch.min(r*batch_adv[cur_sample:cur_sample + pol_batch_size], clip_r*batch_adv[cur_sample:cur_sample + pol_batch_size]).mean()
 
                 approx_kl = (logp - old_logp).mean()
                 if approx_kl > target_kl:
@@ -211,18 +204,16 @@ def ppo(
 
         # value_fn update
         # ========================================================================
-        training_data = data.TensorDataset(batch_obs, batch_discrew)
-        training_generator = data.DataLoader(training_data, batch_size=val_batch_size, shuffle=True, num_workers=0, pin_memory=False)
+        num_mbatch = int(batch_obs.shape[0] / val_batch_size)
 
         # Update value function with the standard L2 Loss
         for val_epoch in range(val_epochs):
-            for local_obs, local_val in training_generator:
-                # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_obs, local_val = (local_obs.to(device), local_val.to(device))
+            for i in range(num_mbatch):
+                cur_sample = i*pol_batch_size
 
                 # predict and calculate loss for the batch
-                val_preds = model.value_fn(local_obs)
-                val_loss = ((val_preds - local_val)**2).mean()
+                val_preds = model.value_fn(batch_obs[cur_sample:cur_sample + pol_batch_size])
+                val_loss = ((val_preds - batch_discrew[cur_sample:cur_sample + pol_batch_size])**2).mean()
 
                 # do the normal pytorch update
                 val_opt.zero_grad()

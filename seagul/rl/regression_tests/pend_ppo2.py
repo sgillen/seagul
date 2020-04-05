@@ -2,7 +2,7 @@ import torch.nn as nn
 from seagul.rl.ppo.ppo2 import ppo
 from seagul.nn import MLP
 import torch
-from seagul.rl.models import PPOModel
+from seagul.rl.ppo.models import PPOModel
 from multiprocessing import Process, Manager
 import numpy as np
 #torch.set_default_dtype(torch.double)
@@ -37,12 +37,14 @@ def run_and_test(arg_dict, retval):
     seed = arg_dict["seed"]
     if var_dict["early_stop"]:
         print("seed", seed, "achieved -200 reward in ", len(rewards), "steps")
-        retval[seed] = True
+        #retval[seed] = True
 
     else:
         print("Error: seed:", seed, "failed")
         print("Rewards were", rewards[-1])
-        retval[seed] = False
+        #retval[seed] = False
+
+    return
 
 # Define our hyper parameters
 arg_dict = {
