@@ -161,6 +161,7 @@ class MLP(nn.Module):
         super(MLP, self).to(place)
         self.state_means = self.state_means.to(place)
         self.state_var = self.state_var.to(place)
+        return self
 
 
 
