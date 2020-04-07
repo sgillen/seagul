@@ -5,6 +5,7 @@ import torch
 from seagul.rl.sac import SACModel
 import time
 from multiprocessing import Process, Manager
+import numpy as np
 
 """
 Basic smoke test for SAC. This file contains an arg_dict that contains hyper parameters known to work with 
@@ -13,11 +14,12 @@ suceeds across 4 random seeds
 
 Example:
 
-from seagul.rl.regression_tests.pend_sac import arg_dict
+from seagul.rl.tests.pend_sac import arg_dict
 from seagul.rl.algos import sac 
 t_model, rewards, var_dict = sac(**arg_dict)  # Should get to -200 reward
 
 """
+
 
 def run_and_test(arg_dict):
     torch.set_num_threads(1)
@@ -58,20 +60,18 @@ if __name__ == "__main__" :
     arg_dict = {
         "env_name": "Pendulum-v0",
         "model": model,
-        "total_steps": 20000,
+        "total_steps": 200000,
         "reward_stop": -200,
         "use_gpu": False,
     }
 
-    #orig = sys.stdout
-    #sys.stdout = open("/dev/null")
+    # arg_dict["seed"] = 0
+    # run_and_test(arg_dict)
 
     proc_list = []
 
-    run_and_test(arg_dict)
-
-    for seed in [0,1,2,3]:
-        arg_dict["seed"] = seed
+    for seed in np.random.randint(0,2**31,8):
+        arg_dict["seed"] = int(seed)
         p = Process(target=run_and_test, args=[arg_dict])
         p.start()
         proc_list.append(p)
@@ -81,4 +81,4 @@ if __name__ == "__main__" :
 
 
     #sys.stdout = orig
-print("--- %s seconds ---" % (time.time() - start_time))
+    print("--- %s seconds ---" % (time.time() - start_time))

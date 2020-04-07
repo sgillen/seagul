@@ -47,15 +47,14 @@ class SACModel:
         std = torch.exp(logstd)
 
         # we can speed this up by reusing the same buffer but this is more readable
-        samples = means + std * noise
+        samples = means + std*noise
         squashed_samples = torch.tanh(samples)
         acts = squashed_samples * self.act_limit
 
         # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
         m = torch.distributions.normal.Normal(means, std)
         logp = m.log_prob(samples)
-        logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6))
-
+        logp -= torch.log(torch.clamp(1 - squashed_samples.reshape(-1,1) ** 2, 0, 1)).sum(dim=1).reshape(acts.shape)
         return acts, logp
 
 class SACModelActHold:
