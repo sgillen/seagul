@@ -291,7 +291,7 @@ if __name__ == "__main__":
     model = PPOModel(
         policy=MLP(input_size, output_size, num_layers, layer_size, activation),
         value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
-        action_var=4,
+        action_std=4,
     )
 
     arg_dict = {"env_name": "su_cartpole-v0", "model": model, "num_epochs": 10, "action_var_schedule": [10, 0]}

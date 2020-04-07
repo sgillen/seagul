@@ -198,10 +198,10 @@ def sac(
                 q2_loss = torch.pow(q2_preds - local_qtarg, 2).mean()
                 q_loss = q1_loss + q2_loss
 
-                q1_opt.zero_grad();
+                q1_opt.zero_grad()
                 q2_opt.zero_grad()
                 q_loss.backward()
-                q1_opt.step();
+                q1_opt.step()
                 q2_opt.step()
 
             # val_fn update
