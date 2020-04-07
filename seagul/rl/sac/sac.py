@@ -170,32 +170,22 @@ def sac(
             v_targ = q_min - alpha * sample_logp
             v_targ = v_targ.detach()
 
-
-            # For training, transfer model to GPU
-            model.policy = model.policy.to(device)
-            model.value_fn = model.value_fn.to(device)
-            model.q1_fn = model.q1_fn.to(device)
-            model.q2_fn = model.q2_fn.to(device)
-
             # q_fn update
             # ========================================================================
-            training_data = data.TensorDataset(replay_obs1, replay_acts, q_targ)
-            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=True, num_workers=0,
-                                                 pin_memory=False)
+            num_mbatch = int(replay_batch_size / sgd_batch_size)
 
-            for local_obs, local_acts, local_qtarg in training_generator:
-                # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_obs, local_acts, local_qtarg = (
-                    local_obs.to(device),
-                    local_acts.to(device),
-                    local_qtarg.to(device),
-                )
+            # training_data = data.TensorDataset(replay_obs1, replay_acts, q_targ)
+            # training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=True, num_workers=0,
+            #                                      pin_memory=False)
 
-                q_in = torch.cat((local_obs, local_acts), dim=1)
+            for i in range(num_mbatch):
+                cur_sample = i*sgd_batch_size
+
+                q_in = torch.cat((replay_obs1[cur_sample:cur_sample + sgd_batch_size], replay_acts[cur_sample:cur_sample + sgd_batch_size]), dim=1)
                 q1_preds = model.q1_fn(q_in)
                 q2_preds = model.q2_fn(q_in)
-                q1_loss = torch.pow(q1_preds - local_qtarg, 2).mean()
-                q2_loss = torch.pow(q2_preds - local_qtarg, 2).mean()
+                q1_loss = torch.pow(q1_preds - q_targ[cur_sample:cur_sample + sgd_batch_size], 2).mean()
+                q2_loss = torch.pow(q2_preds - q_targ[cur_sample:cur_sample + sgd_batch_size], 2).mean()
                 q_loss = q1_loss + q2_loss
 
                 q1_opt.zero_grad()
@@ -206,17 +196,13 @@ def sac(
 
             # val_fn update
             # ========================================================================
-            training_data = data.TensorDataset(replay_obs1, v_targ)
-            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=True, num_workers=0,
-                                                 pin_memory=False)
 
-            for local_obs, local_vtarg in training_generator:
-                # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_obs, local_vtarg = (local_obs.to(device), local_vtarg.to(device))
+            for i in range(num_mbatch):
+                cur_sample = i*sgd_batch_size
 
                 # predict and calculate loss for the batch
-                val_preds = model.value_fn(local_obs)
-                val_loss = torch.sum(torch.pow(val_preds - local_vtarg, 2)) / replay_batch_size
+                val_preds = model.value_fn(replay_obs1[cur_sample:cur_sample + sgd_batch_size])
+                val_loss = torch.sum(torch.pow(val_preds - v_targ[cur_sample:cur_sample + sgd_batch_size], 2)) / replay_batch_size
 
                 # do the normal pytorch update
                 val_opt.zero_grad()
@@ -229,14 +215,13 @@ def sac(
             training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=True, num_workers=0,
                                                  pin_memory=False)
 
-            for local_obs in training_generator:
-                # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_obs = local_obs[0].to(device)
+            for i in range(num_mbatch):
+                cur_sample = i*sgd_batch_size
 
-                noise = torch.randn(local_obs.shape[0], act_size).to(device)
-                local_acts, local_logp = model.select_action(local_obs, noise)
+                noise = torch.randn(replay_obs1[cur_sample:cur_sample + sgd_batch_size].shape[0], act_size).to(device)
+                local_acts, local_logp = model.select_action(replay_obs1[cur_sample:cur_sample + sgd_batch_size], noise)
 
-                q_in = torch.cat((local_obs, local_acts), dim=1)
+                q_in = torch.cat((replay_obs1[cur_sample:cur_sample + sgd_batch_size], local_acts), dim=1)
                 pol_loss = torch.sum(alpha * local_logp - model.q1_fn(q_in)) / replay_batch_size
 
                 # do the normal pytorch update
@@ -250,7 +235,7 @@ def sac(
             pol_loss_hist.append(pol_loss.item())
             q1_loss_hist.append(q1_loss.item())
             q2_loss_hist.append(q2_loss.item())
-            #
+
             # model.policy.state_means = update_mean(replay_obs1, model.policy.state_means, cur_total_steps)
             # model.policy.state_var  =  update_var(replay_obs1, model.policy.state_var, cur_total_steps)
             # model.value_fn.state_means = model.policy.state_means
@@ -275,6 +260,7 @@ def sac(
             target_value_fn.load_state_dict(tar_sd)
 
     return model, raw_rew_hist, locals()
+
 
 def do_rollout(env, model, num_steps):
     acts_list = []
