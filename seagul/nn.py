@@ -109,12 +109,12 @@ def fit_model(
 
 class MLP(nn.Module):
     """
-    Policy debetaned to be used with seaguls rl module.
+    Policy to be used with seaguls rl module.
     Simple MLP that has a linear layer at the output
     """
 
     def __init__(
-            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, input_bias=None):
+            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, input_bias=None, dtype=torch.float32):
         """
          input_size: how many inputs
          output_size: how many outputs
@@ -165,7 +165,7 @@ class MLP(nn.Module):
 
 
 
-
+# Nina
 def gaus(x, mu, beta):
     '''
     Implementation of gaussian function.
@@ -192,6 +192,7 @@ def gaus(x, mu, beta):
     #     out[i_x] = 1./factor * torch.exp(-torch.pow((x[i_x]-mu)/beta,2)/2)
     return torch.div(out, torch.unsqueeze(torch.sum(out,axis=1),1)) # normalization ! (out/sum(out))
 
+# Nina
 class gaussian(nn.Module):
     '''
     Implementation of gaussian activation function.
@@ -236,6 +237,7 @@ class gaussian(nn.Module):
         return gaus(x, self.mu, self.beta)
 
 
+# Nina
 class RBF(nn.Module):
     """
     Policy debetaned to be used with seaguls rl module.
@@ -369,29 +371,6 @@ class DummyNet(nn.Module):
     def forward(self, data):
         dummy = self.layer(data) * torch.zeros(self.output_size)  # so that torch sees a gradient
         return dummy + self.net_fn(data)
-
-
-class LinearNet(nn.Module):
-    """
-    This is a "network" consisting of a single linear layer
-    """
-
-    def __init__(self, input_size, output_size, bias=False):
-        """
-        :param input_size: how many inputs
-        :param output_size: how many outputs
-        """
-        super(LinearNet, self).__init__()
-        self.output_size = output_size
-        self.layer = nn.Linear(input_size, output_size, bias=bias)  #
-
-        self.state_means = torch.zeros(input_size)
-        self.state_var = torch.ones(input_size)
-
-    def forward(self, data):
-        data = (data - self.state_means) / torch.sqrt(self.state_var)
-        return self.layer(data)
-
 
 # Marco Molnar
 def make_histories(states, history_length, sampling_sparsity=1):

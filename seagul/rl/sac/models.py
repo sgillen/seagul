@@ -15,7 +15,6 @@ class RandModel:
     def select_action(self, state, noise):
         return (torch.rand(self.act_size) * 2 * self.act_limit - self.act_limit, 1 / (self.act_limit * 2))
 
-
 class SACModel:
     """
     Model for use with seagul's sac algorithm
@@ -36,15 +35,15 @@ class SACModel:
     # Step is the deterministic evaluation of the policy
     def step(self, state):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
-        action, logp = self.select_action(state, torch.zeros(1, 1))
+        action, logp = self.select_action(state, torch.zeros(1))
         value = self.value_fn(torch.as_tensor(state))
         return action, value, None, logp
 
     # Select action is used internally and is the stochastic evaluation
     def select_action(self, state, noise):
         out = self.policy(state)
-        means = out[:, : self.num_acts]
-        logstd = torch.clamp(out[:, self.num_acts :], self.LOG_STD_MIN, self.LOG_STD_MAX)
+        means = out[..., :self.num_acts]
+        logstd = torch.clamp(out[..., self.num_acts:], self.LOG_STD_MIN, self.LOG_STD_MAX)
         std = torch.exp(logstd)
 
         # we can speed this up by reusing the same buffer but this is more readable
@@ -55,7 +54,7 @@ class SACModel:
         # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
         m = torch.distributions.normal.Normal(means, std)
         logp = m.log_prob(samples)
-        logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(-1, 1)
+        logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6))
 
         return acts, logp
 
@@ -90,7 +89,7 @@ class SACModelActHold:
         if self.cur_hold_count == 0:
             out = self.policy(state)
             means = out[:, : self.num_acts]
-            logstd = torch.clamp(out[:, self.num_acts :], self.LOG_STD_MIN, self.LOG_STD_MAX)
+            logstd = torch.clamp(out[..., self.num_acts :], self.LOG_STD_MIN, self.LOG_STD_MAX)
             std = torch.exp(logstd)
 
             # we can speed this up by reusing the same buffer but this is more readable
@@ -101,7 +100,7 @@ class SACModelActHold:
             # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
             m = torch.distributions.normal.Normal(means, std)
             logp = m.log_prob(samples)
-            logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1).reshape(-1, 1)
+            logp -= torch.sum(torch.log(torch.clamp(1 - torch.pow(squashed_samples, 2), 0, 1) + 1e-6), dim=1)
 
             self.cur_action = acts
             self.cur_logp = logp
@@ -116,7 +115,6 @@ class SACModelActHold:
             self.cur_hold_count = 0
 
         return acts, logp
-
 
 class SACModelSwitch:
     """

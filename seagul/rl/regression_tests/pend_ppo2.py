@@ -18,16 +18,15 @@ from seagul.rl.algos import ppo
 t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 """
 
-
 input_size = 3
-output_size = 1
+output_size = 2
 layer_size = 16
 num_layers = 1
 activation = nn.ReLU
 
 policy = MLP(input_size, output_size, num_layers, layer_size, activation)
 value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-model = PPOModel(policy, value_fn, action_var=0.1, discrete=False)
+model = PPOModel(policy, value_fn, action_std=0.1, fixed_std=False)
 
 def run_and_test(arg_dict, retval):
 
