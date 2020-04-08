@@ -60,14 +60,14 @@ if __name__ == "__main__" :
     arg_dict = {
         "env_name": "Pendulum-v0",
         "model": model,
-        "breplay_batch_size"
+        "exploration_steps" : 5000,
         "total_steps": 200000,
         "reward_stop": -200,
         "use_gpu": False,
     }
     #
-    arg_dict["seed"] = 0
-    run_and_test(arg_dict)
+    # arg_dict["seed"] = 0
+    # run_and_test(arg_dict)
 
     proc_list = []
 

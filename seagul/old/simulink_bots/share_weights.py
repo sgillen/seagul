@@ -33,8 +33,8 @@ def do_simulink_rollout(env, model):
 
     print("here")
     
-    obs = read_array('obs' , ep_steps, obs_size)
-    act = read_array('act' , ep_steps, act_size)
+    obs = read_array('obs', ep_steps, obs_size)
+    act = read_array('act', ep_steps, act_size)
     done = np.zeros(ep_steps,1)
     rews = calc_rewards(obs, act)
 

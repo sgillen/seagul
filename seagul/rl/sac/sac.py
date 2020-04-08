@@ -218,7 +218,7 @@ def sac(
             for i in range(num_mbatch):
                 cur_sample = i*sgd_batch_size
 
-                noise = torch.randn(replay_obs1[cur_sample:cur_sample + sgd_batch_size].shape[0], act_size).to(device)
+                noise = torch.randn(replay_obs1[cur_sample:cur_sample + sgd_batch_size].shape[0], act_size)
                 local_acts, local_logp = model.select_action(replay_obs1[cur_sample:cur_sample + sgd_batch_size], noise)
 
                 q_in = torch.cat((replay_obs1[cur_sample:cur_sample + sgd_batch_size], local_acts), dim=1)
@@ -246,11 +246,6 @@ def sac(
             # model.q2_fn.state_means = model.q1_fn.state_means
             # model.q2_fn.state_var = model.q1_fn.state_var
 
-            # Transfer back to CPU, which is faster for rollouts
-            model.policy = model.policy.to('cpu')
-            model.value_fn = model.value_fn.to('cpu')
-            model.q1_fn = model.q1_fn.to('cpu')
-            model.q2_fn = model.q2_fn.to('cpu')
 
             val_sd = model.value_fn.state_dict()
             tar_sd = target_value_fn.state_dict()
