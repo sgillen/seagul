@@ -88,7 +88,7 @@ class LinearEnv(gym.Env):
     
         done = False
         self.cur_step += 1
-        if self.cur_step > self.num_steps:
+        if self.cur_step >= self.num_steps:
             done = True
 
         return aug_state , reward, done, {"full_obs": full_obs}
