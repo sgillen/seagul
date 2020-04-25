@@ -11,7 +11,7 @@ Hightlights include:
 
 - [Experiment utilities](./seagul/rl/run_utils), for saving RL experiments along with meta data, logs, and a mechanism to restore the trained agents.
 
-And lots of other little odds and ends ([check out all my abandonded projects!])(./seagul/old). 
+And lots of other little odds and ends ([check out all my abandonded projects!](./seagul/old)). 
 
 
 This is a python package, after cloning I recommend you install it (in some sort of virtual environment) with:
