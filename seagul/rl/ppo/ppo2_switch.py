@@ -5,7 +5,7 @@ import tqdm.auto as tqdm
 import gym
 import pickle
 
-from seagul.rl.common import update_mean, update_var
+from seagul.rl.common import update_mean, update_std
 
 
 def ppo_switch(
@@ -181,7 +181,7 @@ def ppo_switch(
             batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))  # [:-1] because we appended the value function to the end as an extra reward
 
             rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
-            rew_var = update_var(batch_discrew, rew_var, cur_total_steps)
+            rew_var = update_std(batch_discrew, rew_var, cur_total_steps)
             batch_discrew = (batch_discrew - rew_mean) / (rew_var + 1e-6)
 
             # calculate this episodes advantages
@@ -198,7 +198,7 @@ def ppo_switch(
 
         # make sure our advantages are zero mean and unit variance
         adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
-        adv_var = update_var(batch_adv, adv_var, cur_total_steps)
+        adv_var = update_std(batch_adv, adv_var, cur_total_steps)
         batch_adv = (batch_adv - adv_mean) / (adv_var + 1e-6)
 
         # policy update
@@ -255,11 +255,11 @@ def ppo_switch(
 
         # update observation mean and variance
         obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
-        obs_var = update_var(batch_obs, obs_var, cur_total_steps)
+        obs_var = update_std(batch_obs, obs_var, cur_total_steps)
         model.policy.state_means = obs_mean
         model.value_fn.state_means = obs_mean
-        model.policy.state_var = obs_var
-        model.value_fn.state_var = obs_var
+        model.policy.state_std = obs_var
+        model.value_fn.state_std = obs_var
         model.action_var = actvar_lookup(cur_total_steps)
         old_model = pickle.loads(pickle.dumps(model))
 

@@ -81,7 +81,7 @@ def ars(env_name, policy, num_epochs=10, step_size=1, n_delta=10, exp_noise=0.3)
         total_steps += ep_steps
 
         policy.state_means = s_mean
-        policy.state_var = s_stdv
+        policy.state_std = s_stdv
 
         torch.nn.utils.vector_to_parameters(th, policy.parameters())
 
