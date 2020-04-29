@@ -6,6 +6,7 @@ attrs==19.3.0
 backcall==0.1.0
 bleach==3.1.5
 bullet==2.1.0
+cachetools==4.1.0
 certifi==2019.11.28
 cffi==1.12.3
 chardet==3.0.4
@@ -25,6 +26,8 @@ enum34==1.1.6
 future==0.17.1
 gast==0.2.2
 glfw==1.8.3
+google-auth==1.14.1
+google-auth-oauthlib==0.4.1
 google-pasta==0.1.7
 grpcio==1.23.0
 gym==0.14.0
@@ -65,6 +68,7 @@ nbconvert==5.6.1
 nbformat==5.0.4
 notebook==6.0.2
 numpy==1.18.3
+oauthlib==3.1.0
 opencv-python==4.1.1.26
 opt-einsum==3.2.1
 packaging==20.3
@@ -80,6 +84,8 @@ prometheus-client==0.7.1
 prompt-toolkit==2.0.9
 protobuf==3.9.1
 ptyprocess==0.6.0
+pyasn1==0.4.8
+pyasn1-modules==0.2.8
 pybullet==2.5.4
 pycosat==0.6.3
 pycparser==2.19
@@ -98,15 +104,17 @@ pyzmq==18.0.0
 qtconsole==4.7.1
 QtPy==1.9.0
 requests==2.22.0
+requests-oauthlib==1.3.0
+rsa==4.0
 ruamel-yaml==0.15.46
-scipy==1.3.0
--e git+https://github.com/sgillen/seagul@214775e3476dc5e1ea9ca8a10410fd5ec6ee5c29#egg=seagul
+scipy==1.4.1
+-e git+https://github.com/sgillen/seagul@2e3db4972bad1d9521ce3beb01495335a50d2a50#egg=seagul
 Send2Trash==1.5.0
 six==1.12.0
 stable-baselines==2.7.0
-tensorboard==1.15.0
-tensorflow==1.15.0
-tensorflow-estimator==1.15.1
+tensorboard==2.1.1
+tensorflow==2.1.0
+tensorflow-estimator==2.1.0
 termcolor==1.1.0
 terminado==0.8.3
 testpath==0.4.4
