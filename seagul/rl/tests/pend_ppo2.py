@@ -5,7 +5,6 @@ import torch
 from seagul.rl.ppo.models import PPOModel
 from multiprocessing import Process, Manager
 import numpy as np
-#torch.set_default_dtype(torch.double)
 
 
 """
@@ -20,7 +19,6 @@ t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 
 def run_and_test(arg_dict):
 
-    torch.set_num_threads(1)
     t_model, rewards, var_dict = ppo(**arg_dict)
 
     seed = arg_dict["seed"]
@@ -34,7 +32,7 @@ def run_and_test(arg_dict):
 
 if __name__ == "__main__":
     input_size = 3
-    output_size = 2
+    output_size = 1
     layer_size = 16
     num_layers = 1
     activation = nn.ReLU
@@ -61,6 +59,8 @@ if __name__ == "__main__":
 
 
     proc_list = []
+
+    #run_and_test(arg_dict)
 
     for seed in np.random.randint(0,2**32,8):
         arg_dict["seed"] = int(seed)

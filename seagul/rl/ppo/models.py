@@ -23,8 +23,6 @@ class PPOModel:
             self.select_action = self.select_action_variable
             self.get_logp = self.get_logp_variable
 
-
-
     def step(self, obs):
         # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
         action, _ = self.select_action(obs)
@@ -271,14 +269,12 @@ def select_cont_action(policy, state, variance):
     logprob = m.log_prob(action)
     return action.detach(), logprob
 
-
 # given a policy plus a state/action pair, what is the log liklihood of having taken that action?
 def get_cont_logp(policy, states, actions, variance):
     means = policy(states)
     m = Normal(loc=means, scale=torch.ones_like(means) * variance)
     logprob = m.log_prob(actions)
     return logprob
-
 
 # takes a policy and the states and sample an action from it... (can we make this faster?)
 def select_discrete_action(policy, state, variance=None):

@@ -11,6 +11,7 @@ def ppo(
     total_steps,
     model,
     act_var_schedule=[0.7],
+    len_lambda = None,
     epoch_batch_size=2048,
     gamma=0.99,
     lam=0.99,
@@ -194,7 +195,7 @@ def ppo(
                 clip_r = torch.clamp(r, 1-eps, 1+eps)
                 pol_loss = -torch.min(r*batch_adv[cur_sample:cur_sample + pol_batch_size], clip_r*batch_adv[cur_sample:cur_sample + pol_batch_size]).mean()
 
-                approx_kl = (logp - old_logp).mean()
+                approx_kl = (logp - old_logp).mean()    
                 if approx_kl > target_kl:
                     break
                 
@@ -230,6 +231,8 @@ def ppo(
         model.value_fn.state_var = obs_var
         model.action_var = actvar_lookup(cur_total_steps)
         old_model = pickle.loads(pickle.dumps(model))
+
+        #env.num_steps = len_lambda(cur_total_steps)
                 
         val_loss_hist.append(val_loss)
         pol_loss_hist.append(pol_loss)
