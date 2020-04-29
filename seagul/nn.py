@@ -141,14 +141,14 @@ class MLP(nn.Module):
             self.output_layer = nn.Linear(layer_size, output_size)
 
         self.state_means = torch.zeros(input_size, requires_grad=False)
-        self.state_var = torch.ones(input_size, requires_grad=False)
+        self.state_std = torch.ones(input_size, requires_grad=False)
 
     def forward(self, data):
 
         if self.input_bias is not None:
             data += self.input_bias
 
-        data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
+        data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_std)
         #ata = torch.as_tensor(data)
         #
 
@@ -160,7 +160,7 @@ class MLP(nn.Module):
     def to(self, place):
         super(MLP, self).to(place)
         self.state_means = self.state_means.to(place)
-        self.state_var = self.state_var.to(place)
+        self.state_std = self.state_std.to(place)
         return self
 
 
@@ -418,7 +418,7 @@ if __name__ == "__main__":
     policy = MLP(input_size=4, output_size=1, num_layers=3, layer_size=12, activation=nn.ReLU)
 
     policy.state_means = torch.ones(4)
-    policy.state_var = torch.ones(4) * 4
+    policy.state_std = torch.ones(4) * 4
     print(policy(torch.randn(1, 4)))
 
     policy = LinearNet(input_size=4, output_size=1, bias=False)

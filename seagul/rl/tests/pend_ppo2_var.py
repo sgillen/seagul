@@ -58,7 +58,6 @@ if __name__ == "__main__":
         "pol_epochs": 10,
         "pol_lr": 1e-2,
         "val_lr": 1e-3,
-        "act_var_schedule": [0.707],
     }
 
     proc_list = []
