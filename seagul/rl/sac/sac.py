@@ -128,6 +128,17 @@ def sac(
 
     progress_bar.update(cur_total_steps)
 
+    # model.policy.state_means = update_mean(replay_buf.obs1_buf, model.policy.state_means, cur_total_steps)
+    # model.policy.state_var  =  update_var(replay_buf.obs1_buf, model.policy.state_var, cur_total_steps)
+    # model.value_fn.state_means = model.policy.state_means
+    # model.value_fn.state_var = model.policy.state_var
+
+    # model.q1_fn.state_means = update_mean(torch.cat((replay_buf.obs1_buf, replay_buf.acts_buf), dim=1), model.q1_fn.state_means, cur_total_steps)
+    # model.q1_fn.state_var = update_var(torch.cat((replay_buf.obs1_buf, replay_buf.acts_buf), dim=1), model.q1_fn.state_var, cur_total_steps)
+    # model.q2_fn.state_means = model.q1_fn.state_means
+    # model.q2_fn.state_var = model.q1_fn.state_var
+
+
     while cur_total_steps < total_steps:
         cur_batch_steps = 0
 
@@ -174,10 +185,6 @@ def sac(
             # ========================================================================
             num_mbatch = int(replay_batch_size / sgd_batch_size)
 
-            # training_data = data.TensorDataset(replay_obs1, replay_acts, q_targ)
-            # training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=True, num_workers=0,
-            #                                      pin_memory=False)
-
             for i in range(num_mbatch):
                 cur_sample = i*sgd_batch_size
 
@@ -187,7 +194,7 @@ def sac(
                 q1_loss = torch.pow(q1_preds - q_targ[cur_sample:cur_sample + sgd_batch_size], 2).mean()
                 q2_loss = torch.pow(q2_preds - q_targ[cur_sample:cur_sample + sgd_batch_size], 2).mean()
                 q_loss = q1_loss + q2_loss
-
+            
                 q1_opt.zero_grad()
                 q2_opt.zero_grad()
                 q_loss.backward()
@@ -211,9 +218,6 @@ def sac(
 
             # policy_fn update
             # ========================================================================
-            training_data = data.TensorDataset(replay_obs1)
-            training_generator = data.DataLoader(training_data, batch_size=sgd_batch_size, shuffle=True, num_workers=0,
-                                                 pin_memory=False)
 
             for i in range(num_mbatch):
                 cur_sample = i*sgd_batch_size
@@ -224,7 +228,6 @@ def sac(
                 q_in = torch.cat((replay_obs1[cur_sample:cur_sample + sgd_batch_size], local_acts), dim=1)
                 pol_loss = torch.sum(alpha * local_logp - model.q1_fn(q_in)) / replay_batch_size
 
-                # do the normal pytorch update
                 pol_opt.zero_grad()
                 pol_loss.backward()
                 pol_opt.step()
@@ -236,15 +239,6 @@ def sac(
             q1_loss_hist.append(q1_loss.item())
             q2_loss_hist.append(q2_loss.item())
 
-            # model.policy.state_means = update_mean(replay_obs1, model.policy.state_means, cur_total_steps)
-            # model.policy.state_var  =  update_var(replay_obs1, model.policy.state_var, cur_total_steps)
-            # model.value_fn.state_means = model.policy.state_means
-            # model.policy.state_var = model.policy.state_var
-            #
-            # model.q1_fn.state_means = update_mean(torch.cat((replay_obs1, replay_acts.detach()), dim=1), model.q1_fn.state_means, cur_total_steps)
-            # model.q1_fn.state_var = update_var(torch.cat((replay_obs1, replay_acts.detach()), dim=1), model.q1_fn.state_var, cur_total_steps)
-            # model.q2_fn.state_means = model.q1_fn.state_means
-            # model.q2_fn.state_var = model.q1_fn.state_var
 
 
             val_sd = model.value_fn.state_dict()

@@ -21,7 +21,7 @@ def fit_model(
     shuffle=True,
     loss_fn=torch.nn.MSELoss(),
     use_tqdm=True,
-    use_cuda = False,
+    use_cuda=False,
 ):
     """
     Trains a pytorch module model to predict actions from states for num_epochs passes through the dataset.
@@ -29,8 +29,6 @@ def fit_model(
     This is used to do a (relatively naive) version of behavior cloning
     pretty naive (but fully functional) training loop right now, will want to keep adding to this and will want to
     eventually make it more customizable.
-
-    The hope is that this will eventually serve as a keras model.fit function, but customized to our needs.
 
 
     Attributes:
@@ -151,6 +149,8 @@ class MLP(nn.Module):
             data += self.input_bias
 
         data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_var)
+        #ata = torch.as_tensor(data)
+        #
 
         for layer in self.layers:
             data = self.activation(layer(data))

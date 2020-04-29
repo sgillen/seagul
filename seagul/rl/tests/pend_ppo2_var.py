@@ -17,10 +17,8 @@ from seagul.rl.algos import ppo
 t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 """
 
-
 def run_and_test(arg_dict):
 
-    torch.set_num_threads(1)
     t_model, rewards, var_dict = ppo(**arg_dict)
 
     seed = arg_dict["seed"]
