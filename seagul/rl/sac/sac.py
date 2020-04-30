@@ -118,26 +118,37 @@ def sac(
     cur_total_steps = 0
     progress_bar.update(0)
     early_stop = False
+    norm_obs1 = torch.empty(0)
 
     while cur_total_steps < exploration_steps:
+        ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
+        norm_obs1 = torch.cat((norm_obs1, ep_obs1))
+        
+        ep_steps = ep_rews.shape[0]
+        cur_total_steps += ep_steps
+
+        progress_bar.update(ep_steps)
+
+    model.policy.state_means = norm_obs1.mean(axis=0)
+    model.policy.state_std  =  norm_obs1.std(axis=0)
+    model.value_fn.state_means = model.policy.state_means
+    model.value_fn.state_std = model.policy.state_std
+    target_value_fn.state_means = model.policy.state_means
+    target_value_fn.state_std = model.policy.state_std
+
+    model.q1_fn.state_means = torch.cat((ep_obs1.mean(axis=0), torch.zeros(act_size)))
+    model.q1_fn.state_std = torch.cat((ep_obs1.std(axis=0), torch.ones(act_size)))
+    model.q2_fn.state_means = model.q1_fn.state_means
+    model.q2_fn.state_std = model.q1_fn.state_std
+    
+    while cur_total_steps < exploration_steps*2:
         ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
         replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
         ep_steps = ep_rews.shape[0]
         cur_total_steps += ep_steps
 
-    progress_bar.update(cur_total_steps)
-
-    # model.policy.state_means = update_mean(replay_buf.obs1_buf, model.policy.state_means, cur_total_steps)
-    # model.policy.state_var  =  update_var(replay_buf.obs1_buf, model.policy.state_var, cur_total_steps)
-    # model.value_fn.state_means = model.policy.state_means
-    # model.value_fn.state_var = model.policy.state_var
-
-    # model.q1_fn.state_means = update_mean(torch.cat((replay_buf.obs1_buf, replay_buf.acts_buf), dim=1), model.q1_fn.state_means, cur_total_steps)
-    # model.q1_fn.state_var = update_var(torch.cat((replay_buf.obs1_buf, replay_buf.acts_buf), dim=1), model.q1_fn.state_var, cur_total_steps)
-    # model.q2_fn.state_means = model.q1_fn.state_means
-    # model.q2_fn.state_var = model.q1_fn.state_var
-
+        progress_bar.update(ep_steps)
 
     while cur_total_steps < total_steps:
         cur_batch_steps = 0

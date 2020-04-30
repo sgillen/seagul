@@ -43,7 +43,7 @@ def add_arrow(line, position=None, direction="right", size=15, color=None):
 
 def smooth_bounded_curve(
     data,
-    time_steps=np.array([]),
+    time_steps=None,
     label=None,
     ax=None,
     window=100,
@@ -107,7 +107,7 @@ def smooth_bounded_curve(
         max_data = pd.Series(max_data).rolling(100, min_periods=10).mean()
         avg_data = pd.Series(avg_data).rolling(100, min_periods=10).mean()
 
-    if time_steps.any() == False:
+    if time_steps is None:
         time_steps = [i for i in range(data.shape[0])]
     ax.plot(time_steps, avg_data, color=color, label=label)
     ax.fill_between(time_steps, min_data, max_data, color=color, alpha=.2)
