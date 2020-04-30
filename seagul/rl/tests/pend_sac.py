@@ -66,8 +66,8 @@ if __name__ == "__main__" :
         "use_gpu": False,
     }
     #
-    # arg_dict["seed"] = 0
-    # run_and_test(arg_dict)
+    #arg_dict["seed"] = 0
+    #run_and_test(arg_dict)
 
     proc_list = []
 
