@@ -129,15 +129,20 @@ def sac(
 
         progress_bar.update(ep_steps)
 
-    model.policy.state_means = norm_obs1.mean(axis=0)
-    model.policy.state_std  =  norm_obs1.std(axis=0)
-    model.value_fn.state_means = model.policy.state_means
-    model.value_fn.state_std = model.policy.state_std
-    target_value_fn.state_means = model.policy.state_means
-    target_value_fn.state_std = model.policy.state_std
+    
+    obs_mean = norm_obs1.mean(axis=0)
+    obs_std  = norm_obs1.std(axis=0)
+    obs_std[torch.isinf(1/obs_std)] = 1 
+    
+    model.policy.state_means = obs_mean
+    model.policy.state_std  =  obs_std
+    model.value_fn.state_means = obs_mean
+    model.value_fn.state_std = obs_std
+    target_value_fn.state_means = obs_mean
+    target_value_fn.state_std = obs_std 
 
-    model.q1_fn.state_means = torch.cat((ep_obs1.mean(axis=0), torch.zeros(act_size)))
-    model.q1_fn.state_std = torch.cat((ep_obs1.std(axis=0), torch.ones(act_size)))
+    model.q1_fn.state_means = torch.cat((obs_mean, torch.zeros(act_size)))
+    model.q1_fn.state_std = torch.cat((obs_std, torch.ones(act_size)))
     model.q2_fn.state_means = model.q1_fn.state_means
     model.q2_fn.state_std = model.q1_fn.state_std
     
