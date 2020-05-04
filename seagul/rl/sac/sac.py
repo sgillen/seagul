@@ -25,6 +25,7 @@ def sac(
         sgd_lr=1e-3,
         exploration_steps=100,
         replay_buf_size=int(100000),
+        normalize_steps = 1000,
         use_gpu=False,
         reward_stop=None,
         env_config = {},
@@ -114,13 +115,15 @@ def sac(
     q1_loss_hist = []
     q2_loss_hist = []
 
-    progress_bar = tqdm.tqdm(total=total_steps)
+    progress_bar = tqdm.tqdm(total=total_steps+normalize_steps)
     cur_total_steps = 0
     progress_bar.update(0)
     early_stop = False
     norm_obs1 = torch.empty(0)
 
-    while cur_total_steps < exploration_steps:
+
+
+    while cur_total_steps < normalize_steps:
         ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
         norm_obs1 = torch.cat((norm_obs1, ep_obs1))
         
@@ -128,7 +131,6 @@ def sac(
         cur_total_steps += ep_steps
 
         progress_bar.update(ep_steps)
-
     
     obs_mean = norm_obs1.mean(axis=0)
     obs_std  = norm_obs1.std(axis=0)
@@ -145,8 +147,8 @@ def sac(
     model.q1_fn.state_std = torch.cat((obs_std, torch.ones(act_size)))
     model.q2_fn.state_means = model.q1_fn.state_means
     model.q2_fn.state_std = model.q1_fn.state_std
-    
-    while cur_total_steps < exploration_steps*2:
+
+    while cur_total_steps < exploration_steps:
         ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
         replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
@@ -219,7 +221,6 @@ def sac(
 
             # val_fn update
             # ========================================================================
-
             for i in range(num_mbatch):
                 cur_sample = i*sgd_batch_size
 
