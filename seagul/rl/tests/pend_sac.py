@@ -44,20 +44,16 @@ if __name__ == "__main__" :
     num_layers = 2
     activation = nn.ReLU
 
-    policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
-    value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
-    q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation)
-
-    # policy = RBF(input_size, output_size * 2, layer_size)
-    # value_fn = RBF(input_size, 1, layer_size)
-    # q1_fn = RBF(input_size + output_size, 1, layer_size)
-    # q2_fn = RBF(input_size + output_size, 1, layer_size)
-
-    model = SACModel(policy, value_fn, q1_fn, q2_fn, 1)
+    model = SACModel(
+         policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation),
+         value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
+         q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation),
+         q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation),
+         act_limit=1
+    )
 
     # Define our hyper parameters
-    arg_dict = {
+    alg_config = {
         "env_name": "Pendulum-v0",
         "model": model,
         "exploration_steps" : 5000,
@@ -65,21 +61,20 @@ if __name__ == "__main__" :
         "reward_stop": -200,
         "use_gpu": False,
     }
-    #
-    #arg_dict["seed"] = 0
-    #run_and_test(arg_dict)
+
+    # for debugging
+    #alg_config["seed"] = 0
+    #run_and_test(alg_config)
 
     proc_list = []
 
     for seed in np.random.randint(0,2**31,8):
-        arg_dict["seed"] = int(seed)
-        p = Process(target=run_and_test, args=[arg_dict])
+        alg_config["seed"] = int(seed)
+        p = Process(target=run_and_test, args=[alg_config])
         p.start()
         proc_list.append(p)
 
     for p in proc_list:
         p.join()
 
-
-    #sys.stdout = orig
-    print("--- %s seconds ---" % (time.time() - start_time))
+print(f"Total time: {(time.time() - start_time)}")
