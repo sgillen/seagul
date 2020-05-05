@@ -131,22 +131,22 @@ def sac(
         cur_total_steps += ep_steps
 
         progress_bar.update(ep_steps)
-    
-    obs_mean = norm_obs1.mean(axis=0)
-    obs_std  = norm_obs1.std(axis=0)
-    obs_std[torch.isinf(1/obs_std)] = 1 
-    
-    model.policy.state_means = obs_mean
-    model.policy.state_std  =  obs_std
-    model.value_fn.state_means = obs_mean
-    model.value_fn.state_std = obs_std
-    target_value_fn.state_means = obs_mean
-    target_value_fn.state_std = obs_std 
+    if normalize_steps > 0:
+        obs_mean = norm_obs1.mean(axis=0)
+        obs_std  = norm_obs1.std(axis=0)
+        obs_std[torch.isinf(1/obs_std)] = 1
 
-    model.q1_fn.state_means = torch.cat((obs_mean, torch.zeros(act_size)))
-    model.q1_fn.state_std = torch.cat((obs_std, torch.ones(act_size)))
-    model.q2_fn.state_means = model.q1_fn.state_means
-    model.q2_fn.state_std = model.q1_fn.state_std
+        model.policy.state_means = obs_mean
+        model.policy.state_std  =  obs_std
+        model.value_fn.state_means = obs_mean
+        model.value_fn.state_std = obs_std
+        target_value_fn.state_means = obs_mean
+        target_value_fn.state_std = obs_std
+
+        model.q1_fn.state_means = torch.cat((obs_mean, torch.zeros(act_size)))
+        model.q1_fn.state_std = torch.cat((obs_std, torch.ones(act_size)))
+        model.q2_fn.state_means = model.q1_fn.state_means
+        model.q2_fn.state_std = model.q1_fn.state_std
 
     while cur_total_steps < exploration_steps:
         ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
@@ -235,6 +235,8 @@ def sac(
 
             # policy_fn update
             # ========================================================================
+            for param in model.q1_fn.parameters():
+                param.requires_grad = False
 
             for i in range(num_mbatch):
                 cur_sample = i*sgd_batch_size
@@ -248,6 +250,9 @@ def sac(
                 pol_opt.zero_grad()
                 pol_loss.backward()
                 pol_opt.step()
+
+            for param in model.q1_fn.parameters():
+                param.requires_grad = True
 
             # Update target value fn with polyak average
             # ========================================================================
@@ -269,6 +274,7 @@ def sac(
 
 
 def do_rollout(env, model, num_steps):
+    torch.autograd.set_grad_enabled(False)
     acts_list = []
     obs1_list = []
     obs2_list = []
@@ -309,4 +315,5 @@ def do_rollout(env, model, num_steps):
     ep_obs2 = torch.stack(obs2_list)
     ep_done = torch.stack(done_list).reshape(-1, 1)
 
+    torch.autograd.set_grad_enabled(True)
     return (ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
