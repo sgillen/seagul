@@ -117,7 +117,7 @@ def smooth_bounded_curve(
         by_label = dict(zip(labels, handles))
         plt.legend(by_label.values(), by_label.keys())
 
-    ax.set_xlabel('Time Steps')
+    ax.set_xlabel('Update Steps')
     ax.set_ylabel('Average return')
     ax.set_title('Reward curve')
 

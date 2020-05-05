@@ -34,7 +34,6 @@ def run_and_test(arg_dict):
         print("Rewards were", rewards[-1])
 
 
-
 if __name__ == "__main__" :
     start_time = time.time()
 

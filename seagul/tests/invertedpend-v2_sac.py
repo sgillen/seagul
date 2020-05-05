@@ -35,8 +35,8 @@ for seed in np.random.randint(0, 2 ** 32, 8):
     # init policy, value fn
     input_size = 4
     output_size = 1
-    layer_size = 32
-    num_layers = 2
+    layer_size = 16
+    num_layers = 1
     activation = nn.ReLU
 
     model = SACModel(
