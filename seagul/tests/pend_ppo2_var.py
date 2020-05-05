@@ -24,43 +24,42 @@ def run_and_test(arg_dict):
     seed = arg_dict["seed"]
     if var_dict["early_stop"]:
         print("seed", seed, "achieved -200 reward in ", len(rewards), "steps")
+        #retval[seed] = True
+
     else:
         print("Error: seed:", seed, "failed")
         print("Rewards were", rewards[-1])
+        #retval[seed] = False
 
     return
 
 if __name__ == "__main__":
+
     input_size = 3
-    output_size = 1
+    output_size = 2
     layer_size = 16
     num_layers = 1
     activation = nn.ReLU
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, action_std=0.1, fixed_std=True)
+    model = PPOModel(policy, value_fn, action_std=1.0, fixed_std=False)
 
     # Define our hyper parameters
     arg_dict = {
-        "env_name" : "Pendulum-v0",
-        "total_steps" : 200*2048,
-        "model" : model,
+        "env_name": "Pendulum-v0",
+        "total_steps": 200 * 2048,
+        "model": model,
         "epoch_batch_size": 2048,  # how many steps we want to use before we update our gradients
         "reward_stop": -200,
-        "pol_batch_size": 512,
-        "val_batch_size": 512,
+        "sgd_batch_size": 512,
         "val_epochs": 10,
         "pol_epochs": 10,
         "pol_lr": 1e-2,
         "val_lr": 1e-3,
-        "act_std_schedule": [1.0],
     }
 
-
     proc_list = []
-
-    #run_and_test(arg_dict)
 
     for seed in np.random.randint(0,2**32,8):
         arg_dict["seed"] = int(seed)
@@ -70,5 +69,4 @@ if __name__ == "__main__":
 
     for p in proc_list:
         p.join()
-
 

@@ -17,12 +17,13 @@ def ppo(
     eps=0.2,
     seed=0,
     pol_batch_size=1024,
-    val_batch_size=1024,
+    sgd_batch_size=1024,
     pol_lr=1e-4,
     val_lr=1e-4,
     pol_epochs=10,
     val_epochs=10,
     target_kl=.01,
+    env_no_term_steps=0,
     use_gpu=False,
     reward_stop=None,
     normalize_return=True,
@@ -43,7 +44,7 @@ def ppo(
         lam: lambda for the Advantage estimation, usually close to 1
         eps: epsilon for the clipping, usually .1 or .2
         pol_batch_size: batch size for policy updates
-        val_batch_size: batch size for value function updates
+        sgd_batch_size: batch size for value function updates
         pol_lr: learning rate for policy pol_optimizer
         val_lr: learning rate of value function pol_optimizer
         pol_epochs: how many epochs to use for each policy update
@@ -100,9 +101,8 @@ def ppo(
     rew_mean = torch.zeros(1)
     rew_var = torch.ones(1)
 
-    old_model = pickle.loads(
-        pickle.dumps(model)
-    )  # copy.deepcopy broke for me with older version of torch. Using pickle for this is weird but works fine
+    # copy.deepcopy broke for me with older version of torch. Using pickle for this is weird but works fine
+    old_model = pickle.loads(pickle.dumps(model))
     pol_opt = torch.optim.Adam(model.policy.parameters(), lr=pol_lr)
     val_opt = torch.optim.Adam(model.value_fn.parameters(), lr=val_lr)
 
@@ -143,29 +143,25 @@ def ppo(
         # construct batch data from rollouts
         # ==============================================================================
         while cur_batch_steps < epoch_batch_size:
-
-            ep_obs, ep_act, ep_rew, ep_steps = do_rollout(env, model)
+            ep_obs, ep_act, ep_rew, ep_steps, ep_term = do_rollout(env, model, env_no_term_steps)
 
             raw_rew_hist.append(sum(ep_rew))
-            ep_rew = (ep_rew - ep_rew.mean()) / (ep_rew.std() + 1e-6)
-
             batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
             batch_act = torch.cat((batch_act, ep_act[:-1]))
 
-            ep_discrew = discount_cumsum(
-                ep_rew, gamma
-            )  # [:-1] because we appended the value function to the end as an extra reward
-            batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
+            if not ep_term:
+                ep_rew[-1] = model.value_fn(ep_obs[-1]).detach()
+
+            ep_discrew = discount_cumsum(ep_rew, gamma)  # [:-1] because we appended the value function to the end as an extra reward
 
             if normalize_return:
-                rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
-                rew_var = update_std(batch_discrew, rew_var, cur_total_steps)
-                batch_discrew = (batch_discrew - rew_mean) / (rew_var + 1e-6)
+                # rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
+                rew_var = update_std(ep_discrew, rew_var, cur_total_steps)
+                ep_discrew = ep_discrew / (rew_var + 1e-6)
 
-            # calculate this episodes advantages
-            last_val = model.value_fn(ep_obs[-1]).reshape(-1, 1)
+            batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
+
             ep_val = model.value_fn(ep_obs)
-            ep_val[-1] = last_val
 
             deltas = ep_rew[:-1] + gamma * ep_val[1:] - ep_val[:-1]
             ep_adv = discount_cumsum(deltas.detach(), gamma * lam)
@@ -181,18 +177,16 @@ def ppo(
 
         # policy update
         # ========================================================================
-        training_data = data.TensorDataset(batch_obs, batch_act, batch_adv)
-        training_generator = data.DataLoader(training_data, batch_size=pol_batch_size, shuffle=True, num_workers=0, pin_memory=False)
-
+        num_mbatch = int(batch_obs.shape[0] / pol_batch_size)
         # Update the policy using the PPO loss
         for pol_epoch in range(pol_epochs):
-            for local_obs, local_act, local_adv in training_generator:
+            for i in range(num_mbatch):
+                cur_sample = i * sgd_batch_size
+
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_obs, local_act, local_adv = (
-                    local_obs.to(device),
-                    local_act.to(device),
-                    local_adv.to(device),
-                )
+                local_obs = batch_obs[cur_sample:cur_sample + sgd_batch_size]
+                local_act = batch_act[cur_sample:cur_sample + sgd_batch_size]
+                local_adv = batch_adv[cur_sample:cur_sample + sgd_batch_size]
 
                 # Compute the loss
                 logp = model.get_logp(local_obs, local_act).reshape(-1, act_size)
@@ -211,14 +205,13 @@ def ppo(
 
         # value_fn update
         # ========================================================================
-        training_data = data.TensorDataset(batch_obs, batch_discrew)
-        training_generator = data.DataLoader(training_data, batch_size=val_batch_size, shuffle=True, num_workers=0, pin_memory=False)
-
         # Update value function with the standard L2 Loss
         for val_epoch in range(val_epochs):
-            for local_obs, local_val in training_generator:
+            for i in range(num_mbatch):
+                cur_sample = i * sgd_batch_size
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_obs, local_val = (local_obs.to(device), local_val.to(device))
+                local_obs = batch_obs[cur_sample:cur_sample + sgd_batch_size]
+                local_val = batch_discrew[cur_sample:cur_sample + sgd_batch_size]
 
                 # predict and calculate loss for the batch
                 val_preds = model.value_fn(local_obs)
@@ -245,8 +238,6 @@ def ppo(
 
         progress_bar.update(cur_batch_steps)
 
-        
-        
     progress_bar.close()
     return model, raw_rew_hist, locals()
 
@@ -259,7 +250,7 @@ def make_std_schedule(std_schedule, model, num_steps):
     std_lookup = lambda epoch: np.interp(epoch, x_vals, std_schedule)
     return std_lookup
 
-def do_rollout(env, model):
+def do_rollout(env, model, n_steps_complete):
     act_list = []
     obs_list = []
     rew_list = []
@@ -267,6 +258,7 @@ def do_rollout(env, model):
     dtype = torch.float32
     obs = env.reset()
     done = False
+    cur_step = 0
 
     while not done:
         obs = torch.as_tensor(obs,dtype=dtype).detach()
@@ -278,13 +270,21 @@ def do_rollout(env, model):
         act_list.append(torch.as_tensor(act.clone()))
         rew_list.append(rew)
 
+        cur_step += 1
+
+    if cur_step < n_steps_complete:
+        ep_term = True
+    else:
+        ep_term = False
+
+
     ep_length = len(rew_list)
     ep_obs = torch.stack(obs_list)
     ep_act = torch.stack(act_list)
     ep_rew = torch.tensor(rew_list)
     ep_rew = ep_rew.reshape(-1, 1)
 
-    return ep_obs, ep_act, ep_rew, ep_length
+    return ep_obs, ep_act, ep_rew, ep_length, ep_term
 
 
 # can make this faster I think?
