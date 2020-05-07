@@ -5,9 +5,7 @@ import matlab
 import numpy as np
 from numpy import pi
 import seagul
-from gym.envs.registration import register
-
-import seagul.notebooks.bball.matlab_src # this is hacky
+import seagul.envs.matlab.bball_src
 
 
 
@@ -26,7 +24,6 @@ class BBallEnv(core.Env):
     """
 
     def __init__(self,
-                 mat_env_path=seagul.notebooks.bball.matlab_src.__path__[0],
                  max_torque=float('inf'),
                  dt=.02,
                  seed=None,
@@ -37,7 +34,7 @@ class BBallEnv(core.Env):
                 ):
 
         self.eng = matlab.engine.start_matlab()
-        self.eng.addpath(mat_env_path, nargout=0)
+        self.eng.addpath(seagul.envs.matlab.bball_src.__path__[0], nargout=0)
         self.max_torque = max_torque
         self.dt = dt
         self.init_state = matlab.single(init_state,size=(8,1))
