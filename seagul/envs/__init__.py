@@ -34,6 +34,8 @@ register(id="sym_pendulum-v0", entry_point="seagul.envs.classic_control:Pendulum
 register(id="dt_pendulum-v0", entry_point="seagul.envs.classic_control:PendulumDtEnv", max_episode_steps=200)
 register(id="su_acro_drake-v0", entry_point="seagul.envs.drake:DrakeAcroEnv")
 
+register(id="bball-v0", entry_point="seagul.envs.matlab:BBallEnv")
+
 # Also go ahead and try to register environments for rllib as well
 
 try:
