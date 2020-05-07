@@ -223,11 +223,11 @@ def load_model(save_path, backend="baselines"):
         for arg, value in arg_dict.items():
             argv_list.append("--" + str(arg) + "=" + value)
 
-        argv_list.append("--play")
+        #argv_list.append("--play")
 
-        model, env = baselines.run.main(argv_list)
+        model = baselines.run.main(argv_list)
 
-        return model, env
+        return model
 
     elif backend == "seagul":
         with open(save_base_path + "/" + "info.json", "r") as infile:
@@ -237,10 +237,7 @@ def load_model(save_path, backend="baselines"):
         with open(save_base_path + "/" + "model", "rb") as infile:
             model = torch.load(infile)
 
-        env_name = data["args"]["env_name"]
-        env = gym.make(env_name)
-
-        return model, env
+        return model
 
     else:
         raise ValueError("unrecognized backend: ", backend)

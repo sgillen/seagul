@@ -265,7 +265,7 @@ def do_rollout(env, model, n_steps_complete):
         obs_list.append(obs.clone())
 
         act, logprob = model.select_action(obs)
-        obs, rew, done, _ = env.step(act.numpy().reshape(-1))
+        obs, rew, done, _ = env.step(act.numpy())
 
         act_list.append(torch.as_tensor(act.clone()))
         rew_list.append(rew)
