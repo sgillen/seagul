@@ -14,10 +14,12 @@ Hightlights include:
 And lots of other little odds and ends ([check out all my abandonded projects!](./seagul/old)). 
 
 
-This is a python package, after cloning I recommend you install it (in some sort of virtual environment) with:
+This is a python package, so you could install it (in some sort of virtual environment!!) with:
 
 ```
-pip install -e seagul/
+git clone https://github.com/sgillen/seagul
+cd seagul
+pip install -e .
 ```
  
 You can install all the requirments with:
