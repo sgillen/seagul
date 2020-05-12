@@ -1,5 +1,5 @@
 # seagul
-A utility library. I collected most of the software I use across projects in my resarch and put it here. 
+A utility library. I collected most of the software I use across projects in my research and put it here. 
 
 Hightlights include:
 
