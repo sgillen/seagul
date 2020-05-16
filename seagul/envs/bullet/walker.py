@@ -26,6 +26,12 @@ class PBMJWalker2dEnv(gym.Env):
         self.init_noise = init_noise
         self.dt = dt
 
+        low = -np.ones(6)
+        self.action_space = gym.spaces.Box(low=low, high=-low, dtype=np.float32)
+
+        low = -np.ones(17)*np.inf
+        self.observation_space = gym.spaces.Box(low=low, high=-low, dtype=np.float32)
+
         if render:
             p.connect(p.GUI)
         else:
