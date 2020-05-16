@@ -16,6 +16,7 @@ register(id="gen_nonlin-v0", entry_point="seagul.envs.simple_nonlinear:GenEnv")
 register(id="dyn_car-v0", entry_point="seagul.envs.car:DynCarEnv")
 register(id="bullet_car-v0", entry_point="seagul.envs.bullet:RacecarGymEnv_v1")
 register(id="bullet_car_ast-v0", entry_point="seagul.envs.bullet:RacecarGymEnvAst_v1")
+register(id="pbmj_walker2d-v0", entry_point="seagul.envs.bullet:PBMJWalker2dEnv")
 # register(id="walker2d_five_link-v0", entry_point="seagul.envs.bullet:Walker2DFiveLink")
 
 register(id="su_cartpole-v0", entry_point="seagul.envs.classic_control:SUCartPoleEnv")
