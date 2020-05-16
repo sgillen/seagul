@@ -17,7 +17,7 @@ class PBMJWalker2dEnv(gym.Env):
                  frame_skip=4,  # pretty  sure we only need one of these
                  solver_iterations=5,
                  init_noise=.005,
-                 dt=0.0165,
+                 dt=0.0165/4,
                  ):
 
         self.args = locals()
@@ -26,6 +26,8 @@ class PBMJWalker2dEnv(gym.Env):
         self.init_noise = init_noise
         self.dt = dt
 
+        self.cur_step = 0
+        
         low = -np.ones(6)
         self.action_space = gym.spaces.Box(low=low, high=-low, dtype=np.float32)
 
@@ -59,15 +61,21 @@ class PBMJWalker2dEnv(gym.Env):
             p.stepSimulation()
 
         x_after = p.getBasePositionAndOrientation(self.walker_id)[0][0]
+        
         base_pose = p.getBasePositionAndOrientation(self.walker_id)
         height = base_pose[0][2]
         pitch  = p.getEulerFromQuaternion(base_pose[1])[1] # Pitch
 
-        reward = (x_after - x_before) / (self.dt*self.frame_skip)
+        reward = (x_after - x_before) / (self.dt*self.frame_skip);
         reward += 1.0  # alive bonus
         reward -= 1e-3 * np.square(a).sum()
 
-        done = not (0.8 < height < 2.0 and -1.0 < pitch < 1.0)
+        
+        done = not ((0.8 < (height+1.25) < 2.0) and (-1.0 < pitch < 1.0))
+
+        self.cur_step+=1
+        if self.cur_step > 1000:
+            done = True
 
         return self._get_obs(), reward, done, {}
 
@@ -90,7 +98,8 @@ class PBMJWalker2dEnv(gym.Env):
 
         for s in p.getJointStates(self.walker_id, self.motor_joints):
             state.append(np.clip(s[1], -10,10))
-        return state
+            
+        return np.array(state)
 
     def reset(self):
 
@@ -120,6 +129,8 @@ class PBMJWalker2dEnv(gym.Env):
                                     velocityGains=[0.1] * self.num_joints,
                                     forces=[0 for _ in range(p.getNumJoints(self.walker_id))]
                                     )
+        self.cur_step = 0
+        
         return self._get_obs()
 
 
