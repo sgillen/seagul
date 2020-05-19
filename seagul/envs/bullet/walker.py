@@ -18,6 +18,8 @@ class PBMJWalker2dEnv(gym.Env):
                  solver_iterations=5,
                  init_noise=.005,
                  dt=0.0165/4,
+                 physics_params = None,
+                 dynamics_params = None,
                  ):
 
         self.args = locals()
@@ -44,34 +46,51 @@ class PBMJWalker2dEnv(gym.Env):
         #flags=p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS)[0] # TODO not sure the self collision needs to be here..
 
         p.setGravity(0, 0, -9.8)
-        p.changeDynamics(self.plane_id, -1, lateralFriction=lateral_friction, restitution=restitution)
-        p.setPhysicsEngineParameter(fixedTimeStep=dt, numSubSteps=sub_steps, numSolverIterations=solver_iterations)
+
+        if physics_params is None:
+            physics_params = {}
+        if dynamics_params is None:
+            dynamics_params = {}
+
+        p.changeDynamics(self.plane_id, -1, **dynamics_params)
+
+        for i in range(p.getNumJoints(self.walker_id)):
+            p.changeDynamics(self.walker_id,i,**dynamics_params)
+
+        p.setPhysicsEngineParameter(**physics_params)
 
         self.reset()
 
     def step(self, a):
 
         a = np.clip(a,-1,1)
-        forces = a*np.array([40, 40, 12, 40, 40, 12]).tolist()
-
-        x_before = p.getBasePositionAndOrientation(self.walker_id)[0][0]
+        #forces = a*np.array([40, 40, 12, 40, 40, 12]).tolist()
+        forces = a.tolist()
+        #x_before = p.getBasePositionAndOrientation(self.walker_id)[0][0]
+        x_before  = p.getLinkState(self.walker_id, 3, computeForwardKinematics=1)[0][0]
 
         p.setJointMotorControlArray(self.walker_id, self.motor_joints, p.TORQUE_CONTROL, forces=forces)
         for i in range(self.frame_skip):
             p.stepSimulation()
-
-        x_after = p.getBasePositionAndOrientation(self.walker_id)[0][0]
         
-        base_pose = p.getBasePositionAndOrientation(self.walker_id)
-        height = base_pose[0][2]
-        pitch  = p.getEulerFromQuaternion(base_pose[1])[1] # Pitch
+        x_after  = p.getLinkState(self.walker_id, 3, computeForwardKinematics=1)[0][0]
+        
+#        base_pose = p.getBasePositionAndOrientation(self.walker_id)
+#        height = base_pose[0][2]
+
+        base_link_info = p.getLinkState(self.walker_id, 3, computeLinkVelocity=1, computeForwardKinematics=1)
+        base_pos = base_link_info[0]
+        base_orn = p.getEulerFromQuaternion(base_link_info[1])
+        
+        height = base_pos[2]
+        pitch  = base_orn[1] # Pitch
 
         reward = (x_after - x_before) / (self.dt*self.frame_skip);
         reward += 1.0  # alive bonus
         reward -= 1e-3 * np.square(a).sum()
 
         
-        done = not ((0.8 < (height+1.25) < 2.0) and (-1.0 < pitch < 1.0))
+        done = not ((0.8 < (height) < 2.0) and (-1.0 < pitch < 1.0))
 
         self.cur_step+=1
         if self.cur_step > 1000:
@@ -79,27 +98,41 @@ class PBMJWalker2dEnv(gym.Env):
 
         return self._get_obs(), reward, done, {}
 
+
+
     def _get_obs(self):
 
         state = []
 
-        base_pose = p.getBasePositionAndOrientation(self.walker_id)
-        state.append(base_pose[0][2]) # Z
-        state.append(p.getEulerFromQuaternion(base_pose[1])[1]) # Pitch
+        #base_pose = p.getBasePositionAndOrientation(self.walker_id)
+        base_link_info = p.getLinkState(self.walker_id, 3, computeLinkVelocity=1, computeForwardKinematics=1)
+        base_pos = base_link_info[0]
+        base_orn = p.getEulerFromQuaternion(base_link_info[1])
+        
+        state.append(base_pos[2]) # Z
+        state.append(base_orn[1]) # Pitch
 
         for s in p.getJointStates(self.walker_id, self.motor_joints):
             state.append(s[0])
 
-        base_vel = p.getBaseVelocity(self.walker_id)
+        #base_vel = p.getBaseVelocity(self.walker_id)
+        base_linvel = base_link_info[6]
+        base_angvel = base_link_info[7]
 
-        state.append(np.clip(base_vel[0][0], -10, 10))  # Z
-        state.append(np.clip(base_vel[0][2],-10,10)) # Z
-        state.append(np.clip(base_vel[1][1],-10,10)) # Pitch
+        # state.append(np.clip(base_vel[0][0], -10, 10))  # Z
+        # state.append(np.clip(base_vel[0][2],-10,10)) # Z
+        # state.append(np.clip(base_vel[1][1],-10,10)) # Pitch
 
+        state.append(np.clip(base_linvel[1], -10, 10))  # Y
+        state.append(np.clip(base_linvel[2], -10,10)) # Z
+        state.append(np.clip(base_angvel[1], -10,10)) # Pitch
+
+        
         for s in p.getJointStates(self.walker_id, self.motor_joints):
             state.append(np.clip(s[1], -10,10))
             
         return np.array(state)
+
 
     def reset(self):
 
