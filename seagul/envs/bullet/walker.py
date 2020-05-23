@@ -10,23 +10,15 @@ class PBMJWalker2dEnv(gym.Env):
 
     def __init__(self,
                  render=False,
-                 lateral_friction = 0.8,
-                 restitution=.5,
                  torque_limit=100,
-                 sub_steps=4,
-                 frame_skip=4,  # pretty  sure we only need one of these
-                 solver_iterations=5,
                  init_noise=.005,
-                 dt=0.0165/4,
                  physics_params = None,
                  dynamics_params = None,
                  ):
 
         self.args = locals()
-        self.frame_skip = frame_skip
         self.torque_limit=torque_limit
         self.init_noise = init_noise
-        self.dt = dt
 
         self.cur_step = 0
         
@@ -57,7 +49,12 @@ class PBMJWalker2dEnv(gym.Env):
         for i in range(p.getNumJoints(self.walker_id)):
             p.changeDynamics(self.walker_id,i,**dynamics_params)
 
+        p.changeDynamics(self.walker_id, -1, **dynamics_params)
+
+    
         p.setPhysicsEngineParameter(**physics_params)
+
+        self.dt = p.getPhysicsEngineParameters()['fixedTimeStep']
 
         self.reset()
 
@@ -66,17 +63,13 @@ class PBMJWalker2dEnv(gym.Env):
         a = np.clip(a,-1,1)
         #forces = a*np.array([40, 40, 12, 40, 40, 12]).tolist()
         forces = a.tolist()
-        #x_before = p.getBasePositionAndOrientation(self.walker_id)[0][0]
+        
         x_before  = p.getLinkState(self.walker_id, 3, computeForwardKinematics=1)[0][0]
 
         p.setJointMotorControlArray(self.walker_id, self.motor_joints, p.TORQUE_CONTROL, forces=forces)
-        for i in range(self.frame_skip):
-            p.stepSimulation()
+        p.stepSimulation()
         
         x_after  = p.getLinkState(self.walker_id, 3, computeForwardKinematics=1)[0][0]
-        
-#        base_pose = p.getBasePositionAndOrientation(self.walker_id)
-#        height = base_pose[0][2]
 
         base_link_info = p.getLinkState(self.walker_id, 3, computeLinkVelocity=1, computeForwardKinematics=1)
         base_pos = base_link_info[0]
@@ -85,7 +78,7 @@ class PBMJWalker2dEnv(gym.Env):
         height = base_pos[2]
         pitch  = base_orn[1] # Pitch
 
-        reward = (x_after - x_before) / (self.dt*self.frame_skip);
+        reward = (x_after - x_before) / self.dt;
         reward += 1.0  # alive bonus
         reward -= 1e-3 * np.square(a).sum()
 
