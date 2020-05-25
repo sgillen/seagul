@@ -64,9 +64,11 @@ class PBMJWalker2dEnv(gym.Env):
     def step(self, a):
 
         a = np.clip(a,-1,1)
+
         #forces = a*np.array([40, 40, 12, 40, 40, 12]).tolist()
-        forces = a.tolist()
-        #x_before = p.getBasePositionAndOrientation(self.walker_id)[0][0]
+        #forces = a.tolist()
+        forces = a*np.array([100, 100, 100, 100, 100, 100]).tolist()
+        
         x_before  = p.getLinkState(self.walker_id, 3, computeForwardKinematics=1)[0][0]
 
         p.setJointMotorControlArray(self.walker_id, self.motor_joints, p.TORQUE_CONTROL, forces=forces)
@@ -74,9 +76,6 @@ class PBMJWalker2dEnv(gym.Env):
             p.stepSimulation()
         
         x_after  = p.getLinkState(self.walker_id, 3, computeForwardKinematics=1)[0][0]
-        
-#        base_pose = p.getBasePositionAndOrientation(self.walker_id)
-#        height = base_pose[0][2]
 
         base_link_info = p.getLinkState(self.walker_id, 3, computeLinkVelocity=1, computeForwardKinematics=1)
         base_pos = base_link_info[0]
@@ -88,7 +87,6 @@ class PBMJWalker2dEnv(gym.Env):
         reward = (x_after - x_before) / (self.dt*self.frame_skip);
         reward += 1.0  # alive bonus
         reward -= 1e-3 * np.square(a).sum()
-
         
         done = not ((0.8 < (height) < 2.0) and (-1.0 < pitch < 1.0))
 
@@ -99,12 +97,10 @@ class PBMJWalker2dEnv(gym.Env):
         return self._get_obs(), reward, done, {}
 
 
-
     def _get_obs(self):
 
         state = []
 
-        #base_pose = p.getBasePositionAndOrientation(self.walker_id)
         base_link_info = p.getLinkState(self.walker_id, 3, computeLinkVelocity=1, computeForwardKinematics=1)
         base_pos = base_link_info[0]
         base_orn = p.getEulerFromQuaternion(base_link_info[1])
@@ -115,13 +111,10 @@ class PBMJWalker2dEnv(gym.Env):
         for s in p.getJointStates(self.walker_id, self.motor_joints):
             state.append(s[0])
 
-        #base_vel = p.getBaseVelocity(self.walker_id)
+
         base_linvel = base_link_info[6]
         base_angvel = base_link_info[7]
 
-        # state.append(np.clip(base_vel[0][0], -10, 10))  # Z
-        # state.append(np.clip(base_vel[0][2],-10,10)) # Z
-        # state.append(np.clip(base_vel[1][1],-10,10)) # Pitch
 
         state.append(np.clip(base_linvel[1], -10, 10))  # Y
         state.append(np.clip(base_linvel[2], -10,10)) # Z
