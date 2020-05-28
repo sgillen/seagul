@@ -4,9 +4,11 @@ import pybullet as p
 import pybullet_data
 
 
-class PBMJWalker2dEnv(gym.Env):
+class PBMJWalker2dFCEnv(gym.Env):
     motor_joints = [4, 6, 8, 10, 12, 14]
     num_joints = 16
+    foot_link0 = 9
+    foot_link1 = 15
 
     def __init__(self,
                  render=False,
@@ -25,7 +27,7 @@ class PBMJWalker2dEnv(gym.Env):
         low = -np.ones(6)
         self.action_space = gym.spaces.Box(low=low, high=-low, dtype=np.float32)
 
-        low = -np.ones(17)*np.inf
+        low = -np.ones(19)*np.inf
         self.observation_space = gym.spaces.Box(low=low, high=-low, dtype=np.float32)
 
         if render:
@@ -120,6 +122,16 @@ class PBMJWalker2dEnv(gym.Env):
         
         for s in p.getJointStates(self.walker_id, self.motor_joints):
             state.append(np.clip(s[1], -10,10))
+
+        if(p.getContactPoints(self.walker_id, self.plane_id, self.foot_link0)):
+            state.append(1.0)
+        else:
+            state.append(0.0)
+
+        if(p.getContactPoints(self.walker_id, self.plane_id,self.foot_link1)):
+            state.append(1.0)
+        else:
+            state.append(0.0)
             
         return np.array(state)
 
@@ -155,7 +167,3 @@ class PBMJWalker2dEnv(gym.Env):
         self.cur_step = 0
         
         return self._get_obs()
-
-
-
-
