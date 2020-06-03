@@ -66,4 +66,9 @@ def update_mean(data, cur_mean, cur_steps):
 
 def update_std(data, cur_var, cur_steps):
     new_steps = data.shape[0]
-    return (torch.var(data, 0) * new_steps + cur_var * cur_steps) / (cur_steps + new_steps)
+    batch_var = torch.var(data, 0)
+
+    if torch.isnan(batch_var).any():
+        return cur_var
+    else:
+        return (torch.var(data, 0) * new_steps + cur_var * cur_steps) / (cur_steps + new_steps)

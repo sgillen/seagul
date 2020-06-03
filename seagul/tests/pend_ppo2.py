@@ -54,13 +54,17 @@ if __name__ == "__main__":
         "pol_lr": 1e-2,
         "val_lr": 1e-3,
         "act_std_schedule": [1.0],
+        "normalize_return": False,
+        "normalize_obs": False,
+        "normalize_adv": False
     }
 
     proc_list = []
-
     for seed in np.random.randint(0,2**32,8):
         arg_dict["seed"] = int(seed)
-        #run_and_test(arg_dict)
+
+        # input("run debug?")
+        # run_and_test(arg_dict)
 
         p = Process(target=run_and_test, args=[arg_dict])
         p.start()
