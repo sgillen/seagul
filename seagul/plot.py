@@ -3,6 +3,7 @@ Plotting utilities
 """
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 import pandas as pd
 
 # Got this from stack overflow
@@ -40,6 +41,25 @@ def add_arrow(line, position=None, direction="right", size=15, color=None):
         arrowprops=dict(arrowstyle="-|>", color=color),
         size=size,
     )
+
+def chop_returns(data_list):
+    """
+    takes a list of (tensors/arrays/lists), and truncates them such that they all the same length as the shortest item. 
+    """
+
+    min_len = min(map(len, data_list))
+
+    truncated_data = []
+    for data in data_list:
+        truncated_data.append(list(data[:min_len]))
+    
+    if isinstance(data, np.ndarray):
+        return np.array(truncated_data)
+    if isinstance(data, torch.Tensor):
+        return torch.tensor(truncated_data)
+    else:
+        return truncated_data
+
 
 def smooth_bounded_curve(
     data,
@@ -89,6 +109,8 @@ def smooth_bounded_curve(
         ax: axes object used for plotting
     """
 
+    data = np.asarray(data)
+
     if ax is None:
         fig, ax = plt.subplots(1, 1)
     else:
@@ -97,15 +119,15 @@ def smooth_bounded_curve(
     avg_data = np.zeros(data.shape[0])
     for i in range(data.shape[1]):
         avg_data += data[:,i]
-
+      
     avg_data /= data.shape[1]
     min_data = [np.min(data[i,:]) for i in range(data.shape[0])]
     max_data = [np.max(data[i,:]) for i in range(data.shape[0])]
 
-    if len(avg_data) > 100:
-        min_data = pd.Series(min_data).rolling(100, min_periods=10).mean()
-        max_data = pd.Series(max_data).rolling(100, min_periods=10).mean()
-        avg_data = pd.Series(avg_data).rolling(100, min_periods=10).mean()
+    if len(avg_data) > window:
+        min_data = pd.Series(min_data).rolling(window, min_periods=10).mean()
+        max_data = pd.Series(max_data).rolling(window, min_periods=10).mean()
+        avg_data = pd.Series(avg_data).rolling(window, min_periods=10).mean()
 
     if time_steps is None:
         time_steps = [i for i in range(data.shape[0])]
@@ -122,3 +144,20 @@ def smooth_bounded_curve(
     ax.set_title('Reward curve')
 
     return fig, ax
+
+
+if __name__ == "__main__":
+    import numpy as np
+    import torch
+
+    d_list = [[1,2,3,4],[1,2,3,4,5],[1,2,3]]
+    smooth_bounded_curve(chop_returns(d_list))
+    plt.show()
+    
+    d_list = [np.array([1,2,3,4]),np.array([1,2,3,4,5]),np.array([1,2,3])]
+    smooth_bounded_curve(chop_returns(d_list))
+    plt.show()
+
+    d_list = [torch.tensor([1,2,3,4]),torch.tensor([1,2,3,4,5]), torch.tensor([1,2,3])]
+    smooth_bounded_curve(chop_returns(d_list))
+    plt.show()
