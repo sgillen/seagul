@@ -1,35 +1,36 @@
 import numpy as np
 import torch
-from torch.utils import data
 import tqdm.auto as tqdm
 import gym
 import pickle
-
 from seagul.rl.common import update_mean, update_std
-def ppo(
-    env_name,
-    total_steps,
-    model,
-    act_std_schedule=[0.7],
-    epoch_batch_size=2048,
-    gamma=0.99,
-    lam=0.99,
-    eps=0.2,
-    seed=0,
-    pol_batch_size=1024,
-    sgd_batch_size=1024,
-    pol_lr=1e-4,
-    val_lr=1e-4,
-    pol_epochs=10,
-    val_epochs=10,
-    target_kl=.01,
-    env_no_term_steps=0,
-    use_gpu=False,
-    reward_stop=None,
-    normalize_return=True,
-    env_config={}
-):
 
+
+def ppo(
+        env_name,
+        total_steps,
+        model,
+        act_std_schedule=(0.7,),
+        epoch_batch_size=2048,
+        gamma=0.99,
+        lam=0.99,
+        eps=0.2,
+        seed=0,
+        pol_batch_size=1024,
+        sgd_batch_size=1024,
+        pol_lr=1e-4,
+        val_lr=1e-4,
+        pol_epochs=10,
+        val_epochs=10,
+        target_kl=.01,
+        env_no_term_steps=0,
+        use_gpu=False,
+        reward_stop=None,
+        normalize_return=True,
+        normalize_obs=True,
+        normalize_adv=True,
+        env_config={}
+):
     """
     Implements proximal policy optimization with clipping
 
@@ -145,17 +146,18 @@ def ppo(
         while cur_batch_steps < epoch_batch_size:
             ep_obs, ep_act, ep_rew, ep_steps, ep_term = do_rollout(env, model, env_no_term_steps)
 
-            raw_rew_hist.append(sum(ep_rew))
+            raw_rew_hist.append(sum(ep_rew).item())
             batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
             batch_act = torch.cat((batch_act, ep_act[:-1]))
 
             if not ep_term:
                 ep_rew[-1] = model.value_fn(ep_obs[-1]).detach()
 
-            ep_discrew = discount_cumsum(ep_rew, gamma)  # [:-1] because we appended the value function to the end as an extra reward
+
+            ep_discrew = discount_cumsum(ep_rew, gamma)
 
             if normalize_return:
-                # rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
+                rew_mean = update_mean(batch_discrew, rew_mean, cur_total_steps)
                 rew_var = update_std(ep_discrew, rew_var, cur_total_steps)
                 ep_discrew = ep_discrew / (rew_var + 1e-6)
 
@@ -171,9 +173,10 @@ def ppo(
             cur_total_steps += ep_steps
 
         # make sure our advantages are zero mean and unit variance
-        adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
-        adv_var = update_std(batch_adv, adv_var, cur_total_steps)
-        batch_adv = (batch_adv - adv_mean) / (adv_var + 1e-6)
+        if normalize_adv:
+            adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
+            adv_var = update_std(batch_adv, adv_var, cur_total_steps)
+            batch_adv = (batch_adv - adv_mean) / (adv_var + 1e-6)
 
         # policy update
         # ========================================================================
@@ -192,13 +195,13 @@ def ppo(
                 logp = model.get_logp(local_obs, local_act).reshape(-1, act_size)
                 old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, act_size)
                 r = torch.exp(logp - old_logp)
-                clip_r = torch.clamp(r, 1-eps, 1+eps)
-                pol_loss = -torch.min(r*local_adv, clip_r*local_adv).mean()
+                clip_r = torch.clamp(r, 1 - eps, 1 + eps)
+                pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean()
 
                 approx_kl = (logp - old_logp).mean()
                 if approx_kl > target_kl:
                     break
-                
+
                 pol_opt.zero_grad()
                 pol_loss.backward()
                 pol_opt.step()
@@ -215,24 +218,25 @@ def ppo(
 
                 # predict and calculate loss for the batch
                 val_preds = model.value_fn(local_obs)
-                val_loss = ((val_preds - local_val)**2).mean()
+                val_loss = ((val_preds - local_val) ** 2).mean()
 
                 # do the normal pytorch update
                 val_opt.zero_grad()
                 val_loss.backward()
                 val_opt.step()
 
-
         # update observation mean and variance
-        obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
-        obs_std = update_std(batch_obs, obs_std, cur_total_steps)
-        model.policy.state_means = obs_mean
-        model.value_fn.state_means = obs_mean
-        model.policy.state_std = obs_std
-        model.value_fn.state_std = obs_std
-        model.action_std = actstd_lookup(cur_total_steps)
+
+        if normalize_obs:
+            obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
+            obs_std = update_std(batch_obs, obs_std, cur_total_steps)
+            model.policy.state_means = obs_mean
+            model.value_fn.state_means = obs_mean
+            model.policy.state_std = obs_std
+            model.value_fn.state_std = obs_std
+            model.action_std = actstd_lookup(cur_total_steps)
+        
         old_model = pickle.loads(pickle.dumps(model))
-                
         val_loss_hist.append(val_loss)
         pol_loss_hist.append(pol_loss)
 
@@ -250,6 +254,7 @@ def make_std_schedule(std_schedule, model, num_steps):
     std_lookup = lambda epoch: np.interp(epoch, x_vals, std_schedule)
     return std_lookup
 
+
 def do_rollout(env, model, n_steps_complete):
     act_list = []
     obs_list = []
@@ -261,7 +266,7 @@ def do_rollout(env, model, n_steps_complete):
     cur_step = 0
 
     while not done:
-        obs = torch.as_tensor(obs,dtype=dtype).detach()
+        obs = torch.as_tensor(obs, dtype=dtype).detach()
         obs_list.append(obs.clone())
 
         act, logprob = model.select_action(obs)
@@ -276,7 +281,6 @@ def do_rollout(env, model, n_steps_complete):
         ep_term = True
     else:
         ep_term = False
-
 
     ep_length = len(rew_list)
     ep_obs = torch.stack(obs_list)
@@ -295,4 +299,3 @@ def discount_cumsum(rewards, discount):
         cumulative_rewards[i] = rewards[i] + discount * future_cumulative_reward
         future_cumulative_reward = cumulative_rewards[i]
     return cumulative_rewards
-

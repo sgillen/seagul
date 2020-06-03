@@ -32,10 +32,10 @@ def run_and_test(seed):
 
 
 if __name__ == "__main__":
-    input_size = 4
-    output_size = 1
-    layer_size = 16
-    num_layers = 1
+    input_size = 17
+    output_size = 6
+    layer_size = 64
+    num_layers = 2
     activation = nn.ReLU
 
     policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
@@ -44,11 +44,11 @@ if __name__ == "__main__":
 
     # Define our hyper parameters
     arg_dict = {
-        "env_name": "InvertedPendulum-v2",
-        "total_steps": 200 * 2048,
+        "env_name": "Walker2d-v2",
+        "total_steps": 2e6,
         "model": model,
         "epoch_batch_size": 2048,  # how many steps we want to use before we update our gradients
-        "reward_stop": 1000,
+        "reward_stop": 3000,
         "sgd_batch_size": 512,
         "val_epochs": 30,
         "pol_epochs": 30,
@@ -63,5 +63,8 @@ if __name__ == "__main__":
     results = pool.map(run_and_test, seeds)
     results = chop_returns(results)
     results = np.array(results).transpose(1,0)
+
+    import ipdb; ipdb.set_trace()
+
     smooth_bounded_curve(results)
     plt.show()
