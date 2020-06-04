@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, action_std=1.0, fixed_std=False)
+    model = PPOModel(policy, value_fn, action_std=.1, fixed_std=False)
 
     # Define our hyper parameters
     arg_dict = {
@@ -54,10 +54,10 @@ if __name__ == "__main__":
         "sgd_batch_size": 512,
         "val_epochs": 10,
         "pol_epochs": 30,
-        "pol_lr": 1e-2,
+        "pol_lr": 1e-3,
         "val_lr": 1e-3,
         "normalize_return": True,
-        "normalize_obs": True,
+        "normalize_obs": False,
         "normalize_adv": True
     }
 

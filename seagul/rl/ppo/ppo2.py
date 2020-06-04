@@ -22,7 +22,7 @@ def ppo(
         val_lr=1e-4,
         pol_epochs=10,
         val_epochs=10,
-        target_kl=.01,
+        target_kl=.1,
         env_no_term_steps=0,
         use_gpu=False,
         reward_stop=None,
@@ -183,6 +183,7 @@ def ppo(
         num_mbatch = int(batch_obs.shape[0] / pol_batch_size)
         # Update the policy using the PPO loss
         for pol_epoch in range(pol_epochs):
+            pol_loss_tmp = []
             for i in range(num_mbatch):
                 cur_sample = i * sgd_batch_size
 
@@ -197,8 +198,14 @@ def ppo(
                 r = torch.exp(logp - old_logp)
                 clip_r = torch.clamp(r, 1 - eps, 1 + eps)
                 pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean()
+                pol_loss_tmp.append(pol_loss)
 
-                approx_kl = (logp - old_logp).mean()
+                for t in model.policy.state_dict().values():
+                    if torch.isnan(t).any():
+                        print("oh no")
+
+                #approx_kl = (torch.exp(logp)*(logp - old_logp)).mean()
+                approx_kl = ((logp - old_logp)**2).mean()
                 if approx_kl > target_kl:
                     break
 
@@ -256,6 +263,8 @@ def make_std_schedule(std_schedule, model, num_steps):
 
 
 def do_rollout(env, model, n_steps_complete):
+    torch.autograd.set_grad_enabled(False)
+
     act_list = []
     obs_list = []
     rew_list = []
@@ -288,6 +297,7 @@ def do_rollout(env, model, n_steps_complete):
     ep_rew = torch.tensor(rew_list)
     ep_rew = ep_rew.reshape(-1, 1)
 
+    torch.autograd.set_grad_enabled(True)
     return ep_obs, ep_act, ep_rew, ep_length, ep_term
 
 

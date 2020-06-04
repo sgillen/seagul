@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # Define our hyper parameters
     arg_dict = {
-        "env_name": "Walker2d-v2",
+        "env_name": "HalfCheetah-v2",
         "total_steps": 2e6,
         "model": model,
         "epoch_batch_size": 2048,  # how many steps we want to use before we update our gradients
