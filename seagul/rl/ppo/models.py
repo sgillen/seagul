@@ -45,7 +45,7 @@ class PPOModel:
 
     def get_logp_variable(self, obs, acts):
         out = self.policy(obs)
-        means = out[..., : self.num_acts]
+        means = out[..., :self.num_acts]
         logstds = torch.clamp(out[..., self.num_acts:], self.LOG_STD_MIN, self.LOG_STD_MAX)
         return guassian_logp(acts, means, torch.exp(logstds).detach())
 
