@@ -98,8 +98,12 @@ if __name__ == "__main__":
 
     seeds = np.random.randint(0,2**32,8)
     pool = Pool(processes=8)
+
+
+#    results = run_and_test(seeds[0])
     results = pool.map(run_and_test, seeds)
-    #results = run_and_test(seeds[0])
+
+
     results = chop_returns(results)
     results = np.array(results).transpose(1,0)
 
