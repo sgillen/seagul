@@ -20,7 +20,7 @@ class LinearEnv2D(gym.Env):
         act_hold=1,
         init_state=np.array([1, 1]),
         init_noise_max=5.0,
-        zy_max=float('inf'),
+        xz_max=float('inf'),
         u_max=25,
         reward_fn=lambda s: (-(.01*s[0])**2 + (.01*s[1])**2, s),
         integrator=rk4
@@ -47,12 +47,12 @@ class LinearEnv2D(gym.Env):
         self.cur_step = 0
         self.integrator = integrator
 
-        self.state_max = np.array([zy_max, zy_max, 1])
+        self.state_max = np.array([xz_max, xz_max, 1])
         self.observation_space = gym.spaces.Box(low=-(self.state_max+50), high=self.state_max+50, dtype=np.float32)
         self.init_noise_max = init_noise_max
 
         # Action (Control) parameters
-        self.action_max = np.array([u_max, u_max])
+        self.action_max = np.array([u_max])
         self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float32)
 
         self.reward_fn = reward_fn
@@ -78,7 +78,7 @@ class LinearEnv2D(gym.Env):
     def step(self, action):
         action = np.clip(action, -self.action_max, self.action_max)
 
-        full_obs = np.zeros((self.act_hold, 3))
+        full_obs = np.zeros((self.act_hold, 2))
         for i in range(self.act_hold):
             self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
             full_obs[i,:] = self.state
