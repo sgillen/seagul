@@ -13,16 +13,16 @@ def ppo(
         act_std_schedule=(0.7,),
         epoch_batch_size=2048,
         gamma=0.99,
-        lam=0.99,
+        lam=0.95,
         eps=0.2,
         seed=0,
-        pol_batch_size=1024,
+        entropy_coef=0.0,
         sgd_batch_size=1024,
-        pol_lr=1e-4,
-        val_lr=1e-4,
-        pol_epochs=10,
-        val_epochs=10,
-        target_kl=.1,
+        lr_schedule=(3e-4,),
+        sgd_epochs=10,
+        target_kl=float('inf'),
+        val_coef=.5,
+        clip_val=True,
         env_no_term_steps=0,
         use_gpu=False,
         reward_stop=None,
@@ -44,11 +44,10 @@ def ppo(
         gamma: discount applied to future rewards, usually close to 1
         lam: lambda for the Advantage estimation, usually close to 1
         eps: epsilon for the clipping, usually .1 or .2
-        pol_batch_size: batch size for policy updates
+        sgd_batch_size: batch size for policy updates
         sgd_batch_size: batch size for value function updates
-        pol_lr: learning rate for policy pol_optimizer
-        val_lr: learning rate of value function pol_optimizer
-        pol_epochs: how many epochs to use for each policy update
+        lr_schedule: learning rate for policy pol_optimizer
+        sgd_epochs: how many epochs to use for each policy update
         val_epochs: how many epochs to use for each value update
         target_kl: max KL before breaking
         use_gpu:  want to use the GPU? set to true
@@ -91,8 +90,11 @@ def ppo(
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
-    actstd_lookup = make_std_schedule(act_std_schedule, model, total_steps)
+    actstd_lookup = make_schedule(act_std_schedule, model, total_steps)
+    lr_lookup = make_schedule(lr_schedule, model, total_steps)
+
     model.action_var = actstd_lookup(0)
+    sgd_lr = lr_lookup(0)
 
     obs_size = env.observation_space.shape[0]
     obs_mean = torch.zeros(obs_size)
@@ -104,8 +106,6 @@ def ppo(
 
     # copy.deepcopy broke for me with older version of torch. Using pickle for this is weird but works fine
     old_model = pickle.loads(pickle.dumps(model))
-    pol_opt = torch.optim.Adam(model.policy.parameters(), lr=pol_lr)
-    val_opt = torch.optim.Adam(model.value_fn.parameters(), lr=val_lr)
 
     # seed all our RNGs
     env.seed(seed)
@@ -128,6 +128,8 @@ def ppo(
     # Train until we hit our total steps or reach our reward threshold
     # ==============================================================================
     while cur_total_steps < total_steps:
+        pol_opt = torch.optim.Adam(model.policy.parameters(), lr=sgd_lr)
+        val_opt = torch.optim.Adam(model.value_fn.parameters(), lr=sgd_lr)
 
         batch_obs = torch.empty(0)
         batch_act = torch.empty(0)
@@ -147,12 +149,12 @@ def ppo(
             ep_obs, ep_act, ep_rew, ep_steps, ep_term = do_rollout(env, model, env_no_term_steps)
 
             raw_rew_hist.append(sum(ep_rew).item())
+            print(raw_rew_hist[-1])
             batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
             batch_act = torch.cat((batch_act, ep_act[:-1]))
 
             if not ep_term:
                 ep_rew[-1] = model.value_fn(ep_obs[-1]).detach()
-
 
             ep_discrew = discount_cumsum(ep_rew, gamma)
 
@@ -174,37 +176,35 @@ def ppo(
 
         # make sure our advantages are zero mean and unit variance
         if normalize_adv:
-            adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
-            adv_var = update_std(batch_adv, adv_var, cur_total_steps)
-            batch_adv = (batch_adv - adv_mean) / (adv_var + 1e-6)
+            #adv_mean = update_mean(batch_adv, adv_mean, cur_total_steps)
+            #adv_var = update_std(batch_adv, adv_var, cur_total_steps)
+            batch_adv = (batch_adv - batch_adv.mean()) / (batch_adv.std() + 1e-6)
 
-        # policy update
-        # ========================================================================
-        num_mbatch = int(batch_obs.shape[0] / pol_batch_size)
+
+        num_mbatch = int(batch_obs.shape[0] / sgd_batch_size)
         # Update the policy using the PPO loss
-        for pol_epoch in range(pol_epochs):
-            pol_loss_tmp = []
+        for pol_epoch in range(sgd_epochs):
             for i in range(num_mbatch):
+                # policy update
+                # ========================================================================
                 cur_sample = i * sgd_batch_size
 
                 # Transfer to GPU (if GPU is enabled, else this does nothing)
                 local_obs = batch_obs[cur_sample:cur_sample + sgd_batch_size]
                 local_act = batch_act[cur_sample:cur_sample + sgd_batch_size]
                 local_adv = batch_adv[cur_sample:cur_sample + sgd_batch_size]
+                local_val = batch_discrew[cur_sample:cur_sample + sgd_batch_size]
 
                 # Compute the loss
                 logp = model.get_logp(local_obs, local_act).reshape(-1, act_size)
                 old_logp = old_model.get_logp(local_obs, local_act).reshape(-1, act_size)
+                mean_entropy = -(logp*torch.exp(logp)).mean()
+
                 r = torch.exp(logp - old_logp)
                 clip_r = torch.clamp(r, 1 - eps, 1 + eps)
-                pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean()
-                pol_loss_tmp.append(pol_loss)
 
-                for t in model.policy.state_dict().values():
-                    if torch.isnan(t).any():
-                        print("oh no")
+                pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean() - entropy_coef*mean_entropy
 
-                #approx_kl = (torch.exp(logp)*(logp - old_logp)).mean()
                 approx_kl = ((logp - old_logp)**2).mean()
                 if approx_kl > target_kl:
                     break
@@ -213,21 +213,18 @@ def ppo(
                 pol_loss.backward()
                 pol_opt.step()
 
-        # value_fn update
-        # ========================================================================
-        # Update value function with the standard L2 Loss
-        for val_epoch in range(val_epochs):
-            for i in range(num_mbatch):
-                cur_sample = i * sgd_batch_size
-                # Transfer to GPU (if GPU is enabled, else this does nothing)
-                local_obs = batch_obs[cur_sample:cur_sample + sgd_batch_size]
-                local_val = batch_discrew[cur_sample:cur_sample + sgd_batch_size]
-
-                # predict and calculate loss for the batch
+                # value_fn update
+                # ========================================================================
                 val_preds = model.value_fn(local_obs)
-                val_loss = ((val_preds - local_val) ** 2).mean()
+                if clip_val:
+                    old_val_preds = old_model.value_fn(local_obs)
+                    val_preds_clipped = old_val_preds + torch.clamp(val_preds - old_val_preds, -eps, eps)
+                    val_loss1 = (val_preds_clipped - local_val)**2
+                    val_loss2 = (val_preds - local_val)**2
+                    val_loss = val_coef*torch.max(val_loss1, val_loss2).mean()
+                else:
+                    val_loss = val_coef*((val_preds - local_val) ** 2).mean()
 
-                # do the normal pytorch update
                 val_opt.zero_grad()
                 val_loss.backward()
                 val_opt.step()
@@ -241,8 +238,10 @@ def ppo(
             model.value_fn.state_means = obs_mean
             model.policy.state_std = obs_std
             model.value_fn.state_std = obs_std
-            model.action_std = actstd_lookup(cur_total_steps)
-        
+
+        model.action_std = actstd_lookup(cur_total_steps)
+        sgd_lr = lr_lookup(cur_total_steps)
+
         old_model = pickle.loads(pickle.dumps(model))
         val_loss_hist.append(val_loss)
         pol_loss_hist.append(pol_loss)
@@ -254,7 +253,7 @@ def ppo(
 
 
 # Takes list or array and returns a lambda that interpolates it for each epoch
-def make_std_schedule(std_schedule, model, num_steps):
+def make_schedule(std_schedule, model, num_steps):
     std_schedule = np.asarray(std_schedule)
     sched_length = std_schedule.shape[0]
     x_vals = np.linspace(0, num_steps, sched_length)
@@ -294,7 +293,7 @@ def do_rollout(env, model, n_steps_complete):
     ep_length = len(rew_list)
     ep_obs = torch.stack(obs_list)
     ep_act = torch.stack(act_list)
-    ep_rew = torch.tensor(rew_list)
+    ep_rew = torch.tensor(rew_list, dtype=dtype)
     ep_rew = ep_rew.reshape(-1, 1)
 
     torch.autograd.set_grad_enabled(True)

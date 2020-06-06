@@ -39,7 +39,7 @@ def run_and_test(seed):
 if __name__ == "__main__":
     input_size = 17
     output_size = 6
-    layer_size = 64
+    layer_size = 156
     num_layers = 2
     activation = nn.ReLU
 
@@ -55,14 +55,13 @@ if __name__ == "__main__":
         "epoch_batch_size": 2048,  # how many steps we want to use before we update our gradients
         "reward_stop": 3000,
         "sgd_batch_size": 512,
-        "val_epochs": 30,
-        "pol_epochs": 30,
-        "pol_lr": 1e-2,
-        "val_lr": 1e-3,
+        "sgd_epochs": 30,
+        "lr_schedule": (3e-4, 0),
+        "entropy_coef": .01,
         "env_no_term_steps": 1000
     }
 
-    seeds = np.random.randint(0,2**32,8)
+    seeds = np.random.randint(0, 2**32, 8)
     pool = Pool(processes=8)
     results = pool.map(run_and_test, seeds)
     #results = run_and_test(seeds[0])

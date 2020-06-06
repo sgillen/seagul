@@ -12,6 +12,8 @@ register(id="humanoid_long-v1", entry_point="gym.envs.mujoco:HumanoidEnv")
 register(id="lorenz-v0", entry_point="seagul.envs.simple_nonlinear:LorenzEnv")
 register(id="linear_z-v0", entry_point="seagul.envs.simple_nonlinear:LinearEnv")
 register(id="gen_nonlin-v0", entry_point="seagul.envs.simple_nonlinear:GenEnv")
+register(id="linear_z2d-v0", entry_point="seagul.envs.simple_nonlinear:LinearEnv2D")
+
 
 #register(id="dyn_car-v0", entry_point="seagul.envs.car:DynCarEnv")
 #register(id="bullet_car-v0", entry_point="seagul.envs.bullet:RacecarGymEnv_v1")
