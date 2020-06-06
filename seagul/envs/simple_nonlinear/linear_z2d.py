@@ -6,7 +6,8 @@ import gym.spaces
 
 from seagul.integration import euler, rk4
 
-class LinearEnv(gym.Env):
+
+class LinearEnv2D(gym.Env):
     """
     Environment for the our "Linear Z" system.. just take a look at the dynamics. Also includes an extra
     "reward" state for the policy, in case you have a time dependend reward

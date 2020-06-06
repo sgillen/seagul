@@ -37,7 +37,7 @@ if __name__ == "__main__":
     input_size = 3
     output_size = 2
     layer_size = 16
-    num_layers = 1
+    num_layers = 2
     activation = nn.ReLU
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
@@ -52,12 +52,10 @@ if __name__ == "__main__":
         "epoch_batch_size": 2048,  # how many steps we want to use before we update our gradients
         "reward_stop": -200,
         "sgd_batch_size": 512,
-        "val_epochs": 10,
-        "pol_epochs": 30,
-        "pol_lr": 1e-3,
-        "val_lr": 1e-3,
+        "sgd_epochs": 30,
+        "lr_schedule": (1e-3,),
         "normalize_return": True,
-        "normalize_obs": False,
+        "normalize_obs": True,
         "normalize_adv": True
     }
 
