@@ -52,7 +52,7 @@ class LinearEnv2D(gym.Env):
         self.init_noise_max = init_noise_max
 
         # Action (Control) parameters
-        self.action_max = np.array([u_max, u_max])
+        self.action_max = np.array([u_max])
         self.action_space = gym.spaces.Box(low=-self.action_max, high=self.action_max, dtype=np.float32)
 
         self.reward_fn = reward_fn
