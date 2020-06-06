@@ -54,23 +54,51 @@ if __name__ == "__main__":
         "model": model,
         "epoch_batch_size": 2048,  # how many steps we want to use before we update our gradients
         "reward_stop": 3000,
-        "sgd_batch_size": 512,
+        "sgd_batch_size": 64,
         "val_epochs": 30,
         "pol_epochs": 30,
-        "pol_lr": 1e-2,
-        "val_lr": 1e-3,
-        "env_no_term_steps": 1000
+        "pol_lr_schedule": [3e-4, 0],
+        "val_lr_schedule": [3e-4, 0],
+        "target_kl": float("inf"),
+        "env_no_term_steps": 1000,
+        "normalize_return": False,
+        "normalize_obs": False,
+        "normalize_adv": True
     }
 
-    seeds = np.random.randint(0,2**32,8)
+    seeds = np.random.randint(0, 2**32, 8)
     pool = Pool(processes=8)
     results = pool.map(run_and_test, seeds)
     #results = run_and_test(seeds[0])
     results = chop_returns(results)
-    results = np.array(results).transpose(1,0)
+    results = np.array(results).transpose(1, 0)
 
-    import ipdb; ipdb.set_trace()
 
-    smooth_bounded_curve(results)
-    plt.show()
+    import gym
+    ws = torch.load("./tmp/workspace_"+str(seeds[0]))
+    model = ws['model']
+    env = gym.make("HalfCheetah-v2")
+    obs = env.reset()
+
+    done = False
+    action_hist = []
+    state_hist = []
+    reward_hist = []
+
+    while not done:
+
+        actions, _, _, _ = model.step(np.asarray(obs, dtype=np.float32))
+        obs, reward, done, _ = env.step(np.asarray(actions))
+        env.render()
+
+        action_hist.append(actions)
+        state_hist.append(obs)
+        reward_hist.append(reward)
+        # env.render()
+
+        if done:
+            break
+
+    #smooth_bounded_curve(results)
+    #plt.show()
 
