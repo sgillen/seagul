@@ -4,9 +4,9 @@ import gym
 from gym.utils import seeding
 import gym.spaces
 
-from seagul.integration import euler,rk4
+from seagul.integration import euler, rk4
 
-class 2DLinearEnv(gym.Env):
+class LinearEnv(gym.Env):
     """
     Environment for the our "Linear Z" system.. just take a look at the dynamics. Also includes an extra
     "reward" state for the policy, in case you have a time dependend reward
@@ -19,9 +19,9 @@ class 2DLinearEnv(gym.Env):
         act_hold=1,
         init_state=np.array([1, 1]),
         init_noise_max=5.0,
-        xyz_max=float('inf'),
+        zy_max=float('inf'),
         u_max=25,
-        reward_fn=lambda s: (-((.01*s[0])**2 + (.01*s[1])**2, s),
+        reward_fn=lambda s: (-(.01*s[0])**2 + (.01*s[1])**2, s),
         integrator=rk4
     ):
 
@@ -77,7 +77,7 @@ class 2DLinearEnv(gym.Env):
     def step(self, action):
         action = np.clip(action, -self.action_max, self.action_max)
 
-        full_obs = np.zeros((self.act_hold,3))
+        full_obs = np.zeros((self.act_hold, 3))
         for i in range(self.act_hold):
             self.state = self.integrator(self._derivs, action, 0, self.dt, self.state)
             full_obs[i,:] = self.state
@@ -110,8 +110,7 @@ class 2DLinearEnv(gym.Env):
         """
 
         xdot = u[0]
-        ydot = u[1]
         zdot = q[0]
 
-        return np.array([xdot, ydot, zdot])
+        return np.array([xdot, zdot])
 
