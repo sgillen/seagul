@@ -2,14 +2,11 @@ from multiprocessing import Process
 import torch.nn as nn
 import numpy as np
 import gym
-from seagul.rl.run_utils import run_sg, load_workspace
-from seagul.rl.sac import sac, SACModel
+from seagul.rl.td3 import td3, TD3Model
 from seagul.nn import MLP
-from seagul.integration import euler
-import seagul.envs
+from seagul.rl.run_utils import run_sg
 import time
 import torch
-#from seagul.integrationx import euler
 
 proc_list = []
 env_name = "InvertedPendulum-v2"
@@ -20,7 +17,7 @@ env = gym.make(env_name)
 def run_and_test(arg_dict):
     torch.set_num_threads(1)
 
-    t_model, rewards, var_dict = sac(**arg_dict)
+    t_model, rewards, var_dict = td3(**arg_dict)
 
     seed = arg_dict["seed"]
     if var_dict["early_stop"]:
@@ -39,9 +36,8 @@ for seed in np.random.randint(0, 2 ** 32, 8):
     num_layers = 1
     activation = nn.ReLU
 
-    model = SACModel(
-         policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation),
-         value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
+    model = TD3Model(
+         policy = MLP(input_size, output_size, num_layers, layer_size, activation),
          q1_fn = MLP(input_size+output_size, 1, num_layers, layer_size, activation),
          q2_fn = MLP(input_size+output_size, 1, num_layers, layer_size, activation),
          act_limit=3
@@ -51,21 +47,22 @@ for seed in np.random.randint(0, 2 ** 32, 8):
         "env_name": env_name,
         "model": model,
         "seed": int(seed),  # int((time.time() % 1)*1e8),
-        "total_steps" : 1e6,
-        "alpha" : .2,
-        "exploration_steps" : 5000,
+        "train_steps" : 1e6,
+        "exploration_steps" : 50000,
         "min_steps_per_update" : 500,
         "reward_stop" : 1000,
-        "env_steps" : env._max_episode_steps,
         "gamma": 1,
+        "act_std_schedule" :(.1,),
         "sgd_batch_size": 64,
-        "replay_batch_size" : 256,
-        "iters_per_update": float('inf'),
+        "replay_batch_size" : 2048,
+        "iters_per_update": 1000,
+        "env_max_steps":1000,
+        "polyak":.995
         #"iters_per_update": float('inf'),
     }
 
 
-    # run_sg(alg_config, sac, "sac bullet defaults", "debug", "/data/" + trial_num + "/" + "seed" + str(seed))
+    #run_sg(alg_config, td3, "sac bullet defaults", "debug", "/data/" + "/" + "seed" + str(seed))
 
     p = Process(target=run_and_test, args=[alg_config])
     p.start()

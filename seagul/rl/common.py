@@ -72,3 +72,24 @@ def update_std(data, cur_var, cur_steps):
         return cur_var
     else:
         return (torch.var(data, 0) * new_steps + cur_var * cur_steps) / (cur_steps + new_steps)
+
+
+class RandModel:
+    """
+    class that just takes actions from a uniform random distribution
+    """
+
+    def __init__(self, act_limit, act_size):
+        self.act_limit = act_limit
+        self.act_size = act_size
+
+    def select_action(self, state, noise):
+        return (torch.rand(self.act_size) * 2 * self.act_limit - self.act_limit, 1 / (self.act_limit * 2))
+
+
+def make_schedule(std_schedule, num_steps):
+    std_schedule = np.asarray(std_schedule)
+    sched_length = std_schedule.shape[0]
+    x_vals = np.linspace(0, num_steps, sched_length)
+    std_lookup = lambda epoch: np.interp(epoch, x_vals, std_schedule)
+    return std_lookup
