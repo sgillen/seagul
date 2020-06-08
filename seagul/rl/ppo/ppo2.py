@@ -3,7 +3,7 @@ import torch
 import tqdm.auto as tqdm
 import gym
 import pickle
-from seagul.rl.common import update_mean, update_std
+from seagul.rl.common import update_mean, update_std, make_schedule
 
 
 def ppo(
@@ -90,8 +90,8 @@ def ppo(
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
-    actstd_lookup = make_schedule(act_std_schedule, model, total_steps)
-    lr_lookup = make_schedule(lr_schedule, model, total_steps)
+    actstd_lookup = make_schedule(act_std_schedule, total_steps)
+    lr_lookup = make_schedule(lr_schedule, total_steps)
 
     model.action_var = actstd_lookup(0)
     sgd_lr = lr_lookup(0)
@@ -253,12 +253,6 @@ def ppo(
 
 
 # Takes list or array and returns a lambda that interpolates it for each epoch
-def make_schedule(std_schedule, model, num_steps):
-    std_schedule = np.asarray(std_schedule)
-    sched_length = std_schedule.shape[0]
-    x_vals = np.linspace(0, num_steps, sched_length)
-    std_lookup = lambda epoch: np.interp(epoch, x_vals, std_schedule)
-    return std_lookup
 
 
 def do_rollout(env, model, n_steps_complete):

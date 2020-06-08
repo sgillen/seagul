@@ -5,8 +5,7 @@ import tqdm.auto as tqdm
 import gym
 import dill
 
-from seagul.rl.common import ReplayBuffer, update_mean, update_std
-from seagul.rl.sac.models import RandModel
+from seagul.rl.common import ReplayBuffer, update_mean, update_std, RandModel
 
 
 def sac(
