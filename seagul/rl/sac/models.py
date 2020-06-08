@@ -1,19 +1,6 @@
 import torch
-from torch.distributions import Normal
 import numpy as np
 
-
-class RandModel:
-    """
-    class that just takes actions from a uniform random distribution
-    """
-
-    def __init__(self, act_limit, act_size):
-        self.act_limit = act_limit
-        self.act_size = act_size
-
-    def select_action(self, state, noise):
-        return (torch.rand(self.act_size) * 2 * self.act_limit - self.act_limit, 1 / (self.act_limit * 2))
 
 class SACModel:
     """
@@ -115,6 +102,7 @@ class SACModelActHold:
 
         return acts, logp
 
+
 class SACModelSwitch:
     """
     Model for use with seagul's sac algorithm
@@ -210,7 +198,6 @@ class SACModelSwitch:
         self.q2_fn = self.q2_fn.to(device)
         self.gate_fn = self.gate_fn.to(device)
         return self
-
 
     # Select action is used internally and is the stochastic evaluation
     def select_action_parallel(self, state, noise):
