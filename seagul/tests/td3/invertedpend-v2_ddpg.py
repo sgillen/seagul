@@ -2,7 +2,7 @@ from multiprocessing import Process
 import torch.nn as nn
 import numpy as np
 import gym
-from seagul.rl.td3 import td3, TD3Model
+from seagul.rl.td3 import ddpg, TD3Model
 from seagul.nn import MLP
 from seagul.rl.run_utils import run_sg
 import time
@@ -17,7 +17,7 @@ env = gym.make(env_name)
 def run_and_test(arg_dict):
     torch.set_num_threads(1)
 
-    t_model, rewards, var_dict = td3(**arg_dict)
+    t_model, rewards, var_dict = ddpg(**arg_dict)
 
     seed = arg_dict["seed"]
     if var_dict["early_stop"]:
@@ -47,22 +47,19 @@ for seed in np.random.randint(0, 2 ** 32, 8):
         "env_name": env_name,
         "model": model,
         "seed": int(seed),  # int((time.time() % 1)*1e8),
-        "train_steps" : 1e6,
-        "exploration_steps": 50000,
-        "min_steps_per_update": 500,
+        "train_steps" : 5e5,
+        "exploration_steps": 500,
         "reward_stop": 1000,
-        "gamma": 1,
-        "act_std_schedule": (.1,),
-        "sgd_batch_size": 64,
-        "replay_batch_size": 2048,
-        "iters_per_update": 1000,
+        "gamma": .95,
+        "act_std_schedule": (1, .1,),
+        "replay_batch_size": 128,
         "env_max_steps": 1000,
-        "polyak": .995
+        "polyak": .995,
+        "sgd_lr":1e-2
         #"iters_per_update": float('inf'),
     }
 
-
-    run_sg(alg_config, td3, "sac bullet defaults", "debug", "/data/" + "/" + "seed" + str(seed))
+    #run_sg(alg_config, ddpg, "sac bullet defaults", "debug", "/data/" + "/" + "seed" + str(seed))
 
     p = Process(target=run_and_test, args=[alg_config])
     p.start()
