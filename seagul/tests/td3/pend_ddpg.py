@@ -34,7 +34,7 @@ def run_and_test(arg_dict):
         print("Rewards were", rewards[-1])
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     start_time = time.time()
 
     input_size = 3
@@ -44,30 +44,30 @@ if __name__ == "__main__" :
     activation = nn.ReLU
 
     model = SACModel(
-         policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation),
-         value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
-         q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation),
-         q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation),
-         act_limit=1
+        policy=MLP(input_size, output_size * 2, num_layers, layer_size, activation),
+        value_fn=MLP(input_size, 1, num_layers, layer_size, activation),
+        q1_fn=MLP(input_size + output_size, 1, num_layers, layer_size, activation),
+        q2_fn=MLP(input_size + output_size, 1, num_layers, layer_size, activation),
+        act_limit=1
     )
 
     # Define our hyper parameters
     alg_config = {
         "env_name": "Pendulum-v0",
         "model": model,
-        "exploration_steps" : 5000,
-        "total_steps": 200000,
+        "exploration_steps": 5000,
+        "train_steps": 200000,
         "reward_stop": -200,
         "use_gpu": False,
     }
 
     # for debugging
-    #alg_config["seed"] = 0
-    #run_and_test(alg_config)
+    # alg_config["seed"] = 0
+    # run_and_test(alg_config)
 
     proc_list = []
 
-    for seed in np.random.randint(0,2**31,8):
+    for seed in np.random.randint(0, 2 ** 31, 8):
         alg_config["seed"] = int(seed)
         p = Process(target=run_and_test, args=[alg_config])
         p.start()

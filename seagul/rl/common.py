@@ -93,3 +93,15 @@ def make_schedule(std_schedule, num_steps):
     x_vals = np.linspace(0, num_steps, sched_length)
     std_lookup = lambda epoch: np.interp(epoch, x_vals, std_schedule)
     return std_lookup
+
+
+def update_target_fn(fn, target_fn, polyak):
+
+    fn_sd = fn.state_dict()
+    target_sd = target_fn.state_dict()
+    for layer in target_sd:
+        target_sd[layer] = polyak * target_sd[layer] + (1 - polyak) * fn_sd[layer]
+
+    target_fn.load_state_dict(target_sd)
+
+    return target_fn
