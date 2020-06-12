@@ -10,9 +10,9 @@ from seagul.rl.common import ReplayBuffer, update_mean, update_std, RandModel
 
 def sac(
         env_name,
-        total_steps,
+        train_steps,
         model,
-        env_steps=0,
+        env_max_steps=0,
         min_steps_per_update=1,
         iters_per_update=100,
         replay_batch_size=64,
@@ -34,10 +34,10 @@ def sac(
 
     Args:
         env_name: name of the openAI gym environment to solve
-        total_steps: number of timesteps to run the PPO for
+        train_steps: number of timesteps to run the PPO for
         model: model from seagul.rl.models. Contains policy, value fn, q1_fn, q2_fn
         min_steps_per_update: minimun number of steps to take before running updates, will finish episodes before updating
-        env_steps: number of steps the environment takes before finishing, if the environment emits a done signal before this we consider it a failure.
+        env_max_steps: number of steps the environment takes before finishing, if the environment emits a done signal before this we consider it a failure.
         iters_per_update: how many update steps to make every time we update
         replay_batch_size: how big a batch to pull from the replay buffer for each update
         seed: random seed for all rngs
@@ -114,7 +114,7 @@ def sac(
     q1_loss_hist = []
     q2_loss_hist = []
 
-    progress_bar = tqdm.tqdm(total=total_steps+normalize_steps)
+    progress_bar = tqdm.tqdm(total=train_steps + normalize_steps)
     cur_total_steps = 0
     progress_bar.update(0)
     early_stop = False
@@ -123,7 +123,7 @@ def sac(
 
 
     while cur_total_steps < normalize_steps:
-        ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
+        ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_max_steps)
         norm_obs1 = torch.cat((norm_obs1, ep_obs1))
         
         ep_steps = ep_rews.shape[0]
@@ -148,7 +148,7 @@ def sac(
         model.q2_fn.state_std = model.q1_fn.state_std
 
     while cur_total_steps < exploration_steps:
-        ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_steps)
+        ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, env_max_steps)
         replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
         ep_steps = ep_rews.shape[0]
@@ -156,7 +156,7 @@ def sac(
 
         progress_bar.update(ep_steps)
 
-    while cur_total_steps < total_steps:
+    while cur_total_steps < train_steps:
         cur_batch_steps = 0
 
         # Bail out if we have met out reward threshold
@@ -168,7 +168,7 @@ def sac(
         # collect data with the current policy
         # ========================================================================
         while cur_batch_steps < min_steps_per_update:
-            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, model, env_steps)
+            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, model, env_max_steps)
             replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
             ep_steps = ep_rews.shape[0]
@@ -176,6 +176,7 @@ def sac(
             cur_total_steps += ep_steps
 
             raw_rew_hist.append(torch.sum(ep_rews))
+
 
         progress_bar.update(cur_batch_steps)
 
