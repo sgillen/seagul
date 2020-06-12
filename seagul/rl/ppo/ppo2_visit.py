@@ -4,12 +4,15 @@ import tqdm.auto as tqdm
 import gym
 import pickle
 from seagul.rl.common import update_mean, update_std, make_schedule
+from seagul.rl.common import ReplayBuffer
 
 
-def ppo(
+def ppo_visit(
         env_name,
         total_steps,
         model,
+        vc=.01,
+        replay_buf_size=int(5e4),
         act_std_schedule=(0.7,),
         epoch_batch_size=2048,
         gamma=0.99,
@@ -90,6 +93,9 @@ def ppo(
     else:
         raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
+
+    replay_buf = ReplayBuffer(env.observation_space.shape[0], act_size, replay_buf_size)
+
     actstd_lookup = make_schedule(act_std_schedule, total_steps)
     lr_lookup = make_schedule(lr_schedule, total_steps)
 
@@ -147,6 +153,13 @@ def ppo(
             ep_obs, ep_act, ep_rew, ep_steps, ep_term = do_rollout(env, model, env_no_term_steps)
 
             raw_rew_hist.append(sum(ep_rew).item())
+
+
+            for i, obs in enumerate(ep_obs):
+                ep_rew[i] -= (np.min(np.linalg.norm(obs - replay_buf.obs1_buf, axis=1)))*vc
+
+            replay_buf.store(ep_obs, ep_obs, ep_act, ep_rew, ep_rew)
+
             batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
             batch_act = torch.cat((batch_act, ep_act[:-1]))
 

@@ -6,10 +6,11 @@ import pickle
 from seagul.rl.common import update_mean, update_std, make_schedule
 
 
-def ppo(
+def ppo_dim(
         env_name,
         total_steps,
         model,
+        transient_length=50,
         act_std_schedule=(0.7,),
         epoch_batch_size=2048,
         gamma=0.99,
@@ -145,6 +146,8 @@ def ppo(
         # ==============================================================================
         while cur_batch_steps < epoch_batch_size:
             ep_obs, ep_act, ep_rew, ep_steps, ep_term = do_rollout(env, model, env_no_term_steps)
+            ep_rew /= var_dim(ep_obs[transient_length:],order=1)
+
 
             raw_rew_hist.append(sum(ep_rew).item())
             batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
@@ -299,3 +302,30 @@ def discount_cumsum(rewards, discount):
         cumulative_rewards[i] = rewards[i] + discount * future_cumulative_reward
         future_cumulative_reward = cumulative_rewards[i]
     return cumulative_rewards
+
+
+def variogram(data, l, ord):
+    """Method of moments variogram estimator: eq (16) from https://arxiv.org/pdf/1101.1444.pdf
+    Args:
+        data: np.array, data you want to estimate the variogram of
+        l: int, lag
+        ord: int, order of the estimator
+    Returns:
+        float, the variogram at point l
+
+    """
+    return 1 / (2 * len(data) - l) * np.sum(np.linalg.norm(data[l:] - data[:-l],ord=ord))
+
+
+def var_dim(data, order):
+    """Variation fractal dimension estimator: eq (18) from https://arxiv.org/pdf/1101.1444.pdf
+        Args:
+            data: np.array, data you want to estimate the dimension of
+            ord: int, order of the estimator
+        Returns:
+            float, the dimension estimate
+        """
+    return 2 - 1/(order*np.log(2))*(np.log(variogram(data, 2, order)) - np.log(variogram(data, 1, order)))
+
+
+
