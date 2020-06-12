@@ -64,14 +64,14 @@ def update_mean(data, cur_mean, cur_steps):
     return (torch.mean(data, 0) * new_steps + cur_mean * cur_steps) / (cur_steps + new_steps)
 
 
-def update_std(data, cur_var, cur_steps):
+def update_std(data, cur_std, cur_steps):
     new_steps = data.shape[0]
     batch_var = torch.var(data, 0)
 
     if torch.isnan(batch_var).any():
-        return cur_var
+        return cur_std
     else:
-        return (torch.var(data, 0) * new_steps + cur_var * cur_steps) / (cur_steps + new_steps)
+        return (torch.std(data, 0) * new_steps + cur_std * cur_steps) / (cur_steps + new_steps)
 
 
 class RandModel:
