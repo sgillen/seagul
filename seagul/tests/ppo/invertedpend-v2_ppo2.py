@@ -28,7 +28,7 @@ def run_and_test(seed):
         print("seed", seed, "achieved 1000 reward in ", len(rewards), "steps")
     else:
         print("Error: seed:", seed, "failed")
-    return rewards
+    return rewards, var_dict["early_stop"]
 
 
 if __name__ == "__main__":
@@ -57,8 +57,10 @@ if __name__ == "__main__":
 
     seeds = np.random.randint(0,2**32,8)
     pool = Pool(processes=8)
-    results = pool.map(run_and_test, seeds)
-    results = chop_returns(results)
-    results = np.array(results).transpose(1,0)
-    smooth_bounded_curve(results)
+    rewards, stopped = pool.map(run_and_test, seeds)
+    rewards = chop_returns(rewards)
+    rewards = np.array(rewards).transpose(1, 0)
+    smooth_bounded_curve(rewards)
+    print(stopped)
+
     plt.show()
