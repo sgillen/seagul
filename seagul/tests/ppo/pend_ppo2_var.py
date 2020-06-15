@@ -19,21 +19,8 @@ from seagul.rl.algos import ppo
 t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 """
 
-def run_and_test(seed):
 
-    arg_dict["seed"] = int(seed)    
-    t_model, rewards, var_dict = ppo(**arg_dict)
-
-    seed = arg_dict["seed"]
-    if var_dict["early_stop"]:
-        print("seed", seed, "achieved -200 reward in ", len(rewards), "steps")
-    else:
-        print("Error: seed:", seed, "failed")
-
-    return rewards
-
-if __name__ == "__main__":
-    torch.multiprocessing.set_sharing_strategy('file_system')
+def run_and_test(seed, verbose=True):
     input_size = 3
     output_size = 2
     layer_size = 16
@@ -45,39 +32,45 @@ if __name__ == "__main__":
     model = PPOModel(policy, value_fn, action_std=.1, fixed_std=False)
 
     # Define our hyper parameters
-    arg_dict = {
-        "env_name": "Pendulum-v0",
-        "total_steps": 400 * 2048,
-        "model": model,
-        "epoch_batch_size": 2048,  # how many steps we want to use before we update our gradients
-        "reward_stop": -200,
-        "sgd_batch_size": 512,
-        "sgd_epochs": 30,
-        "lr_schedule": (1e-3,),
-        "normalize_return": True,
-        "normalize_obs": True,
-        "normalize_adv": True
-    }
+    t_model, rewards, var_dict = ppo(env_name="Pendulum-v0",
+                                     total_steps=1e6,
+                                     model=model,
+                                     epoch_batch_size=2048,
+                                     reward_stop=-200,
+                                     sgd_batch_size=512,
+                                     sgd_epochs=30,
+                                     lr_schedule=(1e-3,),
+                                     normalize_return=True,
+                                     normalize_obs=True,
+                                     normalize_adv=True,
+                                     seed=int(seed))
 
+
+    if verbose:
+        if var_dict["early_stop"]:
+            print("seed", seed, "achieved 1000 reward in ", len(rewards), "steps")
+        else:
+            print("Error: seed:", seed, "failed")
+
+    return rewards, var_dict["early_stop"]
+
+
+if __name__ == "__main__":
     seeds = np.random.randint(0,2**32,8)
     pool = Pool(processes=8)
     results = pool.map(run_and_test, seeds)
-    results = chop_returns(results)
-    results = np.array(results).transpose(1,0)
-    smooth_bounded_curve(results)
 
-    #import ipdb; ipdb.set_trace()    
+    rewards = []
+    finished = []
+    for result in results:
+        rewards.append(result[0])
+        finished.append(result[1])
+
+    for reward in rewards:
+        plt.plot(reward, alpha=.8)
+
+    #rewards = np.array(rewards).transpose(1, 0)
+    #smooth_bounded_curve(rewards, window=10)
+    print(finished)
+
     plt.show()
-
-    
-    # proc_list = []
-
-    # for seed in np.random.randint(0,2**32,8):
-    #     arg_dict["seed"] = int(seed)
-    #     p = Process(target=run_and_test, args=[arg_dict])
-    #     p.start()
-    #     proc_list.append(p)
-
-    # for p in proc_list:
-    #     p.join()
-

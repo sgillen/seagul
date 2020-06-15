@@ -23,9 +23,9 @@ t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 
 
 def run_and_test(seed, verbose=False):
-    input_size = 17
-    output_size = 6
-    layer_size = 128
+    input_size = 11
+    output_size = 2
+    layer_size = 32
     num_layers = 2
     activation = nn.ReLU
 
@@ -33,7 +33,7 @@ def run_and_test(seed, verbose=False):
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
     model = PPOModel(policy, value_fn, action_std=0.1, fixed_std=False)
 
-    t_model, rewards, var_dict = ppo(env_name="HalfCheetah-v2",
+    t_model, rewards, var_dict = ppo(env_name="Reacher-v2",
                                      total_steps=5e5,
                                      model=model,
                                      epoch_batch_size=2048,
@@ -42,9 +42,9 @@ def run_and_test(seed, verbose=False):
                                      sgd_epochs=10,
                                      lr_schedule=[3e-4],
                                      target_kl=float('inf'),
-                                     env_no_term_steps=1000,
+                                     env_no_term_steps=50,
                                      entropy_coef=0.0,
-                                     normalize_return=True,
+                                     normalize_return=False,
                                      normalize_obs=True,
                                      normalize_adv=True,
                                      clip_val=False,

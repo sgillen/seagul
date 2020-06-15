@@ -1,4 +1,3 @@
-import dill
 import torch.nn as nn
 from seagul.rl.ppo.ppo2 import ppo
 from seagul.nn import MLP
@@ -8,8 +7,6 @@ from multiprocessing import Process, Manager, Pool
 import numpy as np
 from seagul.plot import smooth_bounded_curve, chop_returns
 import matplotlib.pyplot as plt
-import torch
-import dill
 
 """
 Basic smoke test for PPO. This file contains an arg_dict that contains hyper parameters known to work with 
@@ -22,36 +19,30 @@ t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 """
 
 
-def run_and_test(seed, verbose=False):
-    input_size = 17
-    output_size = 6
-    layer_size = 128
-    num_layers = 2
+def run_and_test(seed, verbose=True):
+    input_size = 4
+    output_size = 1
+    layer_size = 16
+    num_layers = 1
     activation = nn.ReLU
 
     policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
     model = PPOModel(policy, value_fn, action_std=0.1, fixed_std=False)
 
-    t_model, rewards, var_dict = ppo(env_name="HalfCheetah-v2",
-                                     total_steps=5e5,
+    t_model, rewards, var_dict = ppo(env_name="InvertedPendulum-v2",
+                                     total_steps=2e6,
                                      model=model,
                                      epoch_batch_size=2048,
-                                     reward_stop=3000,
-                                     sgd_batch_size=64,
-                                     sgd_epochs=10,
-                                     lr_schedule=[3e-4],
-                                     target_kl=float('inf'),
+                                     reward_stop=1000,
+                                     sgd_batch_size=512,
+                                     sgd_epochs=50,
+                                     lr_schedule=(1e-3,),
+                                     target_kl=.05,
                                      env_no_term_steps=1000,
-                                     entropy_coef=0.0,
+                                     normalize_adv=False,
                                      normalize_return=True,
-                                     normalize_obs=True,
-                                     normalize_adv=True,
-                                     clip_val=False,
                                      seed=int(seed))
-
-
-    torch.save(var_dict, open("./tmp/" + str(seed), 'wb'), pickle_module=dill)
 
     if verbose:
         if var_dict["early_stop"]:
@@ -63,14 +54,14 @@ def run_and_test(seed, verbose=False):
 
 
 if __name__ == "__main__":
-    seeds = np.random.randint(0, 2**32, 8)
-    pool = Pool(processes=8)
 
-    #results = run_and_test(run_and_test(seeds[0]))
+    seeds = np.random.randint(0,2**32,8)
+    pool = Pool(processes=8)
     results = pool.map(run_and_test, seeds)
 
     rewards = []
     finished = []
+
     for result in results:
         rewards.append(result[0])
         finished.append(result[1])
@@ -81,5 +72,3 @@ if __name__ == "__main__":
     print(finished)
 
     plt.show()
-
-    ws = torch.load(open(f'/home/sgillen/work/seagul/seagul/tests/ppo/todo/tmp/{seeds[0]}', 'rb'))
