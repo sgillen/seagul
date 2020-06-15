@@ -8,7 +8,6 @@ import numpy as np
 from seagul.plot import smooth_bounded_curve, chop_returns
 import matplotlib.pyplot as plt
 
-
 """
 Basic smoke test for PPO. This file contains an arg_dict that contains hyper parameters known to work with 
 seagul's implementation of PPO. You can also run this script directly, which will check if the algorithm 
@@ -21,30 +20,29 @@ t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 
 
 def run_and_test(seed, verbose=True):
-    input_size = 3
-    output_size = 2
+    input_size = 4
+    output_size = 1
     layer_size = 16
-    num_layers = 2
+    num_layers = 1
     activation = nn.ReLU
 
-    policy = MLP(input_size, output_size, num_layers, layer_size, activation)
+    policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, action_std=.1, fixed_std=False)
+    model = PPOModel(policy, value_fn, action_std=0.1, fixed_std=False)
 
-    # Define our hyper parameters
-    t_model, rewards, var_dict = ppo(env_name="Pendulum-v0",
-                                     total_steps=1e6,
+    t_model, rewards, var_dict = ppo(env_name="InvertedPendulum-v2",
+                                     total_steps=2e6,
                                      model=model,
                                      epoch_batch_size=2048,
-                                     reward_stop=-200,
+                                     reward_stop=1000,
                                      sgd_batch_size=512,
-                                     sgd_epochs=30,
+                                     sgd_epochs=50,
                                      lr_schedule=(1e-3,),
+                                     target_kl=.05,
+                                     env_no_term_steps=1000,
+                                     normalize_adv=False,
                                      normalize_return=True,
-                                     normalize_obs=True,
-                                     normalize_adv=True,
                                      seed=int(seed))
-
 
     if verbose:
         if var_dict["early_stop"]:
@@ -56,12 +54,14 @@ def run_and_test(seed, verbose=True):
 
 
 if __name__ == "__main__":
+
     seeds = np.random.randint(0,2**32,8)
     pool = Pool(processes=8)
     results = pool.map(run_and_test, seeds)
 
     rewards = []
     finished = []
+
     for result in results:
         rewards.append(result[0])
         finished.append(result[1])
@@ -69,8 +69,6 @@ if __name__ == "__main__":
     for reward in rewards:
         plt.plot(reward, alpha=.8)
 
-    #rewards = np.array(rewards).transpose(1, 0)
-    #smooth_bounded_curve(rewards, window=10)
     print(finished)
 
     plt.show()
