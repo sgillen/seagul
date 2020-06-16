@@ -39,9 +39,9 @@ def run_and_test(seed, verbose=False):
                                      epoch_batch_size=2048,
                                      reward_stop=3000,
                                      sgd_batch_size=64,
-                                     sgd_epochs=10,
+                                     sgd_epochs=80,
                                      lr_schedule=[3e-4],
-                                     target_kl=float('inf'),
+                                     target_kl=.01,
                                      env_no_term_steps=50,
                                      entropy_coef=0.0,
                                      normalize_return=False,
@@ -49,9 +49,6 @@ def run_and_test(seed, verbose=False):
                                      normalize_adv=True,
                                      clip_val=False,
                                      seed=int(seed))
-
-
-    torch.save(var_dict, open("./tmp/" + str(seed), 'wb'), pickle_module=dill)
 
     if verbose:
         if var_dict["early_stop"]:
@@ -81,5 +78,5 @@ if __name__ == "__main__":
     print(finished)
 
     plt.show()
-
     ws = torch.load(open(f'/home/sgillen/work/seagul/seagul/tests/ppo/todo/tmp/{seeds[0]}', 'rb'))
+    locals().update(ws)

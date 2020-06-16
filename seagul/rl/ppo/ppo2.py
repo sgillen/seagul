@@ -19,7 +19,7 @@ def ppo(
         entropy_coef=0.0,
         sgd_batch_size=1024,
         lr_schedule=(3e-4,),
-        sgd_epochs=10,
+        sgd_epochs=80,
         target_kl=float('inf'),
         val_coef=.5,
         clip_val=True,
@@ -150,23 +150,25 @@ def ppo(
             cur_total_steps += ep_steps
 
             raw_rew_hist.append(sum(ep_rew).item())
-            batch_obs = torch.cat((batch_obs, ep_obs[:-1]))
-            batch_act = torch.cat((batch_act, ep_act[:-1]))
+            batch_obs = torch.cat((batch_obs, ep_obs))
+            batch_act = torch.cat((batch_act, ep_act))
 
             if not ep_term:
-                ep_rew[-1] = model.value_fn(ep_obs[-1]).detach()
+                ep_rew = torch.cat((ep_rew, model.value_fn(ep_obs[-1]).detach().reshape(1,1)))
+            else:
+                ep_rew = torch.cat((ep_rew, torch.zeros(1,1)))
 
-            ep_discrew_train = discount_cumsum(ep_rew, gamma)
+            ep_discrew = discount_cumsum(ep_rew, gamma)
 
             if normalize_return:
                 rew_mean = update_mean(ep_discrew, rew_mean, cur_total_steps)
                 rew_std = update_std(ep_discrew, rew_std, cur_total_steps)
                 ep_discrew = (ep_discrew) / (rew_std + 1e-6)
 
-            batch_discrew = torch.cat((batch_discrew, ep_discrew[:-1]))
+            batch_discrew = torch.cat((batch_discrew, ep_discrew))
 
             with torch.no_grad():
-                ep_val = model.value_fn(ep_obs)
+                ep_val = torch.cat((model.value_fn(ep_obs), ep_rew[-1].reshape(1,1)))
                 deltas = ep_rew[:-1] + gamma * ep_val[1:] - ep_val[:-1]
 
             ep_adv = discount_cumsum(deltas, gamma * lam)
@@ -211,8 +213,12 @@ def ppo(
                 pol_loss.backward()
                 pol_opt.step()
 
+        for val_epoch in range(sgd_epochs):
+            for i in range(num_mbatch):
                 # value_fn update
                 # ========================================================================
+                cur_sample = i * sgd_batch_size
+                local_obs = batch_obs[cur_sample:cur_sample + sgd_batch_size]
                 val_preds = model.value_fn(local_obs)
                 if clip_val:
                     old_val_preds = old_model.value_fn(local_obs)
