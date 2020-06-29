@@ -23,44 +23,8 @@ t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 """
 
 
-def run_and_test(seed):
-    alg_config["seed"] = int(seed)
-    t_model, rewards, var_dict = ppo(**alg_config)
+def run_and_test(seed, verbose=True):
 
-    seed = alg_config["seed"]
-    if var_dict["early_stop"]:
-        print("seed", seed, "achieved 1000 reward in ", len(rewards), "steps")
-    else:
-        print("Error: seed:", seed, "failed")
-
-    with open("./tmp/workspace_" + str(seed), "wb") as outfile:
-        torch.save(var_dict, outfile, pickle_module=dill)
-
-    return rewards
-
-
-def reward_fn(s):
-    if s[3] > 0:
-        if s[0] >= 0 and s[2] >= 0:
-            reward = np.clip(np.sqrt(s[0]**2 + s[2]**2),0,10)
-            #reward = 5 - np.clip(np.abs(np.sqrt(s[0]**2 + s[2]**2) - 5)**2,0,5)
-            s[3] = -10
-        else:
-            reward = 0.0
-
-    elif s[3] < 0:
-        if s[0] <= 0 and s[2] <= 0:
-            reward = np.clip(np.sqrt(s[0]**2 + s[2]**2),0,10)
-            #reward = 5 - np.clip(np.abs(np.sqrt(s[0]**2 + s[2]**2)**2 - 5),0,5)
-            s[3] = 10
-        else:
-            reward = 0.0
-
-    return reward, s
-#
-
-
-if __name__ == "__main__":
     input_size = 4
     output_size = 2
     layer_size = 32
@@ -71,6 +35,25 @@ if __name__ == "__main__":
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
     model = PPOModel(policy, value_fn, action_std=0.1, fixed_std=False)
     env_name = "linear_z-v0"
+
+    def reward_fn(s):
+        if s[3] > 0:
+            if s[0] >= 0 and s[2] >= 0:
+                reward = np.clip(np.sqrt(s[0] ** 2 + s[2] ** 2), 0, 10)
+                # reward = 5 - np.clip(np.abs(np.sqrt(s[0]**2 + s[2]**2) - 5)**2,0,5)
+                s[3] = -10
+            else:
+                reward = 0.0
+
+        elif s[3] < 0:
+            if s[0] <= 0 and s[2] <= 0:
+                reward = np.clip(np.sqrt(s[0] ** 2 + s[2] ** 2), 0, 10)
+                # reward = 5 - np.clip(np.abs(np.sqrt(s[0]**2 + s[2]**2)**2 - 5),0,5)
+                s[3] = 10
+            else:
+                reward = 0.0
+
+        return reward, s
 
     num_steps = 500
     env_config = {
@@ -83,26 +66,44 @@ if __name__ == "__main__":
         "init_noise_max": 10,
     }
 
-    alg_config = {
-        "env_name": env_name,
-        "model": model,
-        "total_steps": 2e6,
-        "epoch_batch_size": 1024,
-        "sgd_batch_size": 512,
-        "lam": .2,
-        "gamma": .95,
-        "env_config": env_config,
-        "sgd_epochs": 30,
-        "reward_stop": 300
-    }
+    t_model, rewards, var_dict = ppo(env_name=env_name,
+                                     model=model,
+                                     total_steps=2e6,
+                                     epoch_batch_size=1024,
+                                     sgd_batch_size=512,
+                                     lam=.2,
+                                     gamma=.95,
+                                     env_config=env_config,
+                                     sgd_epochs=30,
+                                     target_kl=.05,
+                                     reward_stop=150,
+                                     seed=int(seed))
 
-    seeds = np.random.randint(0,2**32,8)
+    if var_dict["early_stop"]:
+        print("seed", seed, "achieved 1000 reward in ", len(rewards), "steps")
+    else:
+        print("Error: seed:", seed, "failed")
+
+    return rewards
+
+
+if __name__ == "__main__":
+
+    seeds = np.random.randint(0, 2**32, 8)
     pool = Pool(processes=8)
     results = pool.map(run_and_test, seeds)
-    #results = run_and_test(seeds[0])
-    results = chop_returns(results)
-    results = np.array(results).transpose(1,0)
 
-    smooth_bounded_curve(results)
+    rewards = []
+    finished = []
+    for result in results:
+        rewards.append(result[0])
+        finished.append(result[1])
+
+    for reward in rewards:
+        plt.plot(reward, alpha=.8)
+
+    #rewards = np.array(rewards).transpose(1, 0)
+    #smooth_bounded_curve(rewards, window=10)
+    print(finished)
+
     plt.show()
-
