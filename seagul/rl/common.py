@@ -71,7 +71,20 @@ def update_std(data, cur_std, cur_steps):
     if torch.isnan(batch_var).any():
         return cur_std
     else:
-        return (torch.std(data, 0) * new_steps + cur_std * cur_steps) / (cur_steps + new_steps)
+        cur_var = cur_std ** 2
+        new_var = torch.std(data, 0) ** 2
+        new_var[new_var < 1e-6] = cur_var[new_var < 1e-6]
+        return torch.sqrt((new_var * new_steps + cur_var * cur_steps) / (cur_steps + new_steps))
+
+
+# can make this faster I think?
+def discount_cumsum(rewards, discount):
+    future_cumulative_reward = 0
+    cumulative_rewards = torch.empty_like(torch.as_tensor(rewards))
+    for i in range(len(rewards) - 1, -1, -1):
+        cumulative_rewards[i] = rewards[i] + discount * future_cumulative_reward
+        future_cumulative_reward = cumulative_rewards[i]
+    return cumulative_rewards
 
 
 class RandModel:
