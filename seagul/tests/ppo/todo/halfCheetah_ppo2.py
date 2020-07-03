@@ -1,6 +1,6 @@
 import dill
 import torch.nn as nn
-from seagul.rl.ppo.ppo2 import ppo
+from seagul.rl.ppo.ppo2 import PPOAgent
 from seagul.nn import MLP
 import torch
 from seagul.rl.ppo.models import PPOModel
@@ -31,25 +31,25 @@ def run_and_test(seed, verbose=False):
 
     policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, action_std=0.1, fixed_std=False)
+    model = PPOModel(policy, value_fn, fixed_std=False)
 
-    t_model, rewards, var_dict = ppo(env_name="HalfCheetah-v2",
-                                     total_steps=5e5,
-                                     model=model,
-                                     epoch_batch_size=2048,
-                                     reward_stop=3000,
-                                     sgd_batch_size=64,
-                                     sgd_epochs=10,
-                                     lr_schedule=[3e-4],
-                                     target_kl=float('inf'),
-                                     env_no_term_steps=1000,
-                                     entropy_coef=0.0,
-                                     normalize_return=True,
-                                     normalize_obs=True,
-                                     normalize_adv=True,
-                                     clip_val=False,
-                                     seed=int(seed))
+    agent = PPOAgent(env_name="HalfCheetah-v2",
+                     model=model,
+                     epoch_batch_size=2048,
+                     reward_stop=3000,
+                     sgd_batch_size=64,
+                     sgd_epochs=10,
+                     lr_schedule=[3e-4],
+                     target_kl=float('inf'),
+                     env_no_term_steps=1000,
+                     entropy_coef=0.0,
+                     normalize_return=False,
+                     normalize_obs=False,
+                     normalize_adv=True,
+                     clip_val=False,
+                     seed=int(seed))
 
+    t_model, rewards, var_dict = agent.learn(total_steps=5e5)
 
     torch.save(var_dict, open("./tmp/" + str(seed), 'wb'), pickle_module=dill)
 
@@ -58,6 +58,7 @@ def run_and_test(seed, verbose=False):
             print("seed", seed, "achieved 1000 reward in ", len(rewards), "steps")
         else:
             print("Error: seed:", seed, "failed")
+
 
     return rewards, var_dict["early_stop"]
 

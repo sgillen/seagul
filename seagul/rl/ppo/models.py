@@ -266,8 +266,8 @@ def select_cont_action(policy, state, std):
     means = policy(state)
     m = Normal(loc=means, scale=torch.ones_like(means) * std)
     action = m.sample()
-    logprob = m.log_prob(action)
-    return action.detach(), logprob
+    #logprob = m.log_prob(action)
+    return action.detach(), None
 
 
 # given a policy plus a state/action pair, what is the log liklihood of having taken that action?
@@ -290,10 +290,10 @@ def select_discrete_action(policy, state, variance=None):
 # Selects a sample from a Gaussian with mean and stds given. Returns sample and the logprob
 def sample_guassian(means, stds):
     actions = stds * torch.randn_like(stds) + means
-    logprob = -((actions - means) ** 2) / (2 * (stds ** 2)) - np.log(stds) - np.log(np.sqrt(2 * np.pi))
-    return actions.detach(), logprob
+    #logprob = -((actions - means) ** 2) / (2 * (stds ** 2)) - torch.log(stds) - np.log(np.sqrt(2 * np.pi))
+    return actions.detach(), None
 
 
 # what is the log liklihood of having taken a given action if it came form a Gaussian with stds and means given
 def guassian_logp(actions, means, stds):
-    return -((actions - means) ** 2) / (2 * (stds ** 2)) - np.log(stds) - np.log(np.sqrt(2 * np.pi))
+    return -((actions - means) ** 2) / (2 * (stds ** 2)) - torch.log(stds) - np.log(np.sqrt(2 * np.pi))

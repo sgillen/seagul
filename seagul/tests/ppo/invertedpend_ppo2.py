@@ -8,16 +8,6 @@ import numpy as np
 from seagul.plot import smooth_bounded_curve, chop_returns
 import matplotlib.pyplot as plt
 
-"""
-Basic smoke test for PPO. This file contains an arg_dict that contains hyper parameters known to work with 
-seagul's implementation of PPO. You can also run this script directly, which will check if the algorithm 
-suceeds across 4 random seeds
-Example:
-from seagul.rl.tests.pend_ppo2 import arg_dict
-from seagul.rl.algos import ppo
-t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
-"""
-
 
 def run_and_test(seed, verbose=True):
     input_size = 4
@@ -28,7 +18,7 @@ def run_and_test(seed, verbose=True):
 
     policy = MLP(input_size, output_size*2, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, log_action_std=-.7, fixed_std=False)
+    model = PPOModel(policy, value_fn, log_action_std=-.5, fixed_std=False)
 
     agent = PPOAgent(env_name="InvertedPendulum-v2",
                      model=model,
