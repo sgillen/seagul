@@ -112,7 +112,7 @@ class MLP(nn.Module):
     """
 
     def __init__(
-            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, input_bias=None, dtype=torch.float32):
+            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, bias=True, input_bias=None, dtype=torch.float32):
         """
          input_size: how many inputs
          output_size: how many outputs
@@ -133,12 +133,12 @@ class MLP(nn.Module):
             
         if num_layers == 0:
             self.layers = []
-            self.output_layer = nn.Linear(input_size, output_size)
+            self.output_layer = nn.Linear(input_size, output_size,bias=bias)
 
         else:
-            self.layers = nn.ModuleList([nn.Linear(input_size, layer_size)])
-            self.layers.extend([nn.Linear(layer_size, layer_size) for _ in range(num_layers-1)])
-            self.output_layer = nn.Linear(layer_size, output_size)
+            self.layers = nn.ModuleList([nn.Linear(input_size, layer_size,bias=bias)])
+            self.layers.extend([nn.Linear(layer_size, layer_size,bias=bias) for _ in range(num_layers-1)])
+            self.output_layer = nn.Linear(layer_size, output_size,bias=bias)
 
         self.state_means = torch.zeros(input_size, requires_grad=False)
         self.state_std = torch.ones(input_size, requires_grad=False)
