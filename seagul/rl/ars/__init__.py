@@ -1,1 +1,1 @@
-from seagul.rl.ars.ars import ars
+from seagul.rl.ars.ars_pipe import ars
