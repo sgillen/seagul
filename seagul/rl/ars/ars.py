@@ -4,7 +4,7 @@ from seagul.rl.common import update_std, update_mean
 from torch.multiprocessing import Pool
 from functools import partial
 
-def do_rollout_train(env_name, policy, delta):
+def do_rollout_train(env_name, policy, postprocess, delta):
     env = gym.make(env_name)
     torch.nn.utils.vector_to_parameters(delta, policy.parameters())
 
@@ -22,11 +22,12 @@ def do_rollout_train(env_name, policy, delta):
         reward_list.append(reward)
 
     state_tens = torch.stack(state_list)
+    reward_list = postprocess(torch.tensor(reward_list))
     reward_sum = torch.as_tensor(sum(reward_list))
 
     return state_tens, reward_sum
 
-def ars(env_name, policy, n_epochs, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, zero_policy=True):
+def ars(env_name, policy, n_epochs, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, zero_policy=True, postprocess=lambda x:x):
     torch.autograd.set_grad_enabled(False)
     """
     Augmented Random Search
@@ -53,7 +54,7 @@ def ars(env_name, policy, n_epochs, n_workers=8, step_size=.02, n_delta=32, n_to
 
     total_steps = 0
     exp_dist = torch.distributions.Normal(torch.zeros(n_delta, n_param), torch.ones(n_delta, n_param))
-    do_rollout_partial = partial(do_rollout_train, env_name, policy)
+    do_rollout_partial = partial(do_rollout_train, env_name, policy, postprocess)
 
     for _ in range(n_epochs):
 
@@ -89,9 +90,9 @@ def ars(env_name, policy, n_epochs, n_workers=8, step_size=.02, n_delta=32, n_to
 
         policy.state_means = s_mean
         policy.state_std = s_stdv
-        do_rollout_partial = partial(do_rollout_train, env_name, policy)
+        do_rollout_partial = partial(do_rollout_train, env_name, policy, postprocess)
 
-        W = W + (step_size / (n_delta * p_returns.std() + 1e-6)) * torch.sum((p_returns - m_returns)*deltas[top_idx].T, dim=1)
+        W = W + (step_size / (n_delta * torch.cat((p_returns, m_returns)).std() + 1e-6)) * torch.sum((p_returns - m_returns)*deltas[top_idx].T, dim=1)
 
     torch.nn.utils.vector_to_parameters(W, policy.parameters())
     return policy, r_hist
@@ -108,11 +109,16 @@ if __name__ == "__main__":
     in_size = env.observation_space.shape[0]
     out_size = env.action_space.shape[0]
 
-    policy = MLP(in_size, out_size,0,0)
+    policy = MLP(in_size, out_size,0,0,bias=False)
+
+    from seagul.mesh import variation_dim
+
+    def var_dim_post(rews):
+        return rews/variation_dim(rews)
 
     import time
     start = time.time()
-    policy, r_hist = ars(env_name, policy, 500, n_workers=16, n_delta=64, n_top=32)
+    policy, r_hist = ars(env_name, policy, 50, n_workers=16, n_delta=64, n_top=32, postprocess=var_dim_post)
     print(time.time() - start)
 
     plt.plot(r_hist)
