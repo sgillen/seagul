@@ -27,7 +27,12 @@ def do_rollout_train(env_name, policy, postprocess, delta):
 
     return state_tens, reward_sum
 
-def ars(env_name, policy, n_epochs, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, zero_policy=True, postprocess=lambda x:x):
+
+def postprocess_default(x):
+    return x
+
+
+def ars(env_name, policy, n_epochs, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, zero_policy=True, postprocess=postprocess_default):
     torch.autograd.set_grad_enabled(False)
     """
     Augmented Random Search
@@ -118,7 +123,7 @@ if __name__ == "__main__":
 
     import time
     start = time.time()
-    policy, r_hist = ars(env_name, policy, 50, n_workers=16, n_delta=64, n_top=32, postprocess=var_dim_post)
+    policy, r_hist = ars(env_name, policy, 5, n_workers=8, n_delta=64, n_top=32)
     print(time.time() - start)
 
     plt.plot(r_hist)
