@@ -148,9 +148,7 @@ class MLP(nn.Module):
         if self.input_bias is not None:
             data += self.input_bias
 
-        data = (torch.as_tensor(data) - self.state_means) / torch.sqrt(self.state_std)
-        #ata = torch.as_tensor(data)
-        #
+        data = (torch.as_tensor(data) - self.state_means) / self.state_std
 
         for layer in self.layers:
             data = self.activation(layer(data))
@@ -421,5 +419,5 @@ if __name__ == "__main__":
     policy.state_std = torch.ones(4) * 4
     print(policy(torch.randn(1, 4)))
 
-    policy = LinearNet(input_size=4, output_size=1, bias=False)
+    policy = MLP(input_size=4, output_size=1, bias=False)
     print(policy(torch.randn(1, 4)))

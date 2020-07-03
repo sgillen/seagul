@@ -9,17 +9,6 @@ from seagul.plot import smooth_bounded_curve, chop_returns
 import matplotlib.pyplot as plt
 
 
-"""
-Basic smoke test for PPO. This file contains an arg_dict that contains hyper parameters known to work with 
-seagul's implementation of PPO. You can also run this script directly, which will check if the algorithm 
-suceeds across 4 random seeds
-Example:
-from seagul.rl.tests.pend_ppo2 import arg_dict
-from seagul.rl.algos import ppo
-t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
-"""
-
-
 def run_and_test(seed, verbose=True):
     input_size = 3
     output_size = 1
@@ -34,18 +23,19 @@ def run_and_test(seed, verbose=True):
     # Define our hyper parameters
     agent = PPOAgent(env_name="Pendulum-v0",
                      model=model,
-                     epoch_batch_size=4096,
+                     epoch_batch_size=2048,
                      reward_stop=-200,
                      sgd_batch_size=64,
-                     sgd_epochs=50,
+                     sgd_epochs=30,
                      target_kl=.05,
-                     lr_schedule=(1e-2,),
+                     lr_schedule=(1e-3,),
                      normalize_return=False,
                      normalize_obs=True,
                      normalize_adv=True,
+                     clip_val=False,
                      seed=int(seed))
 
-    t_model, rewards, var_dict = agent.learn(total_steps = 2e5)
+    t_model, rewards, var_dict = agent.learn(total_steps = 5e5)
 
     if verbose:
         if var_dict["early_stop"]:
@@ -59,6 +49,8 @@ def run_and_test(seed, verbose=True):
 if __name__ == "__main__":
     seeds = np.random.randint(0,2**32,8)
     pool = Pool(processes=8)
+
+    #run_and_test(seeds[0])
     results = pool.map(run_and_test, seeds)
 
     rewards = []

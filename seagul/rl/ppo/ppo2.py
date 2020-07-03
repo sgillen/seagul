@@ -3,6 +3,7 @@ import torch
 import tqdm.auto as tqdm
 import gym
 import pickle
+import copy
 from seagul.rl.common import update_mean, update_std, make_schedule, discount_cumsum
 
 
@@ -93,8 +94,8 @@ class PPOAgent:
 
         # init everything
         # ==============================================================================
-        torch.set_num_threads(1)
 
+        torch.set_num_threads(1)
         env = gym.make(self.env_name, **self.env_config)
         if isinstance(env.action_space, gym.spaces.Box):
             self.act_size = env.action_space.shape[0]
@@ -158,6 +159,7 @@ class PPOAgent:
                 cur_batch_steps += ep_steps
                 cur_total_steps += ep_steps
 
+                #print(sum(ep_rew).item())
                 raw_rew_hist.append(sum(ep_rew).item())
                 batch_obs = torch.cat((batch_obs, ep_obs.clone()))
                 batch_act = torch.cat((batch_act, ep_act.clone()))
@@ -196,7 +198,7 @@ class PPOAgent:
                 pol_loss, approx_kl = self.policy_update(batch_act, batch_obs, batch_adv)
                 if approx_kl > self.target_kl:
                     print("KL Stop")
-                break
+                    break
 
             for val_epoch in range(self.sgd_epochs):
                 val_loss = self.value_update(batch_obs, batch_discrew)
@@ -241,8 +243,8 @@ class PPOAgent:
             old_logp = self.old_model.get_logp(local_obs, local_act).reshape(-1, self.act_size).sum(axis=1)
             mean_entropy = -(logp * torch.exp(logp)).mean()
 
-            r = torch.exp(logp - old_logp)
-            clip_r = torch.clamp(r, 1 - self.eps, 1 + self.eps)
+            r = torch.exp(logp - old_logp).reshape(-1, 1)
+            clip_r = torch.clamp(r, 1 - self.eps, 1 + self.eps).reshape(-1,1)
 
             pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean() - self.entropy_coef * mean_entropy
 
@@ -297,7 +299,7 @@ def do_rollout(env, model, n_steps_complete):
         obs_list.append(obs.clone())
 
         act, logprob = model.select_action(obs)
-        obs, rew, done, _ = env.step(np.clip(act.numpy(),-1,1))
+        obs, rew, done, _ = env.step(act.numpy())
 
         act_list.append(torch.as_tensor(act.clone()))
         rew_list.append(rew)
