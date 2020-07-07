@@ -18,7 +18,7 @@ class PPOModel:
         if fixed_std:
             self.select_action = self.select_action_fixed
             self.get_logp = self.get_logp_fixed
-            self.log_act_std = torch.nn.Parameter(torch.as_tensor(log_action_std))
+            self.policy.log_act_std = torch.nn.Parameter(torch.ones(policy.output_layer.out_features)*log_action_std)
         else:
             self.select_action = self.select_action_variable
             self.get_logp = self.get_logp_variable
@@ -32,10 +32,10 @@ class PPOModel:
         return action, value, None, logp
 
     def select_action_fixed(self, obs):
-        return select_cont_action(self.policy, obs, torch.exp(self.log_act_std))
+        return select_cont_action(self.policy, obs, torch.exp(self.policy.log_act_std))
 
     def get_logp_fixed(self, obs, acts):
-        return get_cont_logp(self.policy, obs, acts, torch.exp(self.log_act_std))
+        return get_cont_logp(self.policy, obs, acts, torch.exp(self.policy.log_act_std))
 
     def select_action_variable(self, obs):
         out = self.policy(obs)
