@@ -16,9 +16,9 @@ def run_and_test(seed, verbose=True):
     num_layers = 1
     activation = nn.ReLU
 
-    policy = MLP(input_size, output_size*2, num_layers, layer_size, activation)
+    policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, log_action_std=-.5, fixed_std=False)
+    model = PPOModel(policy, value_fn, log_action_std=-.5, fixed_std=True)
 
     agent = PPOAgent(env_name="InvertedPendulum-v2",
                      model=model,

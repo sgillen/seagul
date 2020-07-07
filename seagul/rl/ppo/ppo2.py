@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import tqdm.auto as tqdm
 import gym
-import pickle
 import copy
 from seagul.rl.common import update_mean, update_std, make_schedule, discount_cumsum
 
@@ -48,6 +47,7 @@ class PPOAgent:
                  target_kl=float('inf'),
                  val_coef=.5,
                  clip_val=True,
+                 clip_pol=True,
                  env_no_term_steps=0,
                  use_gpu=False,
                  reward_stop=None,
@@ -72,6 +72,7 @@ class PPOAgent:
         self.target_kl = target_kl
         self.val_coef = val_coef
         self.clip_val = clip_val
+        self.clip_pol = clip_pol
         self.env_no_term_steps = env_no_term_steps
         self.use_gpu = use_gpu
         self.reward_stop = reward_stop
@@ -79,7 +80,33 @@ class PPOAgent:
         self.normalize_obs = normalize_obs
         self.normalize_adv = normalize_adv
         self.env_config = env_config
-        self.old_model = pickle.loads(pickle.dumps(self.model))
+        self.old_model = copy.deepcopy(self.model)
+
+        torch.set_num_threads(1)
+        env = gym.make(self.env_name, **self.env_config)
+        if isinstance(env.action_space, gym.spaces.Box):
+            self.act_size = env.action_space.shape[0]
+            self.act_dtype = torch.double
+        else:
+            raise NotImplementedError("trying to use unsupported action space", env.action_space)
+
+
+        obs_size = env.observation_space.shape[0]
+        self.obs_mean = torch.zeros(obs_size)
+        self.obs_std = torch.ones(obs_size)
+        self.rew_mean = torch.zeros(1)
+        self.rew_std = torch.ones(1)
+
+        # set defaults, and decide if we are using a GPU or not
+        use_cuda = torch.cuda.is_available() and self.use_gpu
+        self.device = torch.device("cuda:0" if use_cuda else "cpu")
+
+        # init logging stuff
+        self.raw_rew_hist = []
+        self.val_loss_hist = []
+        self.pol_loss_hist = []
+
+        env.close()
 
     def learn(self, total_steps):
 
@@ -94,51 +121,30 @@ class PPOAgent:
 
         # init everything
         # ==============================================================================
-
-        torch.set_num_threads(1)
+        # seed all our RNGs
         env = gym.make(self.env_name, **self.env_config)
-        if isinstance(env.action_space, gym.spaces.Box):
-            self.act_size = env.action_space.shape[0]
-            self.act_dtype = torch.double
-        else:
-            raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
+        cur_total_steps = 0
+        env.seed(self.seed)
+        torch.manual_seed(self.seed)
+        np.random.seed(self.seed)
+
+        progress_bar = tqdm.tqdm(total=total_steps)
         actstd_lookup = make_schedule(self.act_std_schedule, total_steps)
         lr_lookup = make_schedule(self.lr_schedule, total_steps)
 
         self.model.action_std = actstd_lookup(0)
         self.sgd_lr = lr_lookup(0)
 
-        obs_size = env.observation_space.shape[0]
-        obs_mean = torch.zeros(obs_size)
-        obs_std = torch.ones(obs_size)
-        rew_mean = torch.zeros(1)
-        rew_std = torch.ones(1)
-
-        # seed all our RNGs
-        env.seed(self.seed)
-        torch.manual_seed(self.seed)
-        np.random.seed(self.seed)
-
-        # set defaults, and decide if we are using a GPU or not
-        use_cuda = torch.cuda.is_available() and self.use_gpu
-        device = torch.device("cuda:0" if use_cuda else "cpu")
-
-        # init logging stuff
-        raw_rew_hist = []
-        val_loss_hist = []
-        pol_loss_hist = []
-        progress_bar = tqdm.tqdm(total=total_steps)
-        cur_total_steps = 0
         progress_bar.update(0)
         early_stop = False
-
-        self.pol_opt = torch.optim.Adam(self.model.policy.parameters(), lr=self.sgd_lr)
-        self.val_opt = torch.optim.Adam(self.model.value_fn.parameters(), lr=self.sgd_lr)
 
         # Train until we hit our total steps or reach our reward threshold
         # ==============================================================================
         while cur_total_steps < total_steps:
+            self.pol_opt = torch.optim.Adam(self.model.policy.parameters(), lr=lr_lookup(cur_total_steps))
+            self.val_opt = torch.optim.Adam(self.model.value_fn.parameters(), lr=lr_lookup(cur_total_steps))
+
             batch_obs = torch.empty(0)
             batch_act = torch.empty(0)
             batch_adv = torch.empty(0)
@@ -146,8 +152,8 @@ class PPOAgent:
             cur_batch_steps = 0
 
             # Bail out if we have met out reward threshold
-            if len(raw_rew_hist) > 2 and self.reward_stop:
-                if raw_rew_hist[-1] >= self.reward_stop and raw_rew_hist[-2] >= self.reward_stop:
+            if len(self.raw_rew_hist) > 2 and self.reward_stop:
+                if self.raw_rew_hist[-1] >= self.reward_stop and self.raw_rew_hist[-2] >= self.reward_stop:
                     early_stop = True
                     break
 
@@ -160,9 +166,14 @@ class PPOAgent:
                 cur_total_steps += ep_steps
 
                 #print(sum(ep_rew).item())
-                raw_rew_hist.append(sum(ep_rew).item())
+                self.raw_rew_hist.append(sum(ep_rew).item())
                 batch_obs = torch.cat((batch_obs, ep_obs.clone()))
                 batch_act = torch.cat((batch_act, ep_act.clone()))
+
+                if self.normalize_return:
+                    self.rew_mean = update_mean(ep_rew, self.rew_mean, cur_total_steps)
+                    self.rew_std = update_std(ep_rew, self.rew_std, cur_total_steps)
+                    ep_rew = ep_rew / (self.rew_std + 1e-6)
 
                 if ep_term:
                     ep_rew = torch.cat((ep_rew, torch.zeros(1, 1)))
@@ -171,11 +182,6 @@ class PPOAgent:
 
                 ep_discrew = discount_cumsum(ep_rew, self.gamma)[:-1]
                 batch_discrew = torch.cat((batch_discrew, ep_discrew.clone()))
-
-                if self.normalize_return:
-                    rew_mean = update_mean(ep_discrew, rew_mean, cur_total_steps)
-                    rew_std = update_std(ep_discrew, rew_std, cur_total_steps)
-                    ep_discrew = ep_rew / (rew_std + 1e-6)
 
                 with torch.no_grad():
                     ep_val = torch.cat((self.model.value_fn(ep_obs), ep_rew[-1].reshape(1, 1).clone()))
@@ -206,24 +212,24 @@ class PPOAgent:
             # update observation mean and variance
 
             if self.normalize_obs:
-                obs_mean = update_mean(batch_obs, obs_mean, cur_total_steps)
-                obs_std = update_std(batch_obs, obs_std, cur_total_steps)
-                self.model.policy.state_means = obs_mean
-                self.model.value_fn.state_means = obs_mean
-                self.model.policy.state_std = obs_std
-                self.model.value_fn.state_std = obs_std
+                self.obs_mean = update_mean(batch_obs, self.obs_mean, cur_total_steps)
+                self.obs_std = update_std(batch_obs, self.obs_std, cur_total_steps)
+                self.model.policy.state_means = self.obs_mean
+                self.model.value_fn.state_means = self.obs_mean
+                self.model.policy.state_std = self.obs_std
+                self.model.value_fn.state_std = self.obs_std
 
             self.model.action_std = actstd_lookup(cur_total_steps)
             sgd_lr = lr_lookup(cur_total_steps)
 
-            self.old_model = pickle.loads(pickle.dumps(self.model))
-            val_loss_hist.append(val_loss)
-            pol_loss_hist.append(pol_loss)
+            self.old_model = copy.deepcopy(self.model)
+            self.val_loss_hist.append(val_loss)
+            self.pol_loss_hist.append(pol_loss)
 
             progress_bar.update(cur_batch_steps)
 
         progress_bar.close()
-        return self.model, raw_rew_hist, locals()
+        return self.model, self.raw_rew_hist, locals()
 
     # Takes list or array and returns a lambda that interpolates it for each epoch
     def policy_update(self, batch_act, batch_obs, batch_adv):
@@ -238,17 +244,21 @@ class PPOAgent:
             local_act = batch_act[cur_sample:cur_sample + self.sgd_batch_size]
             local_adv = batch_adv[cur_sample:cur_sample + self.sgd_batch_size]
 
-            # Compute the loss
             logp = self.model.get_logp(local_obs, local_act).reshape(-1, self.act_size).sum(axis=1)
-            old_logp = self.old_model.get_logp(local_obs, local_act).reshape(-1, self.act_size).sum(axis=1)
             mean_entropy = -(logp * torch.exp(logp)).mean()
 
-            r = torch.exp(logp - old_logp).reshape(-1, 1)
-            clip_r = torch.clamp(r, 1 - self.eps, 1 + self.eps).reshape(-1,1)
+            if self.clip_pol:
+                pol_loss = -(logp*local_adv).mean()
+                approx_kl = 0
 
-            pol_loss = -torch.min(r * local_adv, clip_r * local_adv).mean() - self.entropy_coef * mean_entropy
+            else:
+                old_logp = self.old_model.get_logp(local_obs, local_act).reshape(-1, self.act_size).sum(axis=1)
+                approx_kl = ((logp - old_logp) ** 2).mean()
 
-            approx_kl = ((logp - old_logp) ** 2).mean()
+                r = torch.exp(logp - old_logp).reshape(-1, 1)
+                clip_r = torch.clamp(r, 1 - self.eps, 1 + self.eps).reshape(-1, 1)
+
+                pol_loss = -(torch.min(r * local_adv, clip_r * local_adv)).mean() - self.entropy_coef * mean_entropy
 
             self.pol_opt.zero_grad()
             pol_loss.backward()
