@@ -18,7 +18,7 @@ def run_and_test(seed, verbose=True):
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, log_action_std=-.5, fixed_std=True)
+    model = PPOModel(policy, value_fn, init_logstd=-.5, learn_std=True)
 
     agent = PPOAgent(env_name="InvertedPendulum-v2",
                      model=model,
@@ -33,7 +33,7 @@ def run_and_test(seed, verbose=True):
                      normalize_return=False,
                      seed=int(seed))
 
-    t_model, rewards, var_dict  =  agent.learn(total_steps = 2e6)
+    t_model, rewards, var_dict = agent.learn(total_steps = 2e6)
 
     if verbose:
         if var_dict["early_stop"]:

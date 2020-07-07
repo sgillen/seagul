@@ -142,8 +142,8 @@ class PPOAgent:
         # Train until we hit our total steps or reach our reward threshold
         # ==============================================================================
         while cur_total_steps < total_steps:
-            self.pol_opt = torch.optim.Adam(self.model.policy.parameters(), lr=lr_lookup(cur_total_steps))
-            self.val_opt = torch.optim.Adam(self.model.value_fn.parameters(), lr=lr_lookup(cur_total_steps))
+            self.pol_opt = torch.optim.SGD(self.model.policy.parameters(), lr=lr_lookup(cur_total_steps))
+            self.val_opt = torch.optim.SGD(self.model.value_fn.parameters(), lr=lr_lookup(cur_total_steps))
 
             batch_obs = torch.empty(0)
             batch_act = torch.empty(0)
@@ -248,10 +248,6 @@ class PPOAgent:
             mean_entropy = -(logp * torch.exp(logp)).mean()
 
             if self.clip_pol:
-                pol_loss = -(logp*local_adv).mean()
-                approx_kl = 0
-
-            else:
                 old_logp = self.old_model.get_logp(local_obs, local_act).reshape(-1, self.act_size).sum(axis=1)
                 approx_kl = ((logp - old_logp) ** 2).mean()
 
@@ -259,6 +255,10 @@ class PPOAgent:
                 clip_r = torch.clamp(r, 1 - self.eps, 1 + self.eps).reshape(-1, 1)
 
                 pol_loss = -(torch.min(r * local_adv, clip_r * local_adv)).mean() - self.entropy_coef * mean_entropy
+
+            else:
+                pol_loss = -(logp*local_adv).mean() - self.entropy_coef*mean_entropy
+                approx_kl = 0
 
             self.pol_opt.zero_grad()
             pol_loss.backward()
