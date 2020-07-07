@@ -23,10 +23,11 @@ def do_rollout_train(env_name, policy, postprocess, delta):
 
     state_tens = torch.stack(state_list)
     reward_list = postprocess(torch.tensor(reward_list))
+    preprocess_sum = sum(reward_list)
     reward_sum = torch.as_tensor(sum(reward_list))
 
     env.close()
-    return state_tens, reward_sum
+    return state_tens, reward_sum, preprocess_sum
 
 
 def postprocess_default(x):
@@ -72,22 +73,25 @@ def ars(env_name, policy, n_epochs, n_workers=8, step_size=.02, n_delta=32, n_to
         states = torch.empty(0)
         p_returns = []
         m_returns = []
+        l_returns = []
         top_returns = []
 
         for p_result, m_result in zip(results[:n_delta], results[n_delta:]):
-            ps, pr = p_result
-            ms, mr = m_result
+            ps, pr, plr = p_result
+            ms, mr, mlr = m_result
 
             states = torch.cat((states, ms, ps), dim=0)
             p_returns.append(pr)
             m_returns.append(mr)
+            l_returns.append(plr); l_returns.append(mlr)
             top_returns.append(max(pr,mr))
 
         top_idx = sorted(range(len(top_returns)), key=lambda k: top_returns[k], reverse=True)[:n_top]
         p_returns = torch.stack(p_returns)[top_idx]
         m_returns = torch.stack(m_returns)[top_idx]
+        l_returns = torch.stack(l_returns)[top_idx]
 
-        r_hist.append((p_returns.mean() + m_returns.mean())/2)
+        r_hist.append(l_returns.mean())
 
         ep_steps = states.shape[0]
         s_mean = update_mean(states, s_mean, total_steps)
