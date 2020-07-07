@@ -25,31 +25,31 @@ t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 def run_and_test(seed, verbose=False):
     input_size = 17
     output_size = 6
-    layer_size = 128
+    layer_size = 64
     num_layers = 2
     activation = nn.ReLU
 
-    policy = MLP(input_size, output_size * 2, num_layers, layer_size, activation)
+    policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, fixed_std=False)
+    model = PPOModel(policy, value_fn, init_logstd=-.5, fixed_std=True)
 
     agent = PPOAgent(env_name="HalfCheetah-v2",
                      model=model,
-                     epoch_batch_size=2048,
+                     epoch_batch_size=4096,
                      reward_stop=3000,
-                     sgd_batch_size=64,
-                     sgd_epochs=10,
-                     lr_schedule=[3e-4],
-                     target_kl=float('inf'),
+                     sgd_batch_size=4096,
+                     sgd_epochs=50,
+                     lr_schedule=[3e-4,0],
+                     target_kl=.1,
                      env_no_term_steps=1000,
                      entropy_coef=0.0,
-                     normalize_return=False,
-                     normalize_obs=False,
+                     normalize_return=True,
+                     normalize_obs=True,
                      normalize_adv=True,
-                     clip_val=False,
+                     clip_val=True,
                      seed=int(seed))
 
-    t_model, rewards, var_dict = agent.learn(total_steps=5e5)
+    t_model, rewards, var_dict = agent.learn(total_steps=1e6)
 
     torch.save(var_dict, open("./tmp/" + str(seed), 'wb'), pickle_module=dill)
 
@@ -64,8 +64,8 @@ def run_and_test(seed, verbose=False):
 
 
 if __name__ == "__main__":
-    seeds = np.random.randint(0, 2**32, 8)
-    pool = Pool(processes=8)
+    seeds = np.random.randint(0, 2**32, 4 )
+    pool = Pool(processes=4)
 
     #results = run_and_test(run_and_test(seeds[0]))
     results = pool.map(run_and_test, seeds)
