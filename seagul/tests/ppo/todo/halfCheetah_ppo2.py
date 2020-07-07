@@ -31,7 +31,7 @@ def run_and_test(seed, verbose=False):
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, log_action_std=-.5, fixed_std=True)
+    model = PPOModel(policy, value_fn, init_logstd=-.5, fixed_std=True)
 
     agent = PPOAgent(env_name="HalfCheetah-v2",
                      model=model,

@@ -16,9 +16,9 @@ def run_and_test(seed, verbose=True):
     num_layers = 1
     activation = nn.ReLU
 
-    policy = MLP(input_size, output_size*2, num_layers, layer_size, activation)
+    policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, log_action_std=-.5, fixed_std=False)
+    model = PPOModel(policy, value_fn, init_logstd=-.5, learn_std=True)
 
     # Define our hyper parameters
     agent = PPOAgent(env_name="Pendulum-v0",
@@ -28,11 +28,11 @@ def run_and_test(seed, verbose=True):
                      sgd_batch_size=64,
                      sgd_epochs=30,
                      target_kl=.05,
-                     lr_schedule=(1e-3,),
-                     normalize_return=False,
+                     lr_schedule=(1e-3,0),
+                     normalize_return=True,
                      normalize_obs=True,
                      normalize_adv=True,
-                     clip_val=False,
+                     clip_val=True,
                      seed=int(seed))
 
     t_model, rewards, var_dict = agent.learn(total_steps = 5e5)
