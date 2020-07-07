@@ -130,7 +130,7 @@ def ars(env_name, policy, n_epochs, env_config={}, n_workers=8, step_size=.02, n
 
         W = W + (step_size / (n_delta * torch.cat((p_returns, m_returns)).std() + 1e-6)) * torch.sum((p_returns - m_returns)*deltas[top_idx].T, dim=1)
 
-
+        
     policy.state_means = s_mean
     policy.state_std = s_std
     torch.nn.utils.vector_to_parameters(W, policy.parameters())
