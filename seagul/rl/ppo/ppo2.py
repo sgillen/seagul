@@ -105,6 +105,8 @@ class PPOAgent:
         self.raw_rew_hist = []
         self.val_loss_hist = []
         self.pol_loss_hist = []
+        self.lrv_hist = []
+        self.lrp_hist = []
 
         env.close()
 
@@ -138,13 +140,12 @@ class PPOAgent:
 
         progress_bar.update(0)
         early_stop = False
+        self.pol_opt = torch.optim.RMSprop(self.model.policy.parameters(), lr=lr_lookup(cur_total_steps))
+        self.val_opt = torch.optim.RMSprop(self.model.value_fn.parameters(), lr=lr_lookup(cur_total_steps))
 
         # Train until we hit our total steps or reach our reward threshold
         # ==============================================================================
         while cur_total_steps < total_steps:
-            self.pol_opt = torch.optim.SGD(self.model.policy.parameters(), lr=lr_lookup(cur_total_steps))
-            self.val_opt = torch.optim.SGD(self.model.value_fn.parameters(), lr=lr_lookup(cur_total_steps))
-
             batch_obs = torch.empty(0)
             batch_act = torch.empty(0)
             batch_adv = torch.empty(0)
@@ -225,6 +226,8 @@ class PPOAgent:
             self.old_model = copy.deepcopy(self.model)
             self.val_loss_hist.append(val_loss)
             self.pol_loss_hist.append(pol_loss)
+            self.lrp_hist.append(self.pol_opt.state_dict()['param_groups'][0]['lr'])
+            self.lrv_hist.append(self.val_opt.state_dict()['param_groups'][0]['lr'])
 
             progress_bar.update(cur_batch_steps)
 
@@ -248,9 +251,10 @@ class PPOAgent:
             mean_entropy = -(logp * torch.exp(logp)).mean()
 
             if self.clip_pol:
-                old_logp = self.old_model.get_logp(local_obs, local_act).reshape(-1, self.act_size).sum(axis=1)
-                approx_kl = ((logp - old_logp) ** 2).mean()
+                with torch.no_grad():
+                    old_logp = self.old_model.get_logp(local_obs, local_act).reshape(-1, self.act_size).sum(axis=1)
 
+                approx_kl = ((logp - old_logp) ** 2).mean()
                 r = torch.exp(logp - old_logp).reshape(-1, 1)
                 clip_r = torch.clamp(r, 1 - self.eps, 1 + self.eps).reshape(-1, 1)
 
@@ -277,7 +281,9 @@ class PPOAgent:
             val_preds = self.model.value_fn(local_obs)
 
             if self.clip_val:
-                old_val_preds = self.old_model.value_fn(local_obs)
+                with torch.no_grad():
+                    old_val_preds = self.old_model.value_fn(local_obs)
+
                 val_preds_clipped = old_val_preds + torch.clamp(val_preds - old_val_preds, -self.eps, self.eps)
                 val_loss1 = (val_preds_clipped - local_val) ** 2
                 val_loss2 = (val_preds - local_val) ** 2
