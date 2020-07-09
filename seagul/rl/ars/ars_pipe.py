@@ -32,6 +32,7 @@ def do_rollout_train(env, policy, postprocess, delta):
     torch.nn.utils.vector_to_parameters(delta, policy.parameters())
 
     state_list = []
+    act_list = [] 
     reward_list = []
 
     obs = env.reset()
@@ -42,14 +43,15 @@ def do_rollout_train(env, policy, postprocess, delta):
         actions = policy(torch.as_tensor(obs))
         obs, reward, done, _ = env.step(actions)
 
+        act_list.append(torch.as_tensor(actions))
         reward_list.append(reward)
 
     state_tens = torch.stack(state_list)
-    reward_list = postprocess(torch.tensor(reward_list))
-    preprocess_sum = sum(reward_list)
+    act_tens = torch.stack(act_list)
+    preprocess_sum = torch.as_tensor(sum(reward_list))
+    reward_list = postprocess(torch.tensor(reward_list), state_tens, act_tens)
     reward_sum = torch.as_tensor(sum(reward_list))
 
-    env.close()
     return state_tens, reward_sum, preprocess_sum
 
 
