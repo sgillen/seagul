@@ -2,6 +2,7 @@ import torch
 from torch.distributions import Normal, Categorical
 import numpy as np
 
+
 class PPOModel:
     """
     Model for use with seagul's ppo algorithm
