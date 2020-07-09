@@ -21,19 +21,9 @@ def run_and_test(seed, verbose=True):
     model = PPOModel(policy, value_fn, init_logstd=-.5, learn_std=True)
 
     # Define our hyper parameters
-    agent = PPOAgent(env_name="Pendulum-v0",
-                     model=model,
-                     epoch_batch_size=2048,
-                     reward_stop=-200,
-                     sgd_batch_size=64,
-                     sgd_epochs=30,
-                     target_kl=float('inf'),
-                     lr_schedule=(1e-3,),
-                     normalize_return=True,
-                     normalize_obs=True,
-                     normalize_adv=True,
-                     clip_val=True,
-                     seed=int(seed))
+    agent = PPOAgent(env_name="Pendulum-v0", model=model, epoch_batch_size=2048, seed=int(seed), sgd_batch_size=64,
+                     lr_schedule=(1e-3,), sgd_epochs=30, target_kl=float('inf'), clip_val=True, reward_stop=-200,
+                     normalize_return=True, normalize_obs=True, normalize_adv=True)
 
     t_model, rewards, var_dict = agent.learn(total_steps = 2e6)
 

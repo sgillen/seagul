@@ -33,21 +33,10 @@ def run_and_test(seed, verbose=False):
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
     model = PPOModel(policy, value_fn, init_logstd=-.5, fixed_std=True)
 
-    agent = PPOAgent(env_name="HalfCheetah-v2",
-                     model=model,
-                     epoch_batch_size=4096,
-                     reward_stop=3000,
-                     sgd_batch_size=4096,
-                     sgd_epochs=50,
-                     lr_schedule=[3e-4,0],
-                     target_kl=.1,
-                     env_no_term_steps=1000,
-                     entropy_coef=0.0,
-                     normalize_return=True,
-                     normalize_obs=True,
-                     normalize_adv=True,
-                     clip_val=True,
-                     seed=int(seed))
+    agent = PPOAgent(env_name="HalfCheetah-v2", model=model, epoch_batch_size=4096, seed=int(seed), entropy_coef=0.0,
+                     sgd_batch_size=4096, lr_schedule=[3e-4, 0], sgd_epochs=50, target_kl=.1, clip_val=True,
+                     env_no_term_steps=1000, reward_stop=3000, normalize_return=True, normalize_obs=True,
+                     normalize_adv=True)
 
     t_model, rewards, var_dict = agent.learn(total_steps=1e6)
 

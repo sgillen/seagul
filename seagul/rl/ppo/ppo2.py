@@ -10,31 +10,11 @@ class PPOAgent:
     """
            Implements proximal policy optimization with clipping
 
-           Args:
-               env_name: name of the openAI gym environment to solve
-               total_steps: number of timesteps to run the PPO for
-               model: model from seagul.rl.models. Contains policy and value fn
-               act_std_schedule: schedule to set the variance of the policy. Will linearly interpolate values
-               self.epoch_batch_size: number of environment steps to take per batch, total steps will be num_epochs*epoch_batch_size
-               seed: seed for all the rngs
-               gamma: discount applied to future rewards, usually close to 1
-               lam: lambda for the Advantage estimation, usually close to 1
-               eps: epsilon for the clipping, usually .1 or .2
-               sgd_batch_size: batch size for policy updates
-               sgd_batch_size: batch size for value function updates
-               lr_schedule: learning rate for policy pol_optimizer
-               sgd_epochs: how many epochs to use for each policy update
-               target_kl: max KL before breaking
-               use_gpu:  want to use the GPU? set to true
-               reward_stop: reward value to stop if we achieve
-               normalize_return: should we normalize the return?
-               env_config: dictionary containing kwargs to pass to your the environment
     """
 
     def __init__(self,
                  env_name,
                  model,
-                 act_std_schedule=(0.7,),
                  epoch_batch_size=2048,
                  gamma=0.99,
                  lam=0.95,
@@ -54,12 +34,35 @@ class PPOAgent:
                  normalize_return=True,
                  normalize_obs=True,
                  normalize_adv=True,
-                 env_config={}
-                 ):
+                 env_config=None):
+
+        """
+                  Args:
+                      env_name: name of the openAI gym environment to solve
+                      model: model from seagul.rl.ppo.models Contains policy and value fn
+                      epoch_batch_size: number of environment steps to take per batch
+                      gamma: discount applied to future rewards, usually close to 1
+                      lam: lambda for the advantage estimation, usually close to 1
+                      eps: epsilon for the ppo clipping, usually .1 or .2
+                      seed: seed for all the rngs
+                      sgd_batch_size: mini batch size for policy/value updates
+                      lr_schedule: learning rate for policy policy / value optimizers
+                      sgd_epochs: how many epochs to use for each policy.value update
+                      val_coef: coefficient to multiply the value loss by
+                      clip_val: True-> use a clipped value function update, False-> normal MSE update
+                      clip_pol: True-> use the ppo clipped objective, False-> use the PG update
+                      env_no_term_steps: maximum episode length if no early termination occurs
+                      target_kl: max KL divergence before breaking
+                      use_gpu:  want to use the GPU? set to true
+                      reward_stop: reward value to stop training at if we achieve
+                      normalize_return: should we normalize the return?
+                      normalize_obs: normalize obs before sending to the model?
+                      normalize_adv: normalize advantage after each batch?
+                      env_config: dictionary containing kwargs to pass to the environment
+           """
 
         self.env_name = env_name
         self.model = model
-        self.act_std_schedule = act_std_schedule
         self.epoch_batch_size = epoch_batch_size
         self.gamma = gamma
         self.lam = lam
@@ -79,6 +82,8 @@ class PPOAgent:
         self.normalize_return = normalize_return
         self.normalize_obs = normalize_obs
         self.normalize_adv = normalize_adv
+        if env_config is None:
+            env_config = {}
         self.env_config = env_config
         self.old_model = copy.deepcopy(self.model)
 
@@ -132,10 +137,8 @@ class PPOAgent:
         np.random.seed(self.seed)
 
         progress_bar = tqdm.tqdm(total=total_steps)
-        actstd_lookup = make_schedule(self.act_std_schedule, total_steps)
         lr_lookup = make_schedule(self.lr_schedule, total_steps)
 
-        self.model.action_std = actstd_lookup(0)
         self.sgd_lr = lr_lookup(0)
 
         progress_bar.update(0)

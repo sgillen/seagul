@@ -20,18 +20,9 @@ def run_and_test(seed, verbose=True):
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
     model = PPOModel(policy, value_fn, init_logstd=-.5, learn_std=True)
 
-    agent = PPOAgent(env_name="InvertedPendulum-v2",
-                     model=model,
-                     epoch_batch_size=2048,
-                     reward_stop=1000,
-                     sgd_batch_size=512,
-                     sgd_epochs=50,
-                     lr_schedule=(1e-3,),
-                     target_kl=.05,
-                     env_no_term_steps=1000,
-                     normalize_adv=True,
-                     normalize_return=False,
-                     seed=int(seed))
+    agent = PPOAgent(env_name="InvertedPendulum-v2", model=model, epoch_batch_size=2048, seed=int(seed),
+                     sgd_batch_size=512, lr_schedule=(1e-3,), sgd_epochs=50, target_kl=.05, env_no_term_steps=1000,
+                     reward_stop=1000, normalize_return=False, normalize_adv=True)
 
     t_model, rewards, var_dict = agent.learn(total_steps = 2e6)
 
