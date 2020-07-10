@@ -55,8 +55,8 @@ def do_rollout_train(env, policy, postprocess, delta):
     return state_tens, reward_sum, preprocess_sum
 
 
-def postprocess_default(x):
-    return x
+def postprocess_default(rews, obs,acts):
+    return rews
 
 
 def ars(env_name, policy, n_epochs, env_config={}, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, zero_policy=True, postprocess=postprocess_default):
@@ -151,12 +151,12 @@ def ars(env_name, policy, n_epochs, env_config={}, n_workers=8, step_size=.02, n
 
 
 if __name__ == "__main__":
-    torch.set_default_dtype(torch.float32)
+    torch.set_default_dtype(torch.float64)
     import seagul.envs
     import matplotlib.pyplot as plt
     from seagul.nn import MLP
 
-    env_name = "Walker2DBulletEnv-v0"
+    env_name = "HalfCheetah-v2"
     env = gym.make(env_name)
     in_size = env.observation_space.shape[0]
     out_size = env.action_space.shape[0]
@@ -170,10 +170,10 @@ if __name__ == "__main__":
 
     import time
     start = time.time()
-    policy, r_hist = ars(env_name, policy, 50, n_workers=8, n_delta=64, n_top=32)
+    policy, r_hist, lr_hist = ars(env_name, policy, 20, n_workers=8, n_delta=32, n_top=16)
     print(time.time() - start)
 
-    plt.plot(r_hist)
+    plt.plot(lr_hist)
     plt.show()
 
     #env = gym.make(env_name)
