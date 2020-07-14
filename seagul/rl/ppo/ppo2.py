@@ -223,7 +223,6 @@ class PPOAgent:
                 self.model.policy.state_std = self.obs_std
                 self.model.value_fn.state_std = self.obs_std
 
-            self.model.action_std = actstd_lookup(cur_total_steps)
             sgd_lr = lr_lookup(cur_total_steps)
 
             self.old_model = copy.deepcopy(self.model)

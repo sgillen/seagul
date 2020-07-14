@@ -8,8 +8,9 @@ from anytree import Node
 import copy
 
 
-def ars(env_name, n_epochs, env_config, step_size, n_delta, n_top, exp_noise, policy, seed):
+def ars(env_name, n_epochs, env_config, step_size, n_delta, n_top, exp_noise, n_workers, policy, seed):
         torch.autograd.set_grad_enabled(False)  # Gradient free baby!
+        pool = Pool(processes=n_workers)
 
         W = torch.nn.utils.parameters_to_vector(policy.parameters())
         n_param = W.shape[0]
@@ -27,36 +28,41 @@ def ars(env_name, n_epochs, env_config, step_size, n_delta, n_top, exp_noise, po
         r_hist = []
 
         exp_dist = torch.distributions.Normal(torch.zeros(n_delta, n_param), torch.ones(n_delta, n_param))
+        do_rollout_partial = partial(do_rollout_train, env_name, policy)
 
         for _ in range(n_epochs):
 
             deltas = exp_dist.sample()
-            W_pos = W + (deltas * exp_noise)
-            W_neg = W - (deltas * exp_noise)
+
+            ###
+            pm_W = torch.cat((W + (deltas * exp_noise), W - (deltas * exp_noise)))
+
+            results = pool.map(do_rollout_partial, pm_W)
 
             states = torch.empty(0)
             p_returns = []
             m_returns = []
-
-            for W in W_pos:
-                s, r = do_rollout_train(env, policy, W)
-                p_returns.append(r)
-                states = torch.cat((states, s), dim=0)
-
-            for W in W_neg:
-                s, r = do_rollout_train(env, policy, W)
-                m_returns.append(r)
-                states = torch.cat((states, s), dim=0)
-
+            l_returns = []
             top_returns = []
-            for p_ret, m_ret in zip(p_returns, m_returns):
-                top_returns.append(max(p_ret, m_ret))
+
+            for p_result, m_result in zip(results[:n_delta], results[n_delta:]):
+                ps, pr, plr = p_result
+                ms, mr, mlr = m_result
+
+                states = torch.cat((states, ms, ps), dim=0)
+                p_returns.append(pr)
+                m_returns.append(mr)
+                l_returns.append(plr);
+                l_returns.append(mlr)
+                top_returns.append(max(pr, mr))
 
             top_idx = sorted(range(len(top_returns)), key=lambda k: top_returns[k], reverse=True)[:n_top]
             p_returns = torch.stack(p_returns)[top_idx]
             m_returns = torch.stack(m_returns)[top_idx]
+            l_returns = torch.stack(l_returns)[top_idx]
 
-            r_hist.append(torch.stack(top_returns)[top_idx].mean())
+            r_hist.append(l_returns.mean())
+            ###
 
             W = W + (step_size / (n_delta * torch.cat((p_returns, m_returns)).std() + 1e-6)) * torch.sum(
                 (p_returns - m_returns) * deltas[top_idx].T, dim=1)
@@ -64,6 +70,8 @@ def ars(env_name, n_epochs, env_config, step_size, n_delta, n_top, exp_noise, po
             ep_steps = states.shape[0]
             policy.state_means = update_mean(states, policy.state_means, total_steps)
             policy.state_std = update_std(states, policy.state_std, total_steps)
+            do_rollout_partial = partial(do_rollout_train, env_name, policy)
+
             total_steps += ep_steps
 
             torch.nn.utils.vector_to_parameters(W, policy.parameters())
@@ -81,8 +89,8 @@ def meta_ars(env_name, policy, meta_epochs, meta_seed, n_seeds=4, n_top_seeds=1,
     W = torch.zeros_like(W)
     torch.nn.utils.vector_to_parameters(W, policy.parameters())
 
-    pool = Pool(processes=n_workers)
-    ars_partial = partial(ars, env_name, ars_epochs, env_config, step_size, n_delta, n_top, exp_noise)
+    pool = Pool(processes=n_seeds)
+    ars_partial = partial(ars, env_name, ars_epochs, env_config, step_size, n_delta, n_top, exp_noise, n_workers)
     #root = Node(meta_seed)
     reward_log = []
 
@@ -157,7 +165,7 @@ if __name__ == "__main__":
 
     import time
     start = time.time()
-    policys, r_hist = meta_ars(env_name, policy, 20, 0)
+    policys, r_hist = meta_ars(env_name, policy, 2, 0)
     print(time.time() - start)
 
     plt.plot(r_hist)

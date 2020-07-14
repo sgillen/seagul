@@ -4,6 +4,7 @@ from seagul.rl.common import update_std, update_mean
 from torch.multiprocessing import Pool
 from functools import partial
 
+
 def do_rollout_train(env_name, policy, postprocess, delta):
     env = gym.make(env_name)
     torch.nn.utils.vector_to_parameters(delta, policy.parameters())
