@@ -2,6 +2,7 @@ import dill
 import torch.nn as nn
 from seagul.rl.ppo.ppo2 import PPOAgent
 from seagul.nn import MLP
+import pybullet_envs
 import torch
 from seagul.rl.ppo.models import PPOModel
 from multiprocessing import Process, Manager, Pool
@@ -23,7 +24,7 @@ t_model, rewards, var_dict = ppo(**arg_dict)  # Should get to -200 reward
 
 
 def run_and_test(seed, verbose=False):
-    input_size = 17
+    input_size = 26
     output_size = 6
     layer_size = 64
     num_layers = 2
@@ -33,7 +34,7 @@ def run_and_test(seed, verbose=False):
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
     model = PPOModel(policy, value_fn, init_logstd=-.5, learn_std=True)
 
-    agent = PPOAgent(env_name="HalfCheetah-v2", model=model, epoch_batch_size=4096, seed=int(seed), entropy_coef=0.0,
+    agent = PPOAgent(env_name="HalfCheetahBulletEnv-v0", model=model, epoch_batch_size=4096, seed=int(seed), entropy_coef=0.0,
                      sgd_batch_size=4096, lr_schedule=[3e-4, 0], sgd_epochs=50, target_kl=.1, clip_val=True,
                      env_no_term_steps=1000, reward_stop=3000, normalize_return=True, normalize_obs=True,
                      normalize_adv=True)
@@ -56,7 +57,7 @@ if __name__ == "__main__":
     seeds = np.random.randint(0, 2**32, 4)
     pool = Pool(processes=4)
 
-    results = run_and_test(run_and_test(seeds[0]))
+    #results = run_and_test(run_and_test(seeds[0]))
     import time
     start = time.time()
     results = pool.map(run_and_test, seeds)
