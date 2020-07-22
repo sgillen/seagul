@@ -1,38 +1,15 @@
 import numpy as np
+import copy
 import scipy.optimize as opt
-import collections
-
-
-def create_mesh(data, d, initial_mesh=None):
-    """ Creates a mesh from the given data using balls of size d
-    Args:
-        data: np.array, the data you want to create a mesh for
-        d: float, the radius for the ball used to determine membership in the mesh
-        initial_mesh: list, if you want to extend an existing mesh with new data, pass the old mesh as a list
-    Returns:
-        mesh: list, all the points from data that made it into the mesh
-        weights: how many points from the original set are represented by the corresponding point in the mesh
-    """
-    if initial_mesh is None:
-        initial_mesh = []
-
-    mesh = initial_mesh
-    weights = []
-    in_mesh = np.zeros(data.shape[0], dtype=np.bool)
-
-    for i, x in enumerate(data):
-        if in_mesh[i]:
-            continue
-        else:
-            in_criteria = np.linalg.norm(x - data, axis=1, ord=1) < d
-            in_mesh = np.logical_or(in_mesh, in_criteria)
-            mesh.append(x)
-            weights.append(np.sum(in_criteria))
-
-    return mesh, weights
-
-
+import torch
 from collections.abc import MutableMapping
+
+
+class MeshPoint:
+    def __init__(self, identity, point):
+        self.id = identity
+        self.point = point
+        self.freq = 1
 
 
 class BylMesh(MutableMapping):
@@ -66,25 +43,120 @@ class BylMesh(MutableMapping):
         return round_key
 
 
-# class BylMesh:
-#     def __init__(self,d):
-#         self.d = d; self.scale = 1/d
-#         self.mesh = collections.OrderedDict()
-#
-#     def __getitem__(self, item):
-#         round_key = self.round_key(item)
-#         return self.mesh[round_key]
-#
-#     def __setitem__(self, key, value):
-#         round_key = self.round_key(key)
-#         self.mesh[round_key] = value
-#
-#     def round_key(self, key):
-#         round_key = np.asarray(key)
-#         round_key = np.round(round_key * self.scale, decimals=0) * self.d
-#         round_key[round_key == -0.0] = 0.0
-#         round_key = tuple(round_key)
-#         return round_key
+
+def create_mesh(data, d, initial_mesh=None):
+    """ Creates a mesh from the given data using balls of size d
+    Args:
+        data: np.array, the data you want to create a mesh for
+        d: float, the radius for the ball used to determine membership in the mesh
+        initial_mesh: list, if you want to extend an existing mesh with new data, pass the old mesh as a list
+    Returns:
+        mesh: list, all the points from data that made it into the mesh
+        weights: how many points from the original set are represented by the corresponding point in the mesh
+    """
+    if initial_mesh is None:
+        initial_mesh = []
+
+    mesh = initial_mesh
+    weights = []
+    in_mesh = np.zeros(data.shape[0], dtype=np.bool)
+
+    for i, x in enumerate(data):
+        if in_mesh[i]:
+            continue
+        else:
+            in_criteria = np.linalg.norm(x - data, axis=1, ord=1) < d
+            in_mesh = np.logical_or(in_mesh, in_criteria)
+            mesh.append(x)
+            weights.append(np.sum(in_criteria))
+
+    return mesh, weights
+
+
+def create_mesh_act(env, policy, d, seed_point, perturbs, reset_fn, snapshot_fn, interp_fn, ref_mean, ref_std):
+    torch.autograd.set_grad_enabled(False)
+    failure_point = np.ones_like(seed_point) * 10
+
+    mesh = BylMesh(d)
+    mesh[failure_point] = MeshPoint(0, failure_point)
+    mesh[seed_point] = MeshPoint(1, seed_point)
+
+    mesh_points = []
+    mesh_points.append(failure_point)
+    mesh_points.append(seed_point)
+
+    transition_list = [[0] * len(perturbs)]  # Failure state always transitions to itself
+
+    cnt = 0;
+    cur_explored_cnt = 0
+    for init_pos in mesh_points:
+        if (init_pos == failure_point).all():
+            continue
+
+        cur_explored_cnt += 1
+        transition_list.append([])
+
+        tmp_points = []
+        tmp_keys = []
+        failed = False
+
+        for pert in perturbs:
+            if failed:
+                break
+            cnt += 1
+
+            step = 0
+            done = False;
+            do_once = 1
+            o = reset_fn(env, init_pos)
+
+            while not done:
+                a = policy(o) + do_once * pert
+                step += 1
+                do_once = 0
+
+                last_o = copy.copy(o)
+
+                o, r, done, _ = env.step(a.numpy())
+
+                if snapshot_fn(o, last_o, step):
+
+                    pt = interp_fn(o, last_o)
+                    key = (pt - ref_mean) / ref_std
+
+                    # weights = pca.singular_values_/pca.singular_values_.max()
+                    # key = weights*pca.transform(key.reshape(1,-1)).reshape(-1)
+
+                    tmp_points.append(copy.copy(pt))
+                    tmp_keys.append(copy.copy(key))
+
+                    if cnt % 1000 == 0:
+                        print("explored: ", cur_explored_cnt, "| added: ", len(mesh), "| ratio: ",
+                              cur_explored_cnt / len(mesh), "| failures: ", mesh[failure_point].freq, "| count: ", cnt)
+                    done = True
+
+                if step > 200:
+                    failed = True
+                    done = True
+
+        if not failed:
+            for p, k in zip(tmp_points, tmp_keys):
+                if k in mesh:
+                    mesh[k].freq += 1
+                else:
+                    mesh_points.append(p)
+                    mesh[k] = MeshPoint(len(mesh_points)-1, p)
+
+                transition_list[-1].append(mesh[k].id)
+
+
+        else:
+            for _ in range(len(perturbs)):
+                mesh[failure_point].freq += 1
+                transition_list[-1].append(mesh[failure_point].id)
+
+    torch.autograd.set_grad_enabled(True)
+    return mesh, mesh_points, np.array(transition_list)
 
 
 def create_mesh_dict(data, d, initial_mesh=None):
@@ -202,7 +274,6 @@ def variation_dim(X, order=1):
 
 if __name__ == "__main__":
     from seagul.mesh import BylMesh
-    import numpy as np
 
     m = BylMesh(.1)
     a = np.random.random(4)
