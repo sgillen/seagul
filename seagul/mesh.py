@@ -190,7 +190,7 @@ def create_mesh_dict(data, d, initial_mesh=None):
 
 
 
-def mesh_dim(data, init_d=1e-3):
+def mesh_dim(data, init_d=1e-6):
     """
     Args:
         data - any np array or torch thing
@@ -200,9 +200,26 @@ def mesh_dim(data, init_d=1e-3):
         mesh_dim, mesh_sizes, d_vals
 
     """
-    mesh_sizes = []
-    d_vals = []
-    d = init_d
+    scale_factor = 2
+
+    mesh = create_mesh_dict(data, init_d)
+    mesh_sizes = [len(mesh)]
+    d_vals = [init_d]
+    if len(mesh) != data.shape[0]:
+        print("Warning initial d for mesh too large! auto adjusting")
+
+        d = init_d/scale_factor
+        while True:
+            mesh = create_mesh_dict(data, d)
+            mesh_sizes.insert(0, len(mesh))
+            d_vals.insert(0, d)
+
+            d = d/scale_factor
+
+            if mesh_sizes[0] == data.shape[0]:
+                break
+
+    d = init_d*scale_factor
     while True:
         mesh = create_mesh_dict(data, d)
         mesh_sizes.append(len(mesh))
@@ -211,21 +228,30 @@ def mesh_dim(data, init_d=1e-3):
         if mesh_sizes[-1] == 1:
             break
 
-        d = d * 2
+        d = d * scale_factor
 
     for i, m in enumerate(mesh_sizes):
         if m < data.shape[0]:
-            lin_begin = i + 2
+            lin_begin = i
             break
 
-    xdata = np.array(d_vals[lin_begin:])
-    ydata = np.array(mesh_sizes[lin_begin:])
+    xdata = np.log2(d_vals[lin_begin:])
+    ydata = np.log2(mesh_sizes[lin_begin:])
 
+    # Fit a curve to the log log line
     def f(x, m, b):
         return m * x + b
 
-    popt, pcov = opt.curve_fit(f, np.log10(xdata), -np.log10(ydata))
-    return popt[0], mesh_sizes, d_vals
+    popt, pcov = opt.curve_fit(f, xdata, -ydata)
+
+    # find the largest slope
+    min_slope = 0
+    for i in range(len(ydata) - 2):
+        slope = (ydata[i+1] - ydata[i]) / (xdata[i + 1] - xdata[i])
+        if slope < min_slope:
+            min_slope = slope
+
+    return popt[0], -min_slope, mesh_sizes, d_vals
 
 
 def conservative_mesh_dim(data, init_d=1e-3):
@@ -251,13 +277,15 @@ def conservative_mesh_dim(data, init_d=1e-3):
 
         d = d * 2
 
-    max_slope = 0
+
+
+    min_slope = 0
     for i in range(len(mesh_sizes)-1):
         slope = - mesh_sizes[i] - mesh_sizes[i+1]/(d_vals[i+1] - d_vals[i])
-        if slope > max_slope:
-            max_slope = slope
+        if slope < min_slope:
+            min_slope = slope
 
-    return max_slope, mesh_sizes, d_vals
+    return -min_slope, mesh_sizes, d_vals
 
 
 def power_var(X, l, ord):
@@ -271,49 +299,31 @@ def variation_dim(X, order=1):
     return 2 - 1/(order*np.log(2))*(np.log(power_var(X, 2, order)) - np.log(power_var(X, 1, order)))
 
 
-
 if __name__ == "__main__":
-    from seagul.mesh import BylMesh
+    import numpy as np
+    import time
+    import matplotlib.pyplot as plt
 
-    m = BylMesh(.1)
-    a = np.random.random(4)
-    m[a] = 1
+    data_size = 10000
+    meshes = []
 
-    print(a in m)
-#
-#
-# if __name__ == "__main__":
-#     import numpy as np
-#     import time
-#     import matplotlib.pyplot as plt
-#
-#     data_sizes = np.logspace(0,4.5)
-#     meshes = []
-#     dict_meshes = []
-#     times = np.zeros_like(data_sizes, dtype=np.float)
-#     dict_times = np.zeros_like(data_sizes, dtype=np.float)
-#
-#     for i, data_size in enumerate(data_sizes):
-#         print(data_size)
-#         X = np.random.random((int(data_size),5))
-#         #X = np.ones((2000,5))
-#         start = time.time()
-#         #m,w = create_mesh(X, .01)
-#         times[i] = time.time() - start
-#         #meshes.append(m)
-#
-#         start = time.time()
-#         m = create_mesh_dict(X,2)
-#         dict_times[i] = time.time() - start
-#         dict_meshes.append(m)
-#
-#     plt.title("Meshing time vs number of data points")
-#    # plt.plot(data_sizes,times, '-o')
-#     plt.plot(data_sizes, dict_times, '-o')
-#     plt.plot(data_sizes, dict_times, '-o')
-#
-#     #plt.legend(['b'])
-#     plt.ylabel("Time (s)")
-#     plt.xlabel("Data set size")
-#     plt.show()
-#     #plt.legend('a','b')
+    dim = 17
+    coefs = np.random.random((dim,))
+    start = np.zeros((dim,))
+    stop = np.ones((dim)) * 10
+
+    x = np.linspace(start, stop, 100)
+    noise = np.random.random(x.shape)
+    data = coefs * (x + noise)
+
+    #X = np.((int(data_size), 10))
+    start = time.time()
+    m, c, mesh_sizes, d_vals = mesh_dim(data, .01)
+
+    xdata = np.log2(d_vals)
+    ydata = np.log2(mesh_sizes)
+
+    plt.plot(d_vals, mesh_sizes, 'x-')
+    plt.show()
+    plt.plot(xdata, ydata, 'x-')
+    plt.show()
