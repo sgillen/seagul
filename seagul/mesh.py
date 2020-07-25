@@ -160,7 +160,7 @@ def create_mesh_act(env, policy, d, seed_point, perturbs, reset_fn, snapshot_fn,
 
 
 def create_mesh_dict(data, d, initial_mesh=None):
-    """ Creates a mesh from the given data using balls of size d
+    """ Creates a mesh from the given data using boxes of size d
     Args:
         data: np.array, the data you want to create a mesh for
         d: float, the radius for the box used to determine membership in the mesh
@@ -206,7 +206,7 @@ def mesh_dim(data, init_d=1e-6):
     mesh_sizes = [len(mesh)]
     d_vals = [init_d]
     if len(mesh) != data.shape[0]:
-        print("Warning initial d for mesh too large! auto adjusting")
+        #print("Warning initial d for mesh too large! auto adjusting")
 
         d = init_d/scale_factor
         while True:
@@ -216,7 +216,8 @@ def mesh_dim(data, init_d=1e-6):
 
             d = d/scale_factor
 
-            if mesh_sizes[0] == data.shape[0]:
+            if mesh_sizes[0] == data.shape[0] or d < 1e-9:
+                #print("d found: ", d, mesh_sizes, data.shape[0])
                 break
 
     d = init_d*scale_factor
@@ -289,8 +290,16 @@ def conservative_mesh_dim(data, init_d=1e-3):
 
 
 def power_var(X, l, ord):
-    # Implements the power variation, used for the variation fractal dimension
-    return 1 / (2 * len(X) - l) * np.sum(np.linalg.norm(X[l:] - X[:-l],ord=ord))
+    diffs = X[l:] - X[:-l]
+    norms = np.zeros(diffs.shape[0])
+    for i,d in enumerate(diffs):
+        norms[i] = np.linalg.norm(d,ord=1)
+        
+    return 1 / (2 * len(X) - l) * np.sum(norms)
+
+# def power_var(X, l, ord):
+#     # Implements the power variation, used for the variation fractal dimension
+#     return 1 / (2 * len(X) - l) * np.sum(np.linalg.norm(X[l:] - X[:-l],ord=ord))
 
 
 def variation_dim(X, order=1):

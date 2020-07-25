@@ -49,6 +49,7 @@ def do_rollout_train(env, policy, postprocess, delta):
     state_tens = torch.stack(state_list)
     act_tens = torch.stack(act_list)
     preprocess_sum = torch.as_tensor(sum(reward_list))
+    nstate_tens = (state_tens - policy.state_means) / policy.state_std
     reward_list = postprocess(torch.tensor(reward_list), state_tens, act_tens)
     reward_sum = torch.as_tensor(sum(reward_list))
 
