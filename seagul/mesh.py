@@ -159,7 +159,7 @@ def create_mesh_act(env, policy, d, seed_point, perturbs, reset_fn, snapshot_fn,
     return mesh, mesh_points, np.array(transition_list)
 
 
-def create_mesh_dict(data, d, initial_mesh=None):
+def create_box_mesh(data, d, initial_mesh=None):
     """ Creates a mesh from the given data using boxes of size d
     Args:
         data: np.array, the data you want to create a mesh for
@@ -190,7 +190,7 @@ def create_mesh_dict(data, d, initial_mesh=None):
 
 
 
-def mesh_dim(data, init_d=1e-6):
+def mesh_dim(data, init_d=1e-2):
     """
     Args:
         data - any np array or torch thing
@@ -200,29 +200,30 @@ def mesh_dim(data, init_d=1e-6):
         mesh_dim, mesh_sizes, d_vals
 
     """
-    scale_factor = 2
+    scale_factor = 1.5
+    mesh_size_upper = 4/5*data.shape[0]
 
-    mesh = create_mesh_dict(data, init_d)
+    mesh = create_box_mesh(data, init_d)
     mesh_sizes = [len(mesh)]
     d_vals = [init_d]
-    if len(mesh) != data.shape[0]:
+    if len(mesh) > mesh_size_upper:
         #print("Warning initial d for mesh too large! auto adjusting")
 
         d = init_d/scale_factor
         while True:
-            mesh = create_mesh_dict(data, d)
+            mesh = create_box_mesh(data, d)
             mesh_sizes.insert(0, len(mesh))
             d_vals.insert(0, d)
 
             d = d/scale_factor
 
-            if mesh_sizes[0] == data.shape[0] or d < 1e-9:
+            if mesh_sizes[0] > mesh_size_upper or d < 1e-9:
                 #print("d found: ", d, mesh_sizes, data.shape[0])
                 break
 
     d = init_d*scale_factor
     while True:
-        mesh = create_mesh_dict(data, d)
+        mesh = create_box_mesh(data, d)
         mesh_sizes.append(len(mesh))
         d_vals.append(d)
 
@@ -232,7 +233,7 @@ def mesh_dim(data, init_d=1e-6):
         d = d * scale_factor
 
     for i, m in enumerate(mesh_sizes):
-        if m < data.shape[0]:
+        if m < mesh_size_upper:
             lin_begin = i
             break
 
@@ -269,7 +270,7 @@ def conservative_mesh_dim(data, init_d=1e-3):
     d_vals = []
     d = init_d
     while True:
-        mesh = create_mesh_dict(data, d)
+        mesh = create_box_mesh(data, d)
         mesh_sizes.append(len(mesh))
         d_vals.append(d)
 

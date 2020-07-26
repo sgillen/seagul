@@ -3,12 +3,13 @@ import torch
 from seagul.rl.common import update_std, update_mean
 from torch.multiprocessing import Process,Pipe
 import cProfile
-
+import os
 
 def worker_fn(worker_con, env_name, env_config, policy, postprocess):
     # pr = cProfile.Profile()
     # pr.enable()
     env = gym.make(env_name, **env_config)
+    epoch = 0
 
     while True:
         data = worker_con.recv()
@@ -26,10 +27,11 @@ def worker_fn(worker_con, env_name, env_config, policy, postprocess):
 
             states, returns, log_returns = do_rollout_train(env, policy, postprocess, W)
             worker_con.send((states, returns, log_returns))
+            epoch +=1
 
 
-def do_rollout_train(env, policy, postprocess, delta):
-    torch.nn.utils.vector_to_parameters(delta, policy.parameters())
+def do_rollout_train(env, policy, postprocess, W):
+    torch.nn.utils.vector_to_parameters(W, policy.parameters())
 
     state_list = []
     act_list = [] 
@@ -50,7 +52,7 @@ def do_rollout_train(env, policy, postprocess, delta):
     act_tens = torch.stack(act_list)
     preprocess_sum = torch.as_tensor(sum(reward_list))
     nstate_tens = (state_tens - policy.state_means) / policy.state_std
-    reward_list = postprocess(torch.tensor(reward_list), state_tens, act_tens)
+    reward_list = postprocess(torch.tensor(reward_list), nstate_tens, act_tens)
     reward_sum = torch.as_tensor(sum(reward_list))
 
     return state_tens, reward_sum, preprocess_sum
@@ -60,7 +62,7 @@ def postprocess_default(rews, obs,acts):
     return rews
 
 
-def ars(env_name, policy, n_epochs, env_config={}, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, zero_policy=True, postprocess=postprocess_default):
+def ars(env_name, policy, n_epochs, env_config={}, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, zero_policy=True, learn_means=True, postprocess=postprocess_default):
     torch.autograd.set_grad_enabled(False)
     """
     Augmented Random Search
@@ -90,17 +92,17 @@ def ars(env_name, policy, n_epochs, env_config={}, n_workers=8, step_size=.02, n
         W = torch.zeros_like(W)
 
     env = gym.make(env_name,**env_config)
-    s_mean = torch.zeros(env.observation_space.shape[0])
-    s_std = torch.ones(env.observation_space.shape[0])
+    s_mean = policy.state_means
+    s_std = policy.state_std
+    total_steps = 0
     env.close()
 
-    total_steps = 0
     r_hist = []
     lr_hist = []
 
     exp_dist = torch.distributions.Normal(torch.zeros(n_delta, n_param), torch.ones(n_delta, n_param))
 
-    for _ in range(n_epochs):
+    for epoch in range(n_epochs):
 
         deltas = exp_dist.sample()
         pm_W = torch.cat((W+(deltas*exp_noise), W-(deltas*exp_noise)))
@@ -140,6 +142,9 @@ def ars(env_name, policy, n_epochs, env_config={}, n_workers=8, step_size=.02, n
         s_mean = update_mean(states, s_mean, total_steps)
         s_std = update_std(states, s_std, total_steps)
         total_steps += ep_steps
+
+        if epoch % 5 == 0:
+            print(f"epoch: {epoch}, reward: {lr_hist[-1].item()}, processed reward: {r_hist[-1].item()} ")
 
         W = W + (step_size / (n_delta * torch.cat((p_returns, m_returns)).std() + 1e-6)) * torch.sum((p_returns - m_returns)*deltas[top_idx].T, dim=1)
 
