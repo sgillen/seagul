@@ -8,7 +8,6 @@ import seagul
 import seagul.envs.matlab.bball_src
 
 
-
 class BBallEnv(core.Env):
     """ Connects to nihars bouncing ball matlab code
 
@@ -46,7 +45,7 @@ class BBallEnv(core.Env):
 
         low = np.array([-pi, -pi, -5, -5, -10, -30, -10, -10 ])
         self.observation_space = spaces.Box(low=low, high=-low, dtype=np.float32)
-        self.action_space = spaces.Box(low=np.array([-max_torque]), high=np.array ([max_torque]), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([-max_torque, -max_torque]), high=np.array ([max_torque, max_torque]), dtype=np.float32)
 
         self.reset()
 
@@ -60,7 +59,9 @@ class BBallEnv(core.Env):
 
     def step(self, action):
         action = np.clip(action, -self.max_torque, self.max_torque)
-        tout, xout = self.eng.integrateODE(matlab.single([self.t, self.t+self.dt]), self.state, self.dt, matlab.single([action.item()]), nargout=2)
+        action = matlab.single(action.tolist())
+        action.reshape((2,1))
+        tout, xout = self.eng.integrateODE(matlab.single([self.t, self.t+self.dt]), self.state, self.dt, action, nargout=2)
         impactState, impactTime = self.eng.detectImpact(tout,xout, nargout=2)
 
         if impactTime == -1:  #No contact
