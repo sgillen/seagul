@@ -1,0 +1,13 @@
+{
+    "train_batch_size": 2048,
+    "vf_clip_param": 10.0,
+    "num_workers": 1,
+    "lambda": 0.95,
+    "gamma": 0.99,
+    "lr": 0.0003,
+    "sgd_minibatch_size": 64,
+    "num_sgd_iter": 10,
+    "clip_param": 0.2,
+    "batch_mode": "complete_episodes",
+    "observation_filter": "MeanStdFilter"
+}
