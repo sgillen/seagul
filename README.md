@@ -11,7 +11,7 @@ Highlights include:
 
 - [Experiment utilities](./seagul/rl/run_utils), for saving RL experiments along with meta data, logs, and a mechanism to restore the trained agents.
 
-And lots of other little odds and ends ([check out all my abandoned projects!](./seagul/old)). 
+And lots of other little odds and ends ([check out all my abandoned projects!](https://github.com/sgillen/misc)). 
 
 ## Who should use this?
 
