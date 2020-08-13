@@ -6,7 +6,6 @@ impactTime = -1; % if this is unchanged implies no impact
 
 params;
 
-
 q1 = xout(:,1); q2 = xout(:,2); q3 = xout(:,3);
 xb = xout(:,4); yb = xout(:,5);
 if length(tout)>1
@@ -34,12 +33,10 @@ if length(tout)>1
     impLinkSlope = (y3(maxHeightIndex:end) - y2(maxHeightIndex:end))./(x3(maxHeightIndex:end) - x2(maxHeightIndex:end));
     impLinkIntercept = y3(maxHeightIndex:end) - impLinkSlope.*x3(maxHeightIndex:end);
 
-
-
     t = tout;
     previousDistance = 0;
     %% Detecting impacts
-    for i = 1:1:length(impLinkSlope)
+    for i = 2:1:length(impLinkSlope)
         actualIndex = i + maxHeightIndex - 1;
         distanceToImpLink = abs(yb(actualIndex) - xb(actualIndex)*impLinkSlope(i) - impLinkIntercept(i))/sqrt(1 + impLinkSlope(i)^2);
         if xb(actualIndex) > x3(actualIndex) && xb(actualIndex) < x2(actualIndex)
