@@ -1,0 +1,2636 @@
+commit 74ef76a1bbf39147061df56ca53f6b66c00bfa68
+Merge: fa55652 179e7f5
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Aug 5 14:28:56 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit fa55652e7a8af05f653c904bd0f87ded4cc2f296
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Aug 5 14:28:45 2020 -0700
+
+    updates to bball2, new bball3 env
+
+commit 179e7f588b340f0879aa1f925028ff10e1df602d
+Author: Sean Gillen <sgillen@ucsb.edu>
+Date:   Wed Aug 5 12:13:54 2020 -0700
+
+    Update README.md
+
+commit deb3521682d76bceeaf8b84ff09d8a6983c9a9fc
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Aug 5 12:06:42 2020 -0700
+
+    large cleanup, most code in old/ and notebooks moved to seperate misc repository, pod moved to root directory
+
+commit 929d5eb64a148a74143f17885ea0073f3f2b950c
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Aug 5 11:44:56 2020 -0700
+
+    remove some junk
+
+commit 126dbfcd06e567130dd1a420c70be8265fdb1566
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Aug 5 11:43:32 2020 -0700
+
+    cleanup for box dim
+
+commit 9499db5db9bef8631fd0bed011f1b11a52bd48fc
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Jul 26 01:28:08 2020 -0700
+
+    rename box mesh
+
+commit 67d0bb821e0cd22f1b612e55b127b67cfb8ee602
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Jul 25 15:55:34 2020 -0700
+
+    ars normalizes before passing to post processor
+
+commit f9e220f0d9ae86ccb104696ae05a0386e0d95129
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jul 23 16:06:16 2020 -0700
+
+    updated mesh dim
+
+commit 3e7d97f302bdafc1bc3130cc604aeb40078cb4dc
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jul 21 17:38:36 2020 -0700
+
+    added create_mesh_act and MeshPoint
+
+commit caf3322d79d35b8e75ef80f4ecb48487fa6a8a68
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Jul 20 19:19:05 2020 -0700
+
+    added mesh dict
+
+commit 6e6ab5151bd3bc6bc8f8bda83c048b6187eeaf54
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jul 14 00:39:39 2020 -0700
+
+    profiling
+
+commit 0c279f3667a7fdf47efd51c9ed7f087ec3088717
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jul 9 17:43:44 2020 -0700
+
+    added meta seed ars
+
+commit 8dcc03a97b862e900c7d02d512f62addc5da08c6
+Merge: 112e65f 2a8020c
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Jul 8 18:44:58 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 112e65f9bda4f5d7e8bc98b0d28d972c01fde337
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Jul 8 18:44:55 2020 -0700
+
+    refactor of ppo (again)
+
+commit 2a8020cbf2eb695ae5057efa4ba744a83c375932
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Jul 8 18:42:16 2020 -0700
+
+    no longer close env after rollout
+
+commit 407e5fa632df28279222f8681ef52d133f12ff6c
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jul 7 19:42:38 2020 -0700
+
+    updates to ars_pipe to include logging unprocessed rewards
+
+commit 76590e67115b62092d62728c4ef3bc2dc3e787aa
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jul 7 14:32:48 2020 -0700
+
+    some bugfixes for ars
+
+commit 0de42e1280fbbcf6149e4eb0658c4a1c85fb0765
+Merge: 2d43235 0a962dd
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jul 7 14:32:17 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 0a962dd8733617d78356e9c53bfa1a357c573f14
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jul 7 14:31:31 2020 -0700
+
+    refactored models for PPO, moved around some init
+
+commit e033437b35aecde4be9ce1884bdcbfb2a073d8a8
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jul 7 12:42:55 2020 -0700
+
+    about to refactor PPO, and remove act old and switch models
+
+commit 2d432355a223e5a4e46bdf9610eb1faec6f4bc99
+Merge: 5e9de19 b773ceb
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jul 2 20:49:19 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit b773ceb7426aa87957075d1b0ddf0216fa999ad5
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jul 2 20:47:03 2020 -0700
+
+    two versions of ARS, pool and pipe
+
+commit b2e26ddc21342cb304d1ec7263586855c343c81a
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jul 2 18:39:19 2020 -0700
+
+    postprocess now defed not lambda
+
+commit 3d1bc12085ca01e98d6af4a84a570190166d08bc
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jul 2 18:28:49 2020 -0700
+
+    add postprocess to ars, add bias option to MLP
+
+commit 5e9de192248f846b738d6e97d14f53edb06930bb
+Merge: 18aa170 e17b2db
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jul 2 17:59:47 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit e17b2dbf317f4b7ca89c495fecad12e6f0653e8d
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jul 2 17:58:51 2020 -0700
+
+    more ppo tests
+
+commit 97b816f60da530e31eea22cc88c86123e01a1984
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jul 2 17:58:03 2020 -0700
+
+    updated ars
+
+commit 18aa17002d6d1a421854d8b7a6b6c055dcb5df4c
+Merge: 58755aa 0d443c9
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Jun 28 20:09:34 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 0d443c9b42175ed948a508f12e6c7a9a5262d9e6
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Jun 28 19:57:32 2020 -0700
+
+    ppo is class based now, also KL exiting actually works
+
+commit 9bfbc3510c0bfffd8a9a9d84df0fe4987b840419
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jun 18 22:26:27 2020 -0700
+
+    added in dimension measures
+
+commit c2ff547d22462a01c2d2a0427abe75c7517aa40d
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jun 16 13:19:54 2020 -0700
+
+    reacher tests
+
+commit aaf0e87c01493b2310bc45ffdac74569624d33db
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Jun 15 00:17:11 2020 -0700
+
+    update to mesh, debug ppo on some environments
+
+commit d1b07f978b921ccd8afd760a87ff53aeda28a0d6
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Jun 12 18:19:04 2020 -0700
+
+    moved todo tests to the ppo folder
+
+commit 58755aa621484e29c42d01d0e60acf09593b7e23
+Merge: 156e8b8 f919de2
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Jun 12 13:57:23 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit f919de2e55bbbc7dc3c08f82c3028432e6c56982
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Jun 12 13:55:31 2020 -0700
+
+    updated update std to use std (and no variance...)
+
+commit 22fdeb63694fa449fa4c75bc1cf8c077ff725a50
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Jun 12 13:55:07 2020 -0700
+
+    added updated ppo dim ppo visit
+
+commit 156e8b89ceb0b5baa4d08f3d14bc6766b17256a4
+Merge: 41684a6 1a079e9
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jun 11 17:19:33 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit b082a8f8f8ac5acf91f31128c1bab21318584d30
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jun 11 17:17:19 2020 -0700
+
+    added imports to env.wrappers __init__, about to refactor ppo var and friends
+
+commit 1a079e933fef18f56d5840370ddbd912bcd75ded
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jun 9 19:36:11 2020 -0700
+
+    ddpg works
+
+commit 41684a64874396e7003a9ab73681617fae22c68b
+Merge: 1ac3493 9b2247f
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jun 9 01:21:54 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 9b2247fc16081a37516ac3765b2fa5c2d64371b4
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jun 9 01:20:21 2020 -0700
+
+    physics wrapper
+
+commit 1ac349360995a1393017779ed04135e1a4e4acbc
+Merge: 94bb9e1 8e158e5
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Jun 8 16:03:36 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 8e158e538887fcad1ea58ed1bbfc95548ee77042
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Jun 7 19:03:45 2020 -0700
+
+    made folder for each algo test, added ddpg/td3, but need tests and bells/whistles
+
+commit 94bb9e109d1b0f5a777d7a5745701e11edb7d3ca
+Merge: 4ec8719 f253399
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Jun 6 14:32:08 2020 -0700
+
+    another merge
+
+commit f253399f4e90e65f446e00cfadbee4a6e5c1a0ab
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Jun 6 14:27:59 2020 -0700
+
+    fixed action space linear 2d
+
+commit 4ec8719ab0201c75d24a32c7bce9b31fe013cd9f
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Jun 6 14:24:03 2020 -0700
+
+    fixed action space for 2d env
+
+commit ae64fba8d798ac8e666404a035fc261e1c1eb9f7
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Jun 6 13:54:41 2020 -0700
+
+    more tests, modified current hyperparams
+
+commit 68843f5a50ace9a6bbb928ea447cc7d526e900c3
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Jun 6 13:52:40 2020 -0700
+
+    moved tests around
+
+commit 38102a7d4dbbe958f28c3b73143409c7b22c3ede
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Jun 3 20:55:44 2020 -0700
+
+    more test files, some hyper parameter tweaks for ppo
+
+commit a12295012113aa4ff106930c9359c408c9250abe
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jun 2 19:27:10 2020 -0700
+
+    walker2d tests, more granularity for normalizing things in ppo
+
+commit 6cd5a05d6d55a6ea140260ac45a7d14040baa4e2
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jun 2 19:26:18 2020 -0700
+
+    added a chop function to truncate rewards
+
+commit d2ad95978a2584d2c7be15ec2a1fdf9c771c1b74
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu May 28 15:21:53 2020 -0700
+
+    walker env with foot contact
+
+commit 26090207baf236c0a55de839ea7650c53d2bf04f
+Merge: 718f51f e2ef2b4
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon May 25 15:39:07 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 718f51f119786ef7bdf8e55dce92d19d39b2f883
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon May 25 15:38:05 2020 -0700
+
+    adjusting power in walker
+
+commit e2ef2b4f135a14b51acc7a83d97d0fb15190e202
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri May 22 20:15:59 2020 -0700
+
+    walker updates
+
+commit 8d850f0b81de2a8d4e9cb811a30ce37ba2406618
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue May 19 16:13:24 2020 -0700
+
+    pbmj walker now accepts dict of physics and dynamics params
+
+commit e25bd59003b509a99746557898f968b19e46ea57
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat May 16 14:19:02 2020 -0700
+
+    walker done criteria fix
+
+commit e19ba2d4771f3055b2277abdbb3c2c6ee3e21e1d
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri May 15 17:23:23 2020 -0700
+
+    bugfixes in pbmj_walker
+
+commit 3b930bf34e3265d4e72d9d95a5bb920d7e02e4c7
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri May 15 17:14:08 2020 -0700
+
+    remove outdated bullet race car env
+
+commit 99f9a7b72ac0fa26c93253e2957f5fbb51209ab2
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri May 15 17:02:57 2020 -0700
+
+    added bullet walker that is compatible with mujoco version
+
+commit 3f3816e07e680d867cd74eb033fa59af73fe3248
+Merge: 8008ede 3461379
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu May 14 19:41:07 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 8008ede444fab63a1b6f26599a511672e1ab17b8
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu May 14 19:40:54 2020 -0700
+
+    added some stuff from zoo so I can access it consitently
+
+commit f70457bb88eee9a885afb60042152c3fd0f29969
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed May 13 17:56:13 2020 -0700
+
+    some cleanup
+
+commit 3461379b6672f5b86b3746b35be408dfd6bd89de
+Author: Sean Gillen <sgillen@ucsb.edu>
+Date:   Tue May 12 17:00:55 2020 -0700
+
+    Update README.md
+
+commit 608c2a6ab81f69fe543d69bdc77eb067c70e8c57
+Author: Sean Gillen <sgillen@ucsb.edu>
+Date:   Tue May 12 11:59:05 2020 -0700
+
+    Update README.md
+
+commit e710ac1884f38bcad10c9416987c2ea1f7efc9c0
+Author: Sean Gillen <sgillen@ucsb.edu>
+Date:   Mon May 11 17:36:14 2020 -0700
+
+    Update README.md
+
+commit 0fbbb05f9fc9a5341090f8b7448733aa05756d8b
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed May 6 23:20:33 2020 -0700
+
+    moved matlab src to envs
+
+commit 350f1a5d96d35253b1bb72a548e1a92b8d28baf9
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed May 6 23:11:58 2020 -0700
+
+    bball stuff training with stable, per run reward and done functions
+
+commit 20768ed5f5110a084e8d8440a778904c9c3262c3
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed May 6 22:29:51 2020 -0700
+
+    added bouncing ball
+
+commit 85f3f7964c9102d58c1336c0eabc19dd040ceffc
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed May 6 22:29:06 2020 -0700
+
+    banish cython
+
+commit 0f8f99f83f87ef920caee4cbab13f38df9f0874e
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue May 5 20:39:39 2020 -0700
+
+    tests are faster
+
+commit 96ebd012489705f50c98faff17c1515275f19e48
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue May 5 00:50:53 2020 -0700
+
+    changes to reward scaling in ppo
+
+commit 1381ce54ed8c8551612adb50d60f05beb6742122
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon May 4 17:43:33 2020 -0700
+
+    large speedup in sac by selectively disabling autograd
+
+commit 7ee753ac34176ce724629f4ecd20d8c94795983f
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun May 3 21:39:36 2020 -0700
+
+    changes to sacs normalizing step
+
+commit ff53dcdd46f2d5d79353fcf0bec8721c642bb332
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Apr 29 19:55:30 2020 -0700
+
+    cleanup
+
+commit 47f20850a7a8554c7aa17fbb8d873b201d66f938
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Apr 29 17:56:27 2020 -0700
+
+    state norms working in sac
+
+commit 2a137084864034a6539f28e588a156e7f4375aeb
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Apr 29 14:10:46 2020 -0700
+
+    update tensorflow
+
+commit 2e3db4972bad1d9521ce3beb01495335a50d2a50
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Apr 29 14:09:18 2020 -0700
+
+    update pod requirements
+
+commit 8df7d601f590f2eb51ff78e7e2b00068b29de2e0
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Apr 29 14:07:59 2020 -0700
+
+    update req
+
+commit 214775e3476dc5e1ea9ca8a10410fd5ec6ee5c29
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Apr 29 13:58:02 2020 -0700
+
+    renames that fixed error with vanilla ppo2
+
+commit f4d0cd0f1c8fb1a86ec5446e03acaf40fde42d33
+Merge: 2eb043c aa952bf
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Apr 29 13:11:22 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 2eb043c1081c04de7792e76807199360b4c4ec08
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Apr 29 13:11:04 2020 -0700
+
+    updates to tests
+
+commit aa952bfea0b3313aa1f97b70fbf59c48744d2a3c
+Author: Sean Gillen <sgillen@ucsb.edu>
+Date:   Sat Apr 25 13:12:51 2020 -0700
+
+    Update README.md
+
+commit 281c45e85d466a53eb8c38042f7f4a3fe7cadc18
+Author: Sean Gillen <sgillen@ucsb.edu>
+Date:   Sat Apr 25 13:12:11 2020 -0700
+
+    Update README.md
+
+commit 1ee503b2bb0ccdf8d87732d79b6e56f48b0f1ea4
+Author: Sean Gillen <sgillen@ucsb.edu>
+Date:   Sat Apr 25 13:10:09 2020 -0700
+
+    Update README.md
+
+commit 514b00717f5dceb53e5ec55db4b95442b22ffa51
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Apr 20 19:45:47 2020 -0700
+
+    added ppo_visit
+
+commit e209e76d77e3f017b270af21c9910aa901dfa3df
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Apr 20 15:42:54 2020 -0700
+
+    off by one ep length in linear_z
+
+commit 81044bd8b1a7978b503307385262aa3ef6ca0507
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Apr 10 18:17:30 2020 -0700
+
+    profiling
+
+commit e0457331d0b51d492fff79f8aae98adaf134a5da
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Apr 7 17:40:15 2020 -0700
+
+    cleanup
+
+commit 4d13f1fa09fc10b0e7c490d39bd6d1f159fe698b
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Apr 7 16:19:12 2020 -0700
+
+    speedups to SAC
+
+commit e0c58d3f3c278a7aadd384e0a1976fb342068c10
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Apr 7 15:41:16 2020 -0700
+
+    all tests passing
+
+commit e8c096b96c37317cb9bad9bfbfadcc0701b9e3c3
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Apr 6 19:49:24 2020 -0700
+
+    close
+
+commit e78deec84b5d5f9a1d7e92354340a0b16edabdaa
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Apr 6 19:46:02 2020 -0700
+
+    update requirements
+
+commit 3a6f3de028e35bdce87bd384e1b9d141d6f12ac2
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Apr 6 19:44:36 2020 -0700
+
+    refactor to get sizes straight
+
+commit 19af30b06598f3e30d239ee24b74400c982d9565
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Apr 5 16:22:47 2020 -0700
+
+    stopped using data loader, things are much faster now
+
+commit 185f5e8a6087de90baa519269e353742dc9e1307
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Apr 4 23:49:26 2020 -0700
+
+    messing with cython stuff
+
+commit 00e75547f5a0353a5d5c02f6b20a425bcb44df7a
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Apr 2 16:39:04 2020 -0700
+
+    moved discount cum_sum
+
+commit 417238368941d8be123a1e252a7891619c332d04
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Mar 27 17:37:44 2020 -0700
+
+    fixed some references
+
+commit 26bac8f5125fc0df434059dc91acc3328f682275
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Mar 25 19:16:08 2020 -0700
+
+    moved everything around, some references are surely broken though
+
+commit 9fac959f8146f609e8da00e97282f79445b484db
+Merge: ffe3299 f20c384
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Mar 25 18:27:51 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit ffe329928d8f548e4e29d93c8ea0fcbffb5c82b6
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Mar 25 18:27:36 2020 -0700
+
+    cleanup
+
+commit f20c384eabc207f2b726c61adb12e8baef3f70ea
+Merge: fdf96ec bcdc06c
+Author: ninafiona <45797157+ninafiona@users.noreply.github.com>
+Date:   Mon Mar 23 14:41:23 2020 +0100
+
+    Merge pull request #4 from sgillen/rbf
+    
+    merged with rbf branch
+
+commit bcdc06c57479096aa2f90361734333768f72dbac
+Merge: fdb8e53 fdf96ec
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 23 14:37:04 2020 +0100
+
+    gerg with master branch 'master' of https://github.com/sgillen/seagul into rbf
+
+commit fdb8e53a46fac8081bbb7858a995814457c99180
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 23 14:36:41 2020 +0100
+
+    before merge
+
+commit 77f64ef3c6295e11a49484decc2d3cd2bd499eda
+Merge: 1a17258 16c749b
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 23 12:09:37 2020 +0100
+
+    merged with local
+
+commit 1a172582aa57ae6679f690a5cf36918faa55152b
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 23 12:08:24 2020 +0100
+
+    before merge
+
+commit 16c749bf6a9dee2e81db1d84e12a2b221a8b49cd
+Merge: 5c1c900 e2fc17d
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 23 03:49:28 2020 -0700
+
+    merged
+
+commit 5c1c9006b31eaa17e438ee75d0675ed98c837208
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 23 03:48:04 2020 -0700
+
+    a few comments added
+
+commit e2fc17db7dd67b792a8960819e94b2b12dff3569
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 23 03:45:21 2020 -0700
+
+    screenshot added
+
+commit c405ef2923bec33458ac916ba3dab11f9ab8e239
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 23 03:14:08 2020 -0700
+
+    png temp
+
+commit 4f89ee800eebd02432b188adb66b26a706705a34
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 23 03:12:56 2020 -0700
+
+    new folder
+
+commit 4cf64e70b524412da52dd2fab04613f80c2458de
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Sun Mar 22 10:31:12 2020 -0700
+
+    results copied
+
+commit fdf96eca473fdf18ba99c92f7c75efec07c92551
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Mar 20 18:37:02 2020 -0700
+
+    override MLP.to
+
+commit d9b229d3fcdf96da4f3ce89ec23c47e9a8957258
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Fri Mar 20 17:22:09 2020 +0100
+
+    file added
+
+commit 74c900c84147d86e41bdba84b0ba78600152da03
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Fri Mar 20 17:19:56 2020 +0100
+
+    merge
+
+commit c9604d3f310a93245e2d6f4ee1471bd83c5ea291
+Merge: 6bcd6a3 5d0e1e4
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Fri Mar 20 17:07:34 2020 +0100
+
+    merged
+
+commit 6bcd6a33819dd8adb46d2fbbfa49e0acc6379331
+Merge: 070c86a 0a0a3f9
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Fri Mar 20 17:05:08 2020 +0100
+
+    merged
+
+commit 5d0e1e47a0b80ddc129df6f3f0a75aa84b217858
+Merge: 070c86a 0a0a3f9
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Fri Mar 20 17:01:21 2020 +0100
+
+    merged
+
+commit 070c86ac601b0536b9082b5599d705a2d7fa56ec
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Fri Mar 20 16:50:11 2020 +0100
+
+    commit before merge
+
+commit 0a0a3f903cd18247d2bc1dfa9a58250758da4fcb
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Mar 19 14:03:04 2020 -0700
+
+    acrobort with full state
+
+commit 5366d25fa73eae111fc69a95775125a30fa57b9b
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Mar 15 20:51:24 2020 -0700
+
+    needle sac
+
+commit d232f4b19715725556fc3b00b07aa30c30b85d94
+Merge: 66b797f 39d6037
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Mar 12 15:34:13 2020 -0700
+
+    merged
+
+commit 66b797f81da046378acd13cdc07de5268b3f172f
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Mar 12 15:33:32 2020 -0700
+
+    reordering
+
+commit 39d6037cdc5b137367d880b7973a453cc95636ee
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Mar 12 15:30:14 2020 -0700
+
+    presentation
+
+commit e1101badf5754b21c83f07fd2c16bd2d0906519a
+Merge: d90485b 1d1f826
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Mar 12 11:59:01 2020 -0700
+
+    Merge branch 'rbf' of https://github.com/sgillen/seagul into rbf
+
+commit d90485b300e51bd3cb71c4d3bdf67f7433cceee4
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Mar 12 11:58:55 2020 -0700
+
+    concl
+
+commit 1d1f826eec5cf07127d6cf17f14de6fd5df4bc17
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Mar 12 11:47:11 2020 -0700
+
+    results
+
+commit 7fb7d6d4b141bccce6d5c9bccd17a3a5db52d9d1
+Merge: e134788 33c85e6
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Mar 12 11:38:40 2020 -0700
+
+    before merge
+
+commit e1347882c26cf3fac9d51b6fac3a0b383c7f7abf
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Mar 12 11:30:12 2020 -0700
+
+    analysis script
+
+commit 33c85e62d86cfef2f111fbfdb35ed1cf540bf1ee
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Mar 12 11:21:38 2020 -0700
+
+    presentation
+
+commit 6271f546d358d5e3c416e8b11d1159eb9f449f49
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Mar 10 23:59:42 2020 -0700
+
+    gpu goodness
+
+commit 750282b257e01555c8a15ea4230f7adaec746f1c
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Mar 10 22:40:34 2020 -0700
+
+    warm added, gate updated
+
+commit 4beabc26e83bd82cfa29410b1e7d79299683b432
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Mar 10 20:58:29 2020 -0700
+
+    gate is learning
+
+commit 19a102aa3386b8f4d23b4d3bdfee10420e570f72
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Mar 10 20:10:09 2020 -0700
+
+    adaptive gate is not broken
+
+commit 1ec20f5c01bfa262f03300a21655d853b2a450a7
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Mar 10 17:23:46 2020 -0700
+
+    threshold bug fix
+
+commit 5c704ab280f138992c4085f987f23841a94a9e59
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Mar 10 17:00:41 2020 -0700
+
+    new adaptive gate thing, not uber slow
+
+commit ad12693f5ace497a7fb784dd4044243bd60bd0c4
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Mar 10 16:40:28 2020 -0700
+
+    pic added
+
+commit 39f47ea3fce6bf9b87073d5314754d5f52264df4
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Mar 10 15:33:41 2020 -0700
+
+    presentation
+    
+    git commit -m presentation
+
+commit 581c759e1aac7318fd90d659df577b615463fe6e
+Merge: 45e033e 575cb9a
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Mar 10 14:18:53 2020 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 575cb9a9c4c536381ff1948d5deb20be40bcb22c
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Mar 10 14:16:37 2020 -0700
+
+    adaptive gate but it's too slow
+
+commit a40ee6f3c16b64b9a55d2247842948731b183cb4
+Merge: 00da14c 318c99c
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Mar 10 14:11:26 2020 -0700
+
+    merged
+
+commit 00da14c46d61a1b1710aa75cf49537d8833db752
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Mar 10 14:09:37 2020 -0700
+
+    presentation and params edited
+
+commit b24ac177b192bf05dc2a7bb25409e5cd5ecd602a
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Mar 8 18:04:37 2020 -0700
+
+    about to mess with the acrobot_switch env
+
+commit 45e033ef79d0c94f1b19467ca014d8c64615f2e3
+Merge: 05bac22 665e8fa
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Mar 5 14:12:52 2020 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 665e8fa2918fec47b64888808372e996857d94df
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Mar 5 14:11:13 2020 -0800
+
+    redoing experiments that worked
+
+commit 05bac22ffc663546f5a1b165c34de9ba5dc191cf
+Merge: bc35b50 b9513e4
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Mar 4 22:38:13 2020 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit bc35b502c8cff5259ae49c9fe62d14833349c645
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Mar 4 22:37:56 2020 -0800
+
+    idk
+
+commit b9513e499bd506658ed64d2481d09722a2703785
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Mar 2 22:35:41 2020 -0800
+
+    reboot
+
+commit 0a72f53eb51cc0e94a3cc8aa92f7ce99089d3d69
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Mar 2 16:39:05 2020 -0800
+
+    something fishy in rewards
+
+commit 318c99c754829c0ec4acc1caf3cb939ec4c2e8d6
+Merge: 3fa33c8 3e43825
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 2 15:35:25 2020 -0800
+
+    cluster pull
+
+commit 3fa33c82a7505ce73980f22f963041c290876c0b
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 2 15:33:31 2020 -0800
+
+    cluster run
+
+commit 3e438254d1436433b3d24bed9ed43590115d8800
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Mar 2 15:31:48 2020 -0800
+
+    presentaion and run
+
+commit ec8fbaed625f72c7e3d791b2323483c9ed5d667b
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Mar 1 13:52:00 2020 -0800
+
+    more work for iros
+
+commit 8739fe254253a459991119ab28b13508298f64cf
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Mar 1 13:51:46 2020 -0800
+
+    fixed drake env
+
+commit ee74dff2a1a92e62bc0bb0409ef7238452e87b54
+Merge: f763a0d 30fac24
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Feb 29 00:52:57 2020 -0800
+
+    Merge branch 'master' into iros
+
+commit f763a0d26c259a9ebc918ece6c82f4f6db889c2d
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Feb 29 00:49:45 2020 -0800
+
+    switching bugfix
+
+commit 4442622f3ab5fcf23bd7e134d4ad5e2a46662250
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Feb 29 00:11:00 2020 -0800
+
+    happy with gate
+
+commit 07864375db8ea4d61bd7cffebcecd18913411e39
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Feb 28 23:20:38 2020 -0800
+
+    happy again
+
+commit 889c7c00fc43fe3f87eae76aa1f7961de1516cfd
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Feb 28 20:47:13 2020 -0800
+
+    warm start is working
+
+commit 03138ec640e50703cf948000b21bdce187d88349
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Feb 28 00:59:56 2020 -0800
+
+    new warm start, works much better
+
+commit 30fac242bab66eb94052d0944ba4cc6ce32e6061
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Feb 26 14:34:40 2020 -0800
+
+    variable variance is broken
+
+commit a02a1f14f16969ac7a63e055678106de31063914
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Feb 26 14:34:09 2020 -0800
+
+    variable variance is broken
+
+commit e4008a65f39115440939f4d178be3e6bc4e53e5b
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Feb 26 13:26:52 2020 -0800
+
+    added ability to learn variance to ppo2, needs testing
+
+commit fdc4af2bad4b9342e3edc17e37c09a8280a1c934
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Feb 26 11:32:54 2020 -0800
+
+    more work on acrobot stuff
+
+commit ef9050759603ae6836d0a8fce3efe4cfc2141fc6
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Feb 25 10:45:23 2020 -0800
+
+    envs bug, linear
+
+commit 7a725b765f8206a19e309cc01369c96ea00b82b2
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Feb 24 21:43:49 2020 -0800
+
+    adding katie files
+
+commit 6d6a8805083c1a87554a4a79f4348f8772243ba1
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Feb 24 21:38:23 2020 -0800
+
+    dump
+
+commit a6c601545f018ddc3e8bef0051c14be782ea7782
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Feb 24 15:40:51 2020 -0800
+
+    params
+
+commit 8f813336abf847477d6a6dff4307ecee47207192
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Feb 24 14:28:59 2020 -0800
+
+    PPO run
+
+commit 16fae1f04149bbaf4a8c6f84c121fcb2d86a6dd8
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Feb 24 10:20:39 2020 -0800
+
+    run
+
+commit 5cd7ad500083cfc2122e3ba4f1641cd35cbd15d9
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Fri Feb 21 11:04:15 2020 -0800
+
+    analysis functions
+
+commit e1c7574b184d6f8101bd419fbdca15d3e97fd162
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Thu Feb 20 19:41:04 2020 -0800
+
+    a little documentation for linear_z
+
+commit 3d34e327ea241f1568202a1e82ac55e65a15359f
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Thu Feb 20 19:20:55 2020 -0800
+
+    more cleanup
+
+commit f15cc6e961b7048815840b9a3d11c7dd721bff88
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Thu Feb 20 19:20:24 2020 -0800
+
+    more warm start policies
+
+commit 859f533365e37275297679f7e1d99ea600e3be81
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Thu Feb 20 19:19:56 2020 -0800
+
+    minor cleanup to rl
+
+commit 551378a063d05e8dffcd0431e3ceb950bbf2c8a9
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 19 12:14:04 2020 -0800
+
+    es and ars
+
+commit ff56df59b345dccda1b267f25c4050fa98314cc2
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 19 11:23:53 2020 -0800
+
+    debug rendering
+
+commit fc64bc8a291ad4f37f11b5c20fe5d2297e7828e6
+Merge: 4338a95 cda7ffd
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Feb 18 17:17:06 2020 -0800
+
+    merged with master
+
+commit 4338a95c8a79bd75899e579f29664997cb3ea2d8
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Feb 18 16:27:42 2020 -0800
+
+    second run cluster default mlp vs mlp
+
+commit 58d3fd1ccbe21ac583914534449ccc04d3225a8f
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Feb 18 16:23:13 2020 -0800
+
+    for cluster
+
+commit c80f615c42bbbd007bb5525e4573602b9415c084
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Tue Feb 18 15:01:33 2020 -0800
+
+    update default y lable on smooth_bounded_curve
+
+commit cda7ffd7330414f70570ad0b8afaf7a6adafca60
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Tue Feb 18 14:48:42 2020 -0800
+
+    more work on switching rl
+
+commit d6f1b73dc6f9e40541b1ede54abff0f98b2ed20c
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Tue Feb 18 14:47:48 2020 -0800
+
+    adding reward curve plotter
+
+commit 5c8ad1673edc38b1f606be92a468567af8cfda6c
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Feb 18 11:16:01 2020 -0800
+
+    powerpoint added
+
+commit 0516b195c912a1eafcd40a394fd01cf34f72c133
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Fri Feb 14 17:01:09 2020 -0800
+
+    meshing stuff added
+
+commit e8215f6b84a817045971a1fce8a1bdee9e276f8f
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Thu Feb 13 14:18:27 2020 -0800
+
+    big update to lorenz analysis notebook
+
+commit 73911210550313d262af96904756aa8abd28c787
+Merge: ccb9e5d 6e8692c
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 12 18:41:07 2020 -0800
+
+    ..
+
+commit ccb9e5d856c9ff1c596ec017b62ac7050f2f954b
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 12 18:39:48 2020 -0800
+
+    run modified
+
+commit 6e8692c7d89c15d26b2a755b29e27fd0c0fcd8fb
+Merge: 8a5b777 4ce8388
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 12 18:36:30 2020 -0800
+
+    merged
+
+commit 8a5b77727bdabc0cd2c49ec193d2c7ef7c71687a
+Author: Nina Grabka <grabka@pod-login1.podcluster>
+Date:   Wed Feb 12 18:33:16 2020 -0800
+
+    commit from cluster
+
+commit 4ce8388779b1d221a4cfd640e5c5d810a2b45565
+Merge: c57e86b a7ea8f8
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 12 18:32:06 2020 -0800
+
+    merged
+
+commit c57e86b095c3e49ae3479f6e7689dd0bd88f0305
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 12 18:28:56 2020 -0800
+
+    before merge qwith cluster changes
+
+commit a7ea8f874bba6509ee6d2c2517eae03074a27fd1
+Author: Nina Grabka <grabka@pod-login1.podcluster>
+Date:   Wed Feb 12 16:10:55 2020 -0800
+
+    changes for cluster
+
+commit 73488cb10f4433380f1181af37e1fca9c7e48729
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 12 13:48:48 2020 -0800
+
+    requirements added
+
+commit 814ea2df68afebcac099c2f34d0f8ed1965ba124
+Merge: bc0eebe febe36e
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Tue Feb 11 20:39:52 2020 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit bc0eebe1e700195cf66a29d4d8fa6a89021eaa52
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Tue Feb 11 20:35:36 2020 -0800
+
+    dump, linear z can be passed in a reward now
+
+commit a36cb95fde9a7cf55781b818053cb91120ddf547
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Feb 11 20:12:32 2020 -0800
+
+    ...
+
+commit 9aa0260bbf1b777257d81570c7e3a37f37d262a8
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Feb 11 19:18:53 2020 -0800
+
+    changed rllib with rbf
+
+commit febe36e57b8172ff80bc85db82eb22140a8f1536
+Merge: c711305 5350fc4
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Feb 11 16:08:34 2020 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit c71130546e1a691ed129b7e6c0de8cf9c196a671
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Feb 11 16:08:04 2020 -0800
+
+    added pod req file
+
+commit 5350fc43e3f6dbe47f3883a817052e36190746aa
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Mon Feb 10 16:32:26 2020 -0800
+
+    remove deprecated algos
+
+commit 8a9b52ce1a3a5e37894a6a2d2a24133cbb886e1f
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Mon Feb 10 16:30:39 2020 -0800
+
+    updated switching ppo2
+
+commit 4b3a81335c2359bd04018c40602a8df145ba0d7e
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Mon Feb 10 16:30:23 2020 -0800
+
+    moved old switching code to the graveyard
+
+commit 63ee6d4fc11c96c4f95087677d7aaeb0fbbe0f72
+Merge: 2c8c50c 746a2e3
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Sun Feb 9 18:22:31 2020 -0800
+
+    merged dumb changes from github...
+
+commit 2c8c50ce9da4e15233aac6c5715a1dcf6cff0d30
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Sun Feb 9 18:19:13 2020 -0800
+
+    clean ppo2 and meta_run
+
+commit 5461dfb97687060c323c4485ba5572597fdb2766
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Sun Feb 9 18:16:57 2020 -0800
+
+    drake acro has a real config now, refactors and cleanups galore elsewhere
+
+commit 011c342ea728e0c0d6d51d938f405451cb14436d
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Sun Feb 9 18:16:28 2020 -0800
+
+    merging changes with the scratch branch
+
+commit 746a2e3468eaa63a8ce73d92cda876c2ad1ac5fe
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Fri Feb 7 23:40:04 2020 -0800
+
+    everything works again
+
+commit ae11fcb13f2d16591c102369fe74f4bb78a899f2
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Fri Feb 7 22:38:14 2020 -0800
+
+    activation->output_activation in MLP
+
+commit 9c4b85662847b806ae398f936e403f505c46198e
+Author: sgillen <sgillen@ucsb.ede>
+Date:   Fri Feb 7 20:58:52 2020 -0800
+
+    dump from the last few days, lorenz and ppo changes
+
+commit 0e62698425cddc6c9329c91eac3081b99c7d39f0
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Fri Feb 7 12:21:51 2020 -0800
+
+    params added
+
+commit a2c1635db144a95658a4f54a336ecc2bc9ae2b1b
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Feb 6 15:12:39 2020 -0800
+
+    all_algos
+
+commit f58dd660a0075302e7207ff924d9abced68f1f16
+Merge: 7977cd6 66ac7d1
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 5 15:27:39 2020 -0800
+
+    pull from origin
+
+commit 66ac7d1d72c81cd4f52bfef21c05f8c9f4a86fa2
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Wed Feb 5 15:07:49 2020 -0800
+
+    visualization changed and rbf rllib
+
+commit 7977cd60dc87d49d7aeff8df9175308ea8de2c8c
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Feb 1 11:56:49 2020 -0800
+
+    updates to lorenz
+
+commit db926bbedf63308f1a000fd4d832f2a1e434384a
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Jan 29 17:56:31 2020 -0800
+
+    viz for lorenz
+
+commit 7d2a283cec72b9241cfec88f7328ec39a55f8755
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Jan 29 17:00:12 2020 -0800
+
+    new vis, new MLP
+
+commit 4cdfd026d9d4760232b69f8542772e6b72672b94
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jan 28 19:56:33 2020 -0800
+
+    misc work on new visualizations for switching, also some new warm start stuff
+
+commit aab70dac8a589c35666be6b8845b9fa2f71bfa77
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Jan 28 14:54:28 2020 -0800
+
+    notebook rbf added
+
+commit 056195359d7d92cbbfcbfc7024e90bc6f517e584
+Merge: c1e8ff0 b2c1d18
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Jan 28 20:19:50 2020 -0800
+
+    merge with master
+    
+    Merge branch 'master' of https://github.com/sgillen/seagul into rbf
+
+commit c1e8ff0c0c069d6693aa75f0c969988bd19f3b80
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Jan 28 20:19:30 2020 -0800
+
+    rbf and keras net modified
+
+commit b2c1d184ac862fc4912b2dc8939cedefb3d4e2fa
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jan 28 12:04:04 2020 -0800
+
+    updates to ppo2_switching
+
+commit 90bc2738649c6f32381c3289384bd6100b1079ed
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jan 28 12:03:17 2020 -0800
+
+    more work on IROS switching
+
+commit 8faa46da8946bc6ce7a3608b5160340df4ac3478
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jan 28 12:02:50 2020 -0800
+
+    comments for analyze_rllib.py
+
+commit 470aee39d7b9d8db3a9994779b55de021fb88169
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Jan 28 02:35:27 2020 -0800
+
+    rllib with sac and ppo
+
+commit 7eb352be91e1dca7b671ec00fdc9d83f1cbefa14
+Merge: 6df3c52 2edbab6
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Jan 27 20:59:13 2020 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul into rbf
+    merged with master
+
+commit 6df3c52b5da8c7e6db14c739ee76a76ce31952c5
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Mon Jan 27 20:52:13 2020 -0800
+
+    rllib/rllib_with_rbf scripts modified
+
+commit 8411ce087c004069c9319e622678e908c21b97e2
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Thu Jan 23 19:09:36 2020 -0800
+
+    added rbf in rllib
+
+commit 2edbab6eef86e092b47ad4167faaa07f3369a83f
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Jan 21 16:44:53 2020 -0800
+
+    normalize rewards in ppo2, passes regression test
+
+commit 372523d8ce4415248f2c7482845cf42360ac8e92
+Merge: 3c6b202 c051891
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Jan 21 16:18:52 2020 -0800
+
+    merging run_utils
+
+commit 3c6b2028f953fc22a68f0da446175e02de2bfb68
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Jan 21 16:17:40 2020 -0800
+
+    added act hold sac model
+
+commit c051891bc14f86408dcf1b976f96407baa9d2e62
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jan 21 15:13:25 2020 -0800
+
+    more tweaking ppo2
+
+commit a39b034c01c22a83a7257a4bc3444a1acd170379
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jan 21 15:11:00 2020 -0800
+
+    work towards ppo2 on the acrobot
+
+commit d463185c677d4cb7b7f5635493e40b397cb149c6
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Jan 18 12:50:17 2020 -0800
+
+    new replay buffer with massive speedup
+
+commit a1809d5a690e9cc0d0af35b460e4ece0a0a09fc4
+Merge: e8fa6b8 a12811a
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Jan 17 22:43:00 2020 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit e8fa6b882c442dd6fb93c112b93ee96175401c74
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Jan 17 22:42:47 2020 -0800
+
+    more experiments with old switcin code
+
+commit a12811a166df905f388fa1f263272666fab1d26e
+Author: sean <sgillen@ucsb.edu>
+Date:   Fri Jan 17 21:46:59 2020 -0800
+
+    made a large dent in weight sharing
+
+commit 46349d00d9d0d0a57eef25da78f8616554c2ee1e
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Jan 17 16:24:27 2020 -0800
+
+    updated dtypes so we can switch between them without pain
+
+commit ff1c32ba21d49eb7f587acdcebac45b43571b594
+Merge: 6b9f9d6 57be403
+Author: sean <sgillen@ucsb.edu>
+Date:   Fri Jan 17 14:41:13 2020 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 6b9f9d6ea7435ce8d7778771938701b5a233e1b6
+Author: sean <sgillen@ucsb.edu>
+Date:   Fri Jan 17 14:40:12 2020 -0800
+
+    adding gated controller for ppo
+
+commit 57be40324c5cfcd93110fc093fddd3d2db2cf7df
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Jan 16 16:08:24 2020 -0800
+
+    removing ppo1 smoke test
+
+commit 790abf8162d2d5f5e18c8a3706c9a8e2c501df57
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Jan 16 16:01:18 2020 -0800
+
+    slightly improved regression tests
+
+commit 03e09fe0d36bf735d3173e8e9ccede449b0407ff
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Jan 16 14:20:53 2020 -0800
+
+    refinements to pod workflow
+
+commit f3e2e8bc7f2715d0190424eb162375815bea79e1
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jan 14 19:01:21 2020 -0800
+
+    adding some utiity files used for pod, also updated gitignore
+
+commit c5da0a305fc1cb1045a030c841b2f012f1d1bd38
+Author: Sean Gillen <sgillen@pod-login1.podcluster>
+Date:   Tue Jan 14 18:56:38 2020 -0800
+
+    adding hald cheetah bullet env for rllib
+
+commit ced85c13f91ed813d2e6296f350436c33bf5c412
+Author: ninafiona <ninafiona@gmx.de>
+Date:   Tue Jan 14 18:10:11 2020 -0800
+
+    RBF network added including gaussian activation function
+
+commit 732e4bf29142d3663b0b0c42f0bec8404b8d5525
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Jan 14 15:32:30 2020 -0800
+
+    minor updates to sac
+
+commit 52655e493835b0f59943b52f4340779042a66df7
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Jan 13 21:53:42 2020 -0800
+
+    more debugging and testing
+
+commit adf8d825a4a781a82ae4d0f9e55196286e557205
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Jan 13 12:49:02 2020 -0800
+
+    adding tqdm testing stuff
+
+commit 5fb4738bb34b0e5c401cd1da4682c56ad9214379
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Jan 13 12:25:35 2020 -0800
+
+    added MLP test
+
+commit 8a9d11d409b6c0dce0010b565139b5d5ec854067
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Jan 13 11:32:13 2020 -0800
+
+    adding torchified mirror fns
+
+commit 6a3149daaae01e609d69c541301440f989c22978
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Jan 10 21:44:29 2020 -0500
+
+    added parallel sac, don't trust it yet though, kinda works but more testing needed
+
+commit 23ff3f58cf408a9e8c4968a6eb6207a7329b5c6d
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Jan 10 19:54:04 2020 -0500
+
+    changes to sac, works on terminating envs now
+
+commit bda968c80bb460f1c870e32791a7972a13330193
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Jan 10 11:28:58 2020 -0500
+
+    ran black formatter
+
+commit 7fa7df798d9f400a960b73bb51e75c4f8d1b7e05
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Jan 9 21:22:44 2020 -0500
+
+    regression test for sac
+
+commit ba7e8ccfea6bd1468f4ab9136599ac72089815c5
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Jan 9 19:17:53 2020 -0500
+
+    sac works for pendulum-v0, regression test incoming
+
+commit f120645394feb9c4a7958ccf3cc9d64f09191970
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Jan 7 21:37:26 2020 -0500
+
+    cleanup and debugging
+
+commit 5c7c33d2f23cc0ccd0577879f91db46f28fa1597
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Jan 7 21:37:06 2020 -0500
+
+    adding back a requirements file with a more minimal set of packages
+
+commit 5a8f82515a8da43326f098a1ce4b2e49a56758d0
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Jan 3 16:17:54 2020 -0500
+
+    sac in place, needs testing
+
+commit 8cf3ad8411931731b11e3b3ccf8fd1fddeed5700
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Jan 3 10:12:12 2020 -0500
+
+    most of SAC done
+
+commit 188f95f2bd3c3b90187eaf59904c583d15702b98
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Dec 27 21:03:54 2019 -0500
+
+    removing nihar five_link from rllib envs for now, to remove dependecny on mujoco
+
+commit 8b4392c5d8fbd9235838f7988b921d0cb785a42e
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Dec 27 00:40:06 2019 -0500
+
+    ppo2 works now, regression test incoming
+
+commit cb6773c526a9f019b86e341df6218a642f18ef00
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Dec 26 15:41:11 2019 -0500
+
+    remove spurious file
+
+commit caba0bbdda63dfc982915daac77ffc715df82da5
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Dec 26 15:40:18 2019 -0500
+
+    added regression test for ppo (and it works right now)
+
+commit 3bcd28833076cb7dc1b00e3b610e12f77f60078d
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Dec 20 15:37:25 2019 -0800
+
+    new experiments with torch sac
+
+commit 995208ba91a4dfbd78d55a9f831f2a7b375bebad
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Dec 19 16:50:31 2019 -0800
+
+    more experiments with humanoid
+
+commit e7f7ec001e599dd854626f8222e253bad79606f2
+Author: sean <sgillen@ucsb.edu>
+Date:   Sat Dec 14 18:49:06 2019 -0800
+
+    basics of weight sharing done... but at what cost
+
+commit fa9ab35e951306e59615c1629c7d32ddf8d0826d
+Author: sean <sgillen@ucsb.edu>
+Date:   Sat Dec 14 14:43:17 2019 -0800
+
+    adding simulink stuff from lab computer
+
+commit 70aabf6cb35a7128a2c87f7be7634393db20079f
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Dec 14 14:27:18 2019 -0800
+
+    added some runs for messhig humanoid-v2
+
+commit 2c4e860154b36785292d6ae0f8bd58ee2a4b06be
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Dec 6 11:21:46 2019 -0800
+
+    minor changes to ppo and ppo_sym
+
+commit 2f2879f5ed39c3e688f2b6eade621c261bb426d4
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Dec 5 17:55:42 2019 -0800
+
+    moving back to ppo1 for now, made a symmetric version
+
+commit 7b2b2ebf469776f77821e3ba53972bb5319947ea
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Dec 2 18:21:53 2019 -0800
+
+    added cleaned up version of ppo
+
+commit 5845ba523bef4f3918b795f4e8380fde54065d67
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Nov 22 17:08:47 2019 -0800
+
+    fixed ppo again
+
+commit 179ad7f2d53be03c6bb0d309809b06c1954de0c6
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Nov 21 20:10:57 2019 -0800
+
+    more debugging on sym ppo
+
+commit d68dacf841f5f99fd0d5d8424f88bab368dd0acc
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Nov 21 12:13:34 2019 -0800
+
+    added new pen env, added some more meta run files for ddpg/td3
+
+commit 96c52b86c864fa2e152ed6725a526457f7d9e083
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Nov 19 18:27:19 2019 -0800
+
+    added back some sg runs, added a symmetric reward policy (wip)
+
+commit 004ad3d9e617f7c8d9f52362b28452a8710e9051
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Nov 18 20:51:50 2019 -0800
+
+    fixed color mesh issues
+
+commit afbcfdc5c45f602fa93f9064d66c022a44014b69
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Nov 18 16:08:36 2019 -0800
+
+    more work on sym
+
+commit 7d3c99d0bbb14689f05578729f4747d6a5638bed
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Nov 18 12:37:05 2019 -0800
+
+    moved register_envs() into envs/__init___, created symetric pendulum env
+
+commit e41076f0b91d4ab63995fa3009398a6a7376dcd1
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Nov 16 19:52:03 2019 -0800
+
+    walker still not really walking...
+
+commit a758fca5c55bc6fd10c02b222202aadc740f85c6
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Nov 15 19:22:06 2019 -0800
+
+    analysis notebook for pendulum
+
+commit 376ace03fb9d16e3eea897815f9109d0747bb395
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Nov 13 19:08:59 2019 -0800
+
+    more work on sym rl
+
+commit da7e55503b34687b73a7b9822be4667c08e5f714
+Merge: d236d4a 147387c
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Nov 13 13:47:14 2019 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit d236d4a65b957261f4231a74f5bbf807a5d68a79
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Nov 13 13:47:03 2019 -0800
+
+    ars experiments
+
+commit d3d4566404e296408f127691499fb0ff815241d6
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Nov 13 13:46:21 2019 -0800
+
+    cleanup of sym
+
+commit f267dd07fbe979fe5e8a7834984bedd6f901bcb0
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Nov 13 13:25:05 2019 -0800
+
+    about to cleanup notebooks/sym_rl
+
+commit 147387c330fc2df0520fb7b9e7bcf67b9a16af81
+Author: sean <sgillen@ucsb.edu>
+Date:   Tue Nov 12 18:26:19 2019 -0800
+
+    added some matlab stuff for simple nn plus bridge
+
+commit 9de9368902000bcbd5a66a5b2dac749bfe77e94b
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Nov 10 10:33:51 2019 -0800
+
+    more debugging basic walker with ppo...
+
+commit b770bbabbbcbe6f5bf2ca06107022c7af5cb6a06
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Nov 8 18:01:56 2019 -0800
+
+    added symmetric PPO, added some more tests for ars/rllib algos
+
+commit 72bca84738b093d4c98dc3c88345a55412c3ca0e
+Merge: 980b20d 31300a6
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Nov 7 18:01:13 2019 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 980b20dbc407fb515add2ee01c5c4abe777aa79b
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Nov 7 18:01:08 2019 -0800
+
+    adding more ars stuff
+
+commit 31300a683d2c45fdda48ef06ff0d3c02e32f3ebd
+Merge: 2785e57 73cc325
+Author: Thomas Ibbetson <tibbetson42@gmail.com>
+Date:   Thu Nov 7 17:41:08 2019 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit 2785e5769ccabd65891203aab4b8d742374c85ba
+Author: Thomas Ibbetson <tibbetson42@gmail.com>
+Date:   Thu Nov 7 17:39:50 2019 -0800
+
+    Mirror functions implimented, cleanup.
+
+commit 73cc325777df0f15d2a24afad947f4a6ddd988a1
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Nov 6 18:07:49 2019 -0800
+
+    more work on ars and ppo, getting stuck with zero action policies...
+
+commit 748efadb10f8f02e74235abf09b80ef143874683
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Nov 6 15:44:24 2019 -0800
+
+    made sandbox into two notebooks
+
+commit 1fe24b9bff294284d8f183d190725baf4f6e2078
+Author: Thomas Ibbetson <tibbetson42@gmail.com>
+Date:   Wed Nov 6 15:22:27 2019 -0800
+
+    added notation on the various joint angles. Also made slight changes to the bullet library but they don't change functionality
+
+commit a1ca47b6ce32da8fd664d38d12b3861cdd85470c
+Author: Thomas Ibbetson <tibbetson42@gmail.com>
+Date:   Wed Nov 6 13:52:26 2019 -0800
+
+    local changes. Not pushed, still experimenting.
+
+commit ef7f35d3d59719460f33c2939838ad70eacefaea
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Nov 5 16:53:44 2019 -0800
+
+    updating base requirments (again)
+
+commit c8264dda46141aac691bbe79d8b5323973e8e031
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Nov 5 16:52:46 2019 -0800
+
+    updating base requirments
+
+commit ea08800def4b6f12d47d6275dcc952b55f4d24e7
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Nov 5 16:50:16 2019 -0800
+
+    some plots
+
+commit 25ad5a1501d01105f948b3bc28561ebd22f9f2f7
+Merge: 777bd3c 94bcd5c
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Nov 5 16:48:42 2019 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/sgul
+
+commit 777bd3c217839f1734bf4116f6179715df118d12
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Nov 5 16:43:56 2019 -0800
+
+    updated to sandbox and sym rl requirements
+
+commit 94bcd5cb6ee0fef95eafb06fb2bbf764282c5da4
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Nov 5 14:36:39 2019 -0800
+
+    more work with ray/rllib on ars/ppo
+
+commit c79c8368b80fc6855df5aca1cfe2631849beb47f
+Merge: 1f14722 ff8e6a8
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Nov 5 14:35:30 2019 -0800
+
+    Merge branch 'master' of https://github.com/sgillen/sgul
+
+commit 1f147223885f6df2d05ccef0f197556eb26642c8
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Nov 5 14:35:10 2019 -0800
+
+    adding notebook for bullet walker symmetry
+
+commit ff8e6a8f164d3a4e69209aa33e23b8da33ecdaa3
+Merge: 2167518 cd7be54
+Author: Sean Gillen <sgillen@ucsb.edu>
+Date:   Fri Nov 1 13:15:56 2019 -0700
+
+    Merge pull request #1 from sgillen/dependabot/pip/notebook-5.7.8
+    
+    Bump notebook from 5.7.5 to 5.7.8
+
+commit cd7be54825e6040ec7f9923d06d726e33423446a
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Fri Nov 1 16:46:18 2019 +0000
+
+    Bump notebook from 5.7.5 to 5.7.8
+    
+    Bumps [notebook](https://github.com/jupyter/jupyterhub) from 5.7.5 to 5.7.8.
+    - [Release notes](https://github.com/jupyter/jupyterhub/releases)
+    - [Changelog](https://github.com/jupyterhub/jupyterhub/blob/master/CHECKLIST-Release.md)
+    - [Commits](https://github.com/jupyter/jupyterhub/commits)
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+
+commit 2167518c7205327b06bd254c8d4929cd0d92b04f
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Oct 30 18:52:25 2019 -0700
+
+    ars running
+
+commit 43322b95d06fea6713f48ec94b4f218f89d04541
+Merge: 387f65b 8f62aef
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Oct 22 14:40:24 2019 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/sgul
+
+commit 387f65b82b5ef50a1834baf026a5a1e3ae6779cc
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Oct 22 14:40:05 2019 -0700
+
+    got rllib ars working in parallel with linear policies
+
+commit 8f62aef5f32ed548422c7dbc72ab9b782fc007bd
+Author: Sean Gillen <seangillen1887@gmail.com>
+Date:   Mon Oct 21 13:27:37 2019 -0700
+
+    Update README.md
+
+commit b845de81232706f8c13b1426ce3ef81b2356067d
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Oct 10 19:12:41 2019 -0700
+
+    ars mostly works but it slow
+
+commit cd1e9986c6b7fc4c0b51c358bf1974191aef4c65
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Oct 3 23:50:02 2019 -0700
+
+    further developed ars
+
+commit 7ca122d6012051fc11dac87c197a5ee92f7c0fe1
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Oct 3 21:39:45 2019 -0700
+
+    adding ars
+
+commit 6f4969cb9be4fb013538dcfa5b9f997c582e793e
+Merge: 1b5adfb 136a29c
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Oct 1 17:26:44 2019 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/sgul
+
+commit 1b5adfbefd2b6eb63909e6770cb9365d755f8707
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Oct 1 17:25:46 2019 -0700
+
+    adding ars notebooks
+
+commit 136a29c4e6bdc188a885d1d2d2237a5f4c868579
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Sep 28 00:09:13 2019 -0700
+
+    commit as of ACC submission
+
+commit 022c3a1ca885cbe4cbad3698d22ba0eb026ae729
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Sep 25 19:35:27 2019 -0700
+
+    about to revert to redo some experiments
+
+commit 24f57e99539446c9a669df79aa16901a2aabecbf
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Sep 25 00:24:45 2019 -0700
+
+    baseline stuff plus profiling
+
+commit ca6703e67007d6187d6776c38e526d95d40a6229
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Sep 23 23:10:32 2019 -0700
+
+    baselines experiments
+
+commit 684b0b775a47d4586ec71b10d8585fcf256e0e76
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Sep 22 15:19:00 2019 -0700
+
+    getting nans again
+
+commit c5e198ddbacb12d6a3e36f03e6e779fddee6f58e
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Sep 21 00:41:58 2019 -0700
+
+    more changes to acro drake env
+
+commit 7aa0318c94407b19d3be21388c8b7d9dbec8345f
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Sep 19 23:19:06 2019 -0700
+
+    more experiments
+
+commit 1a300e121aaa52cdbc28482407195a16acc43954
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Sep 19 19:51:42 2019 -0700
+
+    cleanup
+
+commit 9553df2112a587e12818ce0211c91e6c952f51bb
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Sep 19 19:40:20 2019 -0700
+
+    about to clean up
+
+commit b3ce52b794ecea0c18da6999ddc82e5d361ae51d
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Sep 18 22:14:50 2019 -0700
+
+    new drake acrobot env, errors when training with it though
+
+commit 1098635e946f65693de813f527e26cb93fdfd7f4
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Sep 16 21:43:18 2019 -0700
+
+    added more LQR stuff
+
+commit bcd2e4df1bc0a77f02e32702b9bf649de0a662b8
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Sep 15 16:56:13 2019 -0700
+
+    more analysis
+
+commit 0a05826cebce3c7cb157247dbd105eacb3f52ca4
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sun Sep 15 01:20:20 2019 -0700
+
+    about to clean up
+
+commit e693349a2b4c183f7a22aa4f3d39ce3eada24d89
+Merge: 45ccf96 b76e744
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 13 19:04:34 2019 -0700
+
+    merging in many sgdt changes
+
+commit 45ccf968b2a8ecf4f1efd0ec8321c568e2a5ffcf
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 13 19:03:10 2019 -0700
+
+    adding ars and ddpg algos (wip)
+
+commit b76e74487a302174699e9bc572bddf38bdb6b251
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Sep 13 19:01:53 2019 -0700
+
+    adding sgdt changes
+
+commit 5dda1db6cecd97c5c41787d91b515d05e2d355c3
+Merge: db0dedf d3cfa1f
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Sep 12 02:13:32 2019 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/seagul
+
+commit d3cfa1f5f71e8dfb0c2b86c6a21a3c5bbdaebc7a
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Sep 12 02:13:09 2019 -0700
+
+    adding lqr acrobot
+
+commit db0dedf622c6a63301b68f58e4105dfbb4543bb9
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Sep 10 17:37:12 2019 -0700
+
+    changes to analyis and runs
+
+commit 28f7961edd5847fb271dc39fda803c5e9c88f189
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Sep 10 15:49:27 2019 -0700
+
+    updates to cartpole envs
+
+commit bdc409506becf0960d6113438de11ed4183e4278
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Sep 10 15:05:45 2019 -0700
+
+    commiting envs for sanity check on smbp
+
+commit 3191696096c62b32caef5d78a2aa8a4c50830a1f
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Sep 9 15:27:41 2019 -0700
+
+    bugfix for logical dummy net
+
+commit 312db30865dcfb177d733fd2cc301c4fa3d3f689
+Merge: daadd2c f0be7f7
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Sep 9 14:58:58 2019 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/sgul
+
+commit f0be7f78562d6022096e1c4224bb0492f7290794
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Sep 9 13:45:35 2019 -0700
+
+    augmented dummy net to return any arbitrary function
+
+commit daadd2cc3ca00e39fd04d38d6431cf08680fbe9a
+Merge: 3cf955e 11ae560
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Sep 9 13:16:16 2019 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/sgul
+
+commit 3cf955e8aea26297170fce2ab22a134a6201d365
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Sep 9 13:15:40 2019 -0700
+
+    adding sync data
+
+commit 11ae560e4807d6065d85dfd1e4ae5b60023b3e22
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Sep 9 13:14:51 2019 -0700
+
+    adding all changes from sat experiments
+
+commit df5b8e5645f9b8d1933025c19de91438b8f40bbe
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Sep 7 21:45:37 2019 -0700
+
+    more plots
+
+commit 80a3fd83a379014f26cc8d981c49c5a870f964d7
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Sep 7 21:39:46 2019 -0700
+
+    adding multiple cartpole envs
+
+commit 49790176636249e565fd67237c5616ed03c58107
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Sep 6 22:25:33 2019 -0700
+
+    expanded reward, moved back to old cartpole dynamics
+
+commit 4ae0d12e68b84fc04e446c62a67b8cb0a9a99d98
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 6 19:26:08 2019 -0700
+
+    rerefactor
+
+commit fa41be2a5d14b0b0558bd86e071844be51eca517
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Sep 6 19:15:29 2019 -0700
+
+    temporary unrefactor
+
+commit 2c5e3a318406a53104babc17cd819e20535bfd89
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Sep 6 19:13:49 2019 -0700
+
+    another bug in step for switching models
+
+commit 775072d131580dfd48f5d8aa1fe0b7033dbe9986
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 6 19:02:23 2019 -0700
+
+    updated ppo for discrete envs
+
+commit 81cc59ff42fdf8cd75eecc323e7ae99a4ee97e13
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 6 19:01:58 2019 -0700
+
+    updated discrete env
+
+commit dfb7c77e2c0efc78970f59b9d516ba04927470cb
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 6 18:23:04 2019 -0700
+
+    warm start with velocity
+
+commit bcf1a496067841e1665383544707bfb4059caa3b
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Fri Sep 6 18:19:34 2019 -0700
+
+    changes to switching model hyst
+
+commit 2c7c3ecfa39310bce076b1c18f3ff567601c4896
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 6 17:23:30 2019 -0700
+
+    bugfix for switching
+
+commit ba5c3900bc096a3703cb8b2e5621f14eca58afe5
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 6 16:57:31 2019 -0700
+
+    bugfix for switched model step
+
+commit 015e68db6741a92a8cd7a514efb9ecaddc85bb0f
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 6 14:44:03 2019 -0700
+
+    new reward fcn
+
+commit cf3651bb8a21ffb9fee7bdc38339ead871854d12
+Merge: cb1e34d c0e4895
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 6 13:30:35 2019 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/sgul
+
+commit cb1e34dc8034e5f47631bf3217c45b735282711a
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Sep 6 13:30:17 2019 -0700
+
+    var schedule fix for ppo
+
+commit c0e4895ba9fd64a2cb9a01f0eda717e5cd1e24e1
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Sep 5 22:30:36 2019 -0700
+
+    dump
+
+commit f2d4b2770be5e63b1b752ecdb3d783ddf75d0482
+Merge: a2e3c47 f2664c6
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Sep 5 20:30:06 2019 -0700
+
+    bug fix for action var schedule in switch
+
+commit a2e3c4703de2cf8e6c98f0d00b15b427b9b63d70
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Sep 5 20:24:02 2019 -0700
+
+    bugfix for var schedule
+
+commit f2664c6884dc9b1d07d360ec1589877d0d4a7fef
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Sep 4 20:24:40 2019 -0700
+
+    bugfix for switched ppo
+
+commit 88537c54158849aa11a1b2513757d27a7926465a
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Wed Sep 4 19:23:01 2019 -0700
+
+    set default variance for switched model
+
+commit 7e87ea5eb1bf5c3b9eb473b7e7b37aecca17dafd
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Wed Sep 4 19:20:11 2019 -0700
+
+    changes to acrobot env
+
+commit e9ee0790bc75ce25a8f9832684b8af7a7eea0586
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Wed Sep 4 13:57:50 2019 -0700
+
+    bugix on import
+
+commit 2bda976f0b499134f2373242f695ff66a71169d2
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Wed Sep 4 13:52:51 2019 -0700
+
+    reorganized and cleaned up
+
+commit 90cb11c63621cb8d718d74b6a5ec5749307c4ba2
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Sep 3 20:33:07 2019 -0700
+
+    added more to load and save, think it's ready for prime time now
+
+commit 5c9e66c428a42c6f23e50f15c96fb4106771c93c
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Sep 3 18:48:32 2019 -0700
+
+    load and save for sg works now:
+
+commit d408ff173bcdd83e263e6c6847a9365b81feab04
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Sep 3 13:53:24 2019 -0700
+
+    updates to agility regression for roman
+
+commit a5d49cffd343a689d78e623a49ccb84cd0558807
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Sep 3 13:52:21 2019 -0700
+
+    moved rl/run_utils/* run_utils to rl/*
+
+commit 5d54f23ab64ec0ac78c89dc9eebdc78ec27e984f
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Sep 3 09:09:05 2019 -0700
+
+    started model framework
+
+commit c2f9c8f9b1920a6d1f3c70ba516b59326783bba3
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Sun Sep 1 09:28:49 2019 -0600
+
+    run saves seagul runs
+
+commit 9b8973de184690b2255dee9a4fb6c2fff2b588ae
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Sat Aug 31 11:16:09 2019 -0600
+
+    Save for seagul
+
+commit 2c94e7ba5b2a5e55ace77fa5af0c845618f6408d
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Aug 29 23:21:22 2019 -0700
+
+    started work on run/save infra
+
+commit 52fdb5d2cf5ec03cfb3e7170743e94434f415b35
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Aug 29 14:30:10 2019 -0700
+
+    updated cartpole a bit
+
+commit 4894e98875f968669398760e13daf7b730be6ffb
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Wed Aug 28 18:30:08 2019 -0700
+
+    can take a floating step with drake now
+
+commit 7ae90f7d297d923435ba499abbf5c17f4d6c590e
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Aug 26 18:42:59 2019 -0700
+
+    one more fix to ppo with norm
+
+commit 30aba8cdecd28066ae88c22f6e82dc5b572ef861
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Aug 26 17:50:56 2019 -0700
+
+    bugfix for normalization
+
+commit bf3ecf58ec7be68dd9d2a02c60e73a862d470c35
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Aug 26 16:16:11 2019 -0700
+
+    added state normalization to ppo, nn
+
+commit 41f65781c33881c6f088d4288ede0624ab025159
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Aug 26 13:30:01 2019 -0700
+
+    added and tested linear network policy
+
+commit c2f7fa6f4ee7049dcdb23b76c73c06957af0716c
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Aug 26 11:35:15 2019 -0700
+
+    more work on dircol
+
+commit d9d836913053b6bea8f559654eb4df7f644285e0
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Sat Aug 24 18:00:11 2019 -0700
+
+    added PFL to walker
+
+commit 2f4d194f6fdd7634d4a3201b344d675604e440f3
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Aug 23 18:46:09 2019 -0700
+
+    cleanup
+
+commit 46e204840521fb6c1831a51036b81aac3821d4f9
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Aug 23 18:25:49 2019 -0700
+
+    added some inverse kinematics to the walker
+
+commit 3f420b536548cc4bbb24d5fc78021fe8cd0dfa10
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Aug 22 14:10:30 2019 -0700
+
+    broke out some rl functions into a common file
+
+commit 9b78a2a9f31d27ff2e65feffb058796e04345a01
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Wed Aug 21 17:30:52 2019 -0700
+
+    created env for bullet walker, initialized it with some drake trajectories
+
+commit 3ba7b05033f8b62e139d8d47bc2614ddc323a100
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Aug 20 20:05:55 2019 -0700
+
+    more work on drake five link
+
+commit efe725e58817f893b1a86e145852ec6e580477e2
+Author: Sean Gillen <seangillen1887@gmail.com>
+Date:   Mon Aug 19 20:09:45 2019 -0700
+
+    Update README.md
+
+commit 973578cbe8003dd84e459a851ed0b1badd9ca37f
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Mon Aug 19 20:06:51 2019 -0700
+
+    update to five link, tracking controller runs but robot falls down
+
+commit 87f646a54b5d13fa6ba73245ba168d1052f1b6e7
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Aug 17 01:52:12 2019 -0700
+
+    updates to req.txt
+
+commit fc2ce165372c87e778eb0b53f1f15c8b49f3a553
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Aug 17 01:47:57 2019 -0700
+
+    adding hydroid stuff to misc
+
+commit 1bf4322f5711f65fd85c06fb3d666386d49e3fbe
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Aug 17 01:47:38 2019 -0700
+
+    adding a requirments file
+
+commit c6a5a9bab77f01b20a0143ba62e43dd8eadf8256
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Sat Aug 17 01:43:07 2019 -0700
+
+    moved old code to here
+
+commit 2cfe17cf183768b7e39f420d76eb5be62ca44f1b
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Thu Aug 15 22:04:18 2019 -0700
+
+    drake simulates dynamics now
+
+commit 566c4812882b73ef2d19f8dd10e1c6f910b03ea7
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Aug 15 11:22:17 2019 -0700
+
+    more switching experiments
+
+commit 9cc438b3f006e66187dd61f2fcd68de24615f392
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Aug 13 19:40:08 2019 -0700
+
+    work on warm start
+
+commit 0c4adcac33c8c91600cb304a6c369059725e3a31
+Author: sgillen <sgillen@ucsb.edu>
+Date:   Tue Aug 13 16:10:42 2019 -0700
+
+    dusting off some of the old drake stuff
+
+commit eea312cdcc34bcec8ef6c428824eeabd5cabcd85
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Aug 8 16:00:00 2019 -0700
+
+    added warm start notebook
+
+commit 92f300f2c3bc35063fa6dc5d93b327942eaec148
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Aug 8 15:59:23 2019 -0700
+
+    more refinements to switching, small updates to utility fcns
+
+commit ec518599c9af91cf7ce50f60c516ad42b5564216
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Aug 8 15:58:35 2019 -0700
+
+    added new environment with upright cartpole that gets random pushes
+
+commit ecd60e5f7942ed74dfef4c96be3303af9d3554bf
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Wed Aug 7 19:23:58 2019 -0700
+
+    basics of save and load for ppo
+
+commit e001682f8e18acc23f03a6866913883fe6aeb7b4
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Wed Aug 7 19:23:35 2019 -0700
+
+    switching can now ingore a nn with a good full controller
+
+commit ec7941a1b0cad039fe19d81b6aacad9a017ac902
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Aug 6 13:44:05 2019 -0700
+
+    another reformat with black, line-length=120
+
+commit f3d641c486a13232f58216e83b4a30b3fb5136bb
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Tue Aug 6 13:43:43 2019 -0700
+
+    got the energy shaping controller working much better with rk4
+
+commit eccbfc169da9962e87ce78bd9b309110c5e2cc5c
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Aug 5 18:20:42 2019 -0700
+
+    more bugfixe I guess
+
+commit c7002379708f8771539adc251abdb081a4f71c94
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Aug 5 17:40:50 2019 -0700
+
+    debugging run.py
+
+commit d18000879a91fadf08b7258e0621adbd540343ae
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Aug 5 17:29:28 2019 -0700
+
+    many updates all around, (due to some global refactors)
+
+commit 23823adbe0ce8fe80de0ae13f5079ac693882992
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Aug 2 20:00:06 2019 -0700
+
+    bugfixes for ast
+
+commit 45328ea80b661d6617a3ed924296852c72570e93
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Aug 2 19:36:49 2019 -0700
+
+    added a switching policy, no errors but the performance is bad
+
+commit b6d5a838e33fd451e92c1d1e762f38e1ac707674
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Aug 2 18:19:46 2019 -0700
+
+    have a seperate nn tensor right here, about to switch to a mask
+
+commit 72c55221d5e6e2d01c1dd9ba5f14c3a938c2a1c4
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Aug 2 17:23:59 2019 -0700
+
+    moved all of research into notebooks
+
+commit 915a162e495d9f5fd91e1a5161611b987964b101
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Aug 1 14:34:03 2019 -0700
+
+    moved buller environments into seagul
+
+commit c633407e04cb312985a72ab56fccf14a44f3e3cc
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Aug 1 11:38:45 2019 -0700
+
+    some cleanup, about to merge a lot of code into this project
+
+commit 8d36b4f1bccaae391f6c7d4b40414c625f2c2308
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Jul 29 19:41:56 2019 -0700
+
+    cleanup up the PPO implementation, works for pendulums, not for walkers
+
+commit c87a4edda6f38249a9f626ecc8727252838858c5
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Jul 29 13:00:11 2019 -0700
+
+    about to cleanup
+
+commit 39bffa26a234765f66fb120435f5be40aa2fea0e
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Jul 26 19:14:17 2019 -0700
+
+    working on the walker hyperparameters
+
+commit 32d4be36b66f50ad639eae0394d387ea2b54a383
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Jul 26 19:05:52 2019 -0700
+
+    trying on walker now
+
+commit 23f3de1d0d3c554a9dea62058bdc3ee6f03c4173
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Fri Jul 26 18:13:14 2019 -0700
+
+    ppo works now for the really simple discrete case
+
+commit d0e3f816660d7a132ed8fb18b42bead0806a2753
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Thu Jul 25 17:27:15 2019 -0700
+
+    proto ppo works for the discrete cartpole
+
+commit 339abfaa1fb8d00b26ab3a2ae51b23675435077a
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Jul 22 21:42:38 2019 -0700
+
+    all the pieces for ppo are there but bugs remain
+
+commit 547359539942f4872ff910e8a523b18ea1fa66a9
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Jul 22 18:13:58 2019 -0700
+
+    removing notebook
+
+commit 649903194be59fb27d536c28bbfa68634d82af8b
+Merge: 8fad57b 4167ec3
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Jul 22 11:57:48 2019 -0700
+
+    Merge branch 'master' of https://github.com/sgillen/sgul
+
+commit 8fad57b3728195d599ad576c7256dd28b8262b39
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Mon Jul 22 11:57:33 2019 -0700
+
+    renamed sgul -> seagul
+
+commit 4167ec3b46ec461b0fff0261f689cbbc2d029308
+Author: Sean Gillen <seangillen1887@gmail.com>
+Date:   Sat Jul 20 19:03:57 2019 -0700
+
+    Create README.md
+
+commit 35d7c430b7afd08e0c46ce1af22faf572da46000
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Sat Jul 20 18:00:56 2019 -0700
+
+    removed some junk and added a gitignore
+
+commit f73818b8f3851905784229c9055177af294ac79d
+Author: sgillen <seangillen1887@gmail.com>
+Date:   Sat Jul 20 17:40:21 2019 -0700
+
+    initial commit

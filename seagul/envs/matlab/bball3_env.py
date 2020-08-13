@@ -25,7 +25,7 @@ class BBall3Env(core.Env):
     """
 
     def __init__(self,
-                 max_torque=float('inf'),
+                 max_torque=5.0,
                  dt=.02,
                  seed=None,
                  init_state=(-pi/4, 0.0, 3*pi/4, 0.025, .5, 0, 0, 0, 0, 0),
@@ -54,7 +54,7 @@ class BBall3Env(core.Env):
     def reset(self):
         self.t = 0
         init_state = self.init_state
-        # init_state += self.eng.rand(8)*(self.init_state_weights*matlab.single([2.0])) - self.init_state_weights
+        #init_state += self.eng.rand(8)*(self.init_state_weights*matlab.single([2.0])) - self.init_state_weights
 
         self.state = init_state
         return np.array(init_state).reshape((10,))
