@@ -1,0 +1,4 @@
+{
+    "num_workers": 3,
+    "num_gpus": 0
+}

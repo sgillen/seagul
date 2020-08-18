@@ -1,0 +1,7 @@
+{
+    "n_directions": 230,
+    "deltas_used": 230,
+    "step_size": 0.02,
+    "delta_std": 0.0075,
+    "shift": 5
+}

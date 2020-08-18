@@ -1,0 +1,11 @@
+{
+    "train_batch_size": 65536,
+    "lambda": 0.95,
+    "gamma": 0.99,
+    "lr": 0.0003,
+    "sgd_minibatch_size": 64,
+    "num_sgd_iter": 32,
+    "clip_param": 0.2,
+    "batch_mode": "truncate_episodes",
+    "observation_filter": "MeanStdFilter"
+}
