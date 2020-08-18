@@ -3,7 +3,7 @@ import copy
 import scipy.optimize as opt
 import torch
 from collections.abc import MutableMapping
-
+import warnings
 
 class MeshPoint:
     def __init__(self, identity, point):
@@ -206,8 +206,11 @@ def mesh_dim(data, init_d=1e-2):
     mesh = create_box_mesh(data, init_d)
     mesh_sizes = [len(mesh)]
     d_vals = [init_d]
-    if len(mesh) > mesh_size_upper:
-        #print("Warning initial d for mesh too large! auto adjusting")
+#    print("mesh size upper: ", mesh_size_upper)
+#    print("len: ", len(mesh))
+    
+    if len(mesh) < mesh_size_upper:
+        #        print("Warning initial d for mesh too large! auto adjusting")
 
         d = init_d/scale_factor
         while True:
@@ -218,7 +221,7 @@ def mesh_dim(data, init_d=1e-2):
             d = d/scale_factor
 
             if mesh_sizes[0] > mesh_size_upper or d < 1e-9:
-                #print("d found: ", d, mesh_sizes, data.shape[0])
+#                print("d found: ", d, mesh_sizes, data.shape[0])
                 break
 
     d = init_d*scale_factor
@@ -240,11 +243,19 @@ def mesh_dim(data, init_d=1e-2):
     xdata = np.log2(d_vals[lin_begin:])
     ydata = np.log2(mesh_sizes[lin_begin:])
 
+    if xdata.shape[0] < 4:
+        return  data.shape[1]/2, data.shape[1]/2 , mesh_sizes,  d_vals
+    
     # Fit a curve to the log log line
     def f(x, m, b):
         return m * x + b
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            popt, pcov = opt.curve_fit(f, xdata, -ydata)
+        except: print(f"covariance failure (probably) {data.shape, mesh_sizes, d_vals}")
 
-    popt, pcov = opt.curve_fit(f, xdata, -ydata)
+
 
     # find the largest slope
     min_slope = 0
