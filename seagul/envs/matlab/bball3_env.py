@@ -28,14 +28,13 @@ class BBall3Env(core.Env):
                  max_torque=5.0,
                  dt=.02,
                  seed=None,
-                 init_state=(-pi/4, 0.0, 3*pi/4, 0.025, .5, 0, 0, 0, 0, 0),
+                 init_state=(-pi/4, 0.0, -3*pi/4, 0.025, .5, 0, 0, 0, 0, 0),
                  init_state_weights=(pi, pi, pi, .5, .5, 0, 0, 0, 0, 0),
                  reward_fn=lambda s, a: s[4],
-                 done_criteria=lambda s: s[4] < (.3 * np.cos(s[0]) + .3 * np.cos(s[0] + s[1]))
                  ):
 
         self.eng = matlab.engine.start_matlab()
-        self.eng.addpath(seagul.envs.matlab.bball3_src.__path__[0], nargout=0)
+        self.eng.addpath(seagul.envs.matlab.bball3_src.__path__._path[0], nargout=0)
         self.max_torque = max_torque
         self.dt = dt
         self.init_state = matlab.single(init_state, size=(10, 1))
@@ -43,7 +42,6 @@ class BBall3Env(core.Env):
         np.random.seed(seed)
 
         self.reward_fn = reward_fn
-        self.done_criteria = done_criteria
 
         low = np.array([-pi, -pi, -pi, -5, -5, -10, -30, -30, -10, -10])
         self.observation_space = spaces.Box(low=low, high=-low, dtype=np.float32)
@@ -57,7 +55,7 @@ class BBall3Env(core.Env):
         #init_state += self.eng.rand(8)*(self.init_state_weights*matlab.single([2.0])) - self.init_state_weights
 
         self.state = init_state
-        return np.array(init_state).reshape((10,))
+        return np.array(init_state, dtype=np.float32).reshape((10,))
 
     def step(self, action):
         action = np.clip(action, -self.max_torque, self.max_torque)
@@ -77,9 +75,9 @@ class BBall3Env(core.Env):
             self.t = np.array(impactTime).item()
 
         reward = self.reward_fn(np.array(self.state), action)
-        done = self.done_criteria(np.array(self.state))
+        done = self.eng.constraint(self.state)
 
-        return np.array(self.state).reshape((10,)), reward.item(), done, {"tout": tout, "xout": xout}
+        return np.array(self.state, dtype=np.float32).reshape((10,)), reward.item(), done, {"tout": tout, "xout": xout}
 
     def render(self):
         raise NotImplementedError('Frame by frame rendering not supported, call animate instead')
