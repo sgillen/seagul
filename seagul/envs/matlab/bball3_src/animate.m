@@ -66,7 +66,7 @@ function [preImpactState, impactTime] = animate(tout,xout)
             M(n) = getframe;
         end
         drawnow
-        pause(0.05)
+        pause(0.50)
     end
 end
         
