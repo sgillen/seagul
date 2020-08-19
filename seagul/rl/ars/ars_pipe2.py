@@ -8,16 +8,16 @@ import os
 
 
 def worker_fn(worker_con, env_name, env_config, policy, postprocess, seed):
-   # pr = cProfile.Profile()
-   # pr.enable()
+    pr = cProfile.Profile()
+    pr.enable()
     env = gym.make(env_name, **env_config)
     env.seed(int(seed))
     while True:
         data = worker_con.recv()
 
         if data == "STOP":
-    #        pr.disable()
-    #        pr.dump_stats("pb.stats"+str(os.getpid()))
+            pr.disable()
+            pr.dump_stats("pb.stats"+str(os.getpid()))
             env.close()
             return
         else:
@@ -101,7 +101,7 @@ class ARSAgent:
         torch.manual_seed(self.seed)
         exp_dist = torch.distributions.Normal(torch.zeros(self.n_delta, n_param), torch.ones(self.n_delta, n_param))
 
-        for _ in range(n_epochs):
+        for epoch in range(n_epochs):
 
             deltas = exp_dist.sample()
             pm_W = torch.cat((W+(deltas*self.exp_noise), W-(deltas*self.exp_noise)))
@@ -136,6 +136,8 @@ class ARSAgent:
 
             self.lr_hist.append(l_returns.mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
+
+            print(epoch, self.r_hist[-1])
 
             ep_steps = states.shape[0]
             self.policy.state_means = update_mean(states, self.policy.state_means, self.total_steps)
