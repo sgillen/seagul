@@ -2,7 +2,7 @@ from multiprocessing import Pool
 import torch.nn as nn
 import numpy as np
 import gym
-from seagul.rl.sac import sac, SACModel
+from seagul.rl.sac import SACAgent, SACModel
 from seagul.nn import MLP
 import matplotlib.pyplot as plt
 import torch
@@ -29,21 +29,12 @@ def run_and_test(seed, verbose=False):
          act_limit=3
     )
 
-    t_model, rewards, var_dict = sac(env_name=env_name,
-                                     model=model,
-                                     seed=int(seed),  # int((time.time() % 1)*1e8),
-                                     train_steps=1e6,
-                                     exploration_steps=5000,
-                                     min_steps_per_update=500,
-                                     reward_stop=3000,
-                                     gamma=1,
-                                     sgd_batch_size=64,
-                                     replay_batch_size =2048,
-                                     iters_per_update=1000,
-                                     env_max_steps=1000,
-                                     polyak=.995)
+    agent = SACAgent(env_name=env_name, model=model, seed=int(seed), exploration_steps=5000,
+                     min_steps_per_update=500, reward_stop=3000, gamma=1, sgd_batch_size=64,
+                     replay_batch_size =2048, iters_per_update=1000, env_max_steps=1000,
+                     polyak=.995)
 
-
+    model, rewards, var_dict,  = agent.learn(train_steps=1e6)
     torch.save(var_dict, open("./tmp/" + str(seed), 'wb'), pickle_module=dill)
 
     if verbose:
