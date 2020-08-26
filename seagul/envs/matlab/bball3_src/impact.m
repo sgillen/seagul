@@ -1,5 +1,5 @@
-
 %% Function to calculate velocities post impact
+
 function Xpost = impact(X)
 
 % linkComX = rand(10,1)

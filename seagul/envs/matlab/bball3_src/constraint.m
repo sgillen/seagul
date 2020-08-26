@@ -25,7 +25,7 @@ y2cm = y1 + p2*cos(th2);
 y3 = y2 + l3*cos(th3);
 y3cm = y2 + p3*cos(th3);
 
-if yb < y3
+if yb < 0
     %condition = "Ball below Link 2";
     flag = 4;
 elseif y3 < 0
