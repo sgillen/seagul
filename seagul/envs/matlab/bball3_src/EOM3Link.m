@@ -1,4 +1,4 @@
-%% Code to calculate the equations of motion for 2 link arm
+%% Code to calculate the equations of motion for 3 link arm
 
 clear all
 clc
@@ -93,8 +93,9 @@ for m=1:length(GC)
     C(m,1) = simplify(eval(LHS{m}));  
 end
 
-U = [tau1;tau2;tau3];
-D_inv = inv(D);
+U = [tau1;tau2;tau3]
+C
+D_inv = inv(D)
 
 % d2X = D_inv*(-C + U);
 % for n = 1:length(GC)
