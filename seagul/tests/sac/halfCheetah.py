@@ -26,12 +26,12 @@ def run_and_test(seed, verbose=False):
          value_fn= MLP(input_size, 1, num_layers, layer_size, activation),
          q1_fn = MLP(input_size+output_size, 1, num_layers, layer_size, activation),
          q2_fn = MLP(input_size+output_size, 1, num_layers, layer_size, activation),
-         act_limit=3
+         act_limit=1
     )
 
     agent = SACAgent(env_name=env_name, model=model, seed=int(seed), exploration_steps=5000,
                      min_steps_per_update=500, reward_stop=3000, gamma=1, sgd_batch_size=64,
-                     replay_batch_size =2048, iters_per_update=1000, env_max_steps=1000,
+                     replay_batch_size=2048, iters_per_update=1000, env_max_steps=1000,
                      polyak=.995)
 
     model, rewards, var_dict,  = agent.learn(train_steps=1e6)

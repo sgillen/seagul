@@ -108,8 +108,6 @@ class SACAgent:
         early_stop = False
         norm_obs1 = torch.empty(0)
 
-
-
         while cur_total_steps < self.normalize_steps:
             ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, self.env_max_steps)
             norm_obs1 = torch.cat((norm_obs1, ep_obs1))

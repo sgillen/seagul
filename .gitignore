@@ -129,3 +129,5 @@ dmypy.jso
 #slurm logs
 slurm-*.out
 *~
+
+**/tmp

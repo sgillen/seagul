@@ -2,7 +2,7 @@ from multiprocessing import Pool
 import torch.nn as nn
 import numpy as np
 import gym
-from seagul.rl.sac import sac, SACModel
+from seagul.rl.sac import SACAgent, SACModel
 from seagul.nn import MLP
 import matplotlib.pyplot as plt
 import torch
@@ -27,23 +27,23 @@ def run_and_test(seed, verbose=False):
          value_fn= MLP(input_size, 1, num_layers, layer_size, activation),
          q1_fn = MLP(input_size+output_size, 1, num_layers, layer_size, activation),
          q2_fn = MLP(input_size+output_size, 1, num_layers, layer_size, activation),
-         act_limit=3
+         act_limit=1
     )
 
-    t_model, rewards, var_dict = sac(env_name=env_name,
-                                     model=model,
-                                     seed=int(seed),  # int((time.time() % 1)*1e8),
-                                     train_steps=1e6,
-                                     exploration_steps=50000,
-                                     min_steps_per_update=500,
-                                     reward_stop=-15,
-                                     gamma=1,
-                                     sgd_batch_size=64,
-                                     replay_batch_size =2048,
-                                     iters_per_update=1000,
-                                     env_max_steps=50,
-                                     polyak=.995)
-
+    agent = SACAgent(env_name=env_name,
+                     model=model,
+                     seed=int(seed),  # int((time.time() % 1)*1e8),
+                     exploration_steps=50000,
+                     min_steps_per_update=500,
+                     reward_stop=-15,
+                     gamma=1,
+                     sgd_batch_size=64,
+                     replay_batch_size =2048,
+                     iters_per_update=1000,
+                     env_max_steps=50,
+                     polyak=.995)
+    
+    model, rewards, var_dict = agent.learn(5e5)
 
     torch.save(var_dict, open("./tmp/" + str(seed), 'wb'), pickle_module=dill)
 
