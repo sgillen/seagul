@@ -170,7 +170,7 @@ def run_sg(arg_dict, algo, run_name=None, run_desc=None, base_path="/data/", app
     with open(save_dir + "model", "wb") as outfile:
         torch.save(t_model, outfile, pickle_module=dill)
     
-    print("saved run in %s, last reward was %f" % (save_dir, rewards[-1]))
+    print(f"saved run in {save_dir}, last reward was {rewards[-1]}")
 
 
 def load_model(save_path, backend="baselines"):

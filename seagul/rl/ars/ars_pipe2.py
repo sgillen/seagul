@@ -7,17 +7,17 @@ import cProfile
 import os
 
 
-def worker_fn(worker_con, env_name, env_config, policy, postprocess, seed):
-    pr = cProfile.Profile()
-    pr.enable()
+def worker_fn(worker_con, env_name, env_config, policy, postprocess, seed, n_postprocess_runs):
+    #pr = cProfile.Profile()
+    #pr.enable()
     env = gym.make(env_name, **env_config)
     env.seed(int(seed))
     while True:
         data = worker_con.recv()
 
         if data == "STOP":
-            pr.disable()
-            pr.dump_stats("pb.stats"+str(os.getpid()))
+            #pr.disable()
+            #pr.dump_stats("pb.stats"+str(os.getpid()))
             env.close()
             return
         else:
@@ -26,12 +26,25 @@ def worker_fn(worker_con, env_name, env_config, policy, postprocess, seed):
             policy.state_std = state_std
             policy.state_means = state_mean
 
-            states, returns, log_returns = do_rollout_train(env, policy, postprocess, W)
-            worker_con.send((states, returns, log_returns))
+            obs_rollout_list = []; obs_rollout_tens = torch.empty(0)
+            act_rollout_list = []
+            rew_rollout_list = []
+
+            for i in range(n_postprocess_runs):
+                obs_tens, act_tens, rew_tens = do_rollout_train(env, policy, W)
+
+                obs_rollout_list.append(obs_tens); obs_rollout_tens = torch.cat((obs_rollout_tens, obs_tens))
+                act_rollout_list.append(act_tens)
+                rew_rollout_list.append(rew_tens)
+
+            raw_reward_mean = torch.mean(torch.stack([torch.sum(rews) for rews in rew_rollout_list]))
+            processed_rewards = postprocess(obs_rollout_list, act_rollout_list, rew_rollout_list)
+
+            worker_con.send((obs_rollout_tens, processed_rewards.sum(), raw_reward_mean))
 
 
-def do_rollout_train(env, policy, postprocess, delta):
-    torch.nn.utils.vector_to_parameters(delta, policy.parameters())
+def do_rollout_train(env, policy, W):
+    torch.nn.utils.vector_to_parameters(W, policy.parameters())
 
     state_list = []
     act_list = []
@@ -50,19 +63,17 @@ def do_rollout_train(env, policy, postprocess, delta):
 
     state_tens = torch.stack(state_list)
     act_tens = torch.stack(act_list)
-    preprocess_sum = torch.as_tensor(sum(reward_list))
-    reward_list = postprocess(torch.tensor(reward_list), state_tens, act_tens)
-    reward_sum = torch.as_tensor(sum(reward_list))
+    reward_tens = torch.tensor(reward_list)
 
-    return state_tens, reward_sum, preprocess_sum
+    return state_tens, act_tens, reward_tens
 
 
-def postprocess_default(rews, obs,acts):
-    return rews
+def postprocess_default(obs, acts, rews):
+    return torch.stack(rews)
 
 
 class ARSAgent:
-    def __init__(self, env_name, policy, seed, env_config=None, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default):
+    def __init__(self, env_name, policy, seed, env_config=None, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default, n_postprocess_runs=1):
         self.env_name = env_name
         self.policy = policy
         self.n_workers = n_workers
@@ -72,6 +83,7 @@ class ARSAgent:
         self.exp_noise = exp_noise
         self.postprocessor = postprocessor
         self.seed = seed
+        self.n_postprocess_runs = n_postprocess_runs
         self.r_hist = []
         self.lr_hist = []
         self.total_epochs = 0
@@ -90,7 +102,7 @@ class ARSAgent:
 
         for i in range(self.n_workers):
             master_con, worker_con= Pipe()
-            proc = Process(target=worker_fn, args=(worker_con, self.env_name, self.env_config, self.policy, self.postprocessor, self.seed))
+            proc = Process(target=worker_fn, args=(worker_con, self.env_name, self.env_config, self.policy, self.postprocessor, self.seed, self.n_postprocess_runs))
             proc.start()
             proc_list.append(proc)
             master_pipe_list.append(master_con)
