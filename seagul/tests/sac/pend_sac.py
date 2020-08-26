@@ -1,8 +1,7 @@
 import torch.nn as nn
-from seagul.rl.sac.sac import sac
 from seagul.nn import RBF, MLP
 import torch
-from seagul.rl.sac import SACModel
+from seagul.rl.sac import SACModel, SACAgent
 import time
 from multiprocessing import Process, Manager
 import numpy as np
@@ -21,12 +20,10 @@ t_model, rewards, var_dict = sac(**arg_dict)  # Should get to -200 reward
 """
 
 
-def run_and_test(arg_dict):
-    torch.set_num_threads(1)
-
-    t_model, rewards, var_dict = sac(**arg_dict)
-
-    seed = arg_dict["seed"]
+def run_and_test(alg_config, n_steps):
+    agent = SACAgent(**alg_config)
+    t_model, rewards, var_dict = agent.learn(n_steps)
+    seed = alg_config["seed"]
     if var_dict["early_stop"]:
         print("seed", seed, "achieved 200 reward in ", len(rewards), "steps")
     else:
@@ -56,10 +53,10 @@ if __name__ == "__main__" :
         "env_name": "Pendulum-v0",
         "model": model,
         "exploration_steps" : 5000,
-        "train_steps": 200000,
         "reward_stop": -200,
         "use_gpu": False,
     }
+    n_steps=200000
 
     # for debugging
     #alg_config["seed"] = 0
@@ -69,7 +66,7 @@ if __name__ == "__main__" :
 
     for seed in np.random.randint(0,2**31,8):
         alg_config["seed"] = int(seed)
-        p = Process(target=run_and_test, args=[alg_config])
+        p = Process(target=run_and_test, args=[alg_config, n_steps])
         p.start()
         proc_list.append(p)
 

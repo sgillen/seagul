@@ -38,9 +38,9 @@ def worker_fn(worker_con, env_name, env_config, policy, postprocess, seed, n_pos
                 rew_rollout_list.append(rew_tens)
 
             raw_reward_mean = torch.mean(torch.stack([torch.sum(rews) for rews in rew_rollout_list]))
-            processed_rewards = postprocess(obs_rollout_list, act_rollout_list, rew_rollout_list)
+            processed_reward_sum = postprocess(obs_rollout_list, act_rollout_list, rew_rollout_list)
 
-            worker_con.send((obs_rollout_tens, processed_rewards.sum(), raw_reward_mean))
+            worker_con.send((obs_rollout_tens, processed_reward_sum, raw_reward_mean))
 
 
 def do_rollout_train(env, policy, W):
