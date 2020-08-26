@@ -4,6 +4,7 @@ stateDimension = length(xout(1,:));
 preImpactState = zeros(stateDimension,1,'single');
 impactTime = -1; % if this is unchanged implies no impact
 
+dt = 0.01;
 params;
 
 q1 = xout(:,1); q2 = xout(:,2); q3 = xout(:,3);
@@ -33,27 +34,26 @@ if length(tout)>1
     impLinkSlope = (y3(maxHeightIndex:end) - y2(maxHeightIndex:end))./(x3(maxHeightIndex:end) - x2(maxHeightIndex:end));
     impLinkIntercept = y3(maxHeightIndex:end) - impLinkSlope.*x3(maxHeightIndex:end);
 
-    t = tout;
+
+
+    t = [tout(1):dt:tout(end)];
     previousDistance = 0;
     %% Detecting impacts
-    for i = 2:1:length(impLinkSlope)
+    for i = 1:1:length(impLinkSlope)
         actualIndex = i + maxHeightIndex - 1;
         distanceToImpLink = abs(yb(actualIndex) - xb(actualIndex)*impLinkSlope(i) - impLinkIntercept(i))/sqrt(1 + impLinkSlope(i)^2);
         if xb(actualIndex) > x3(actualIndex) && xb(actualIndex) < x2(actualIndex)
             if (distanceToImpLink < rb)
-                impactTime = interp1([previousDistance distanceToImpLink], tout(actualIndex - 1: actualIndex), rb,'PCHIP');
-                t = tout;
+                impactTime = interp1([previousDistance distanceToImpLink], tout(actualIndex - 1: actualIndex), rb,'PCHIP')
+                t = [tout(1):dt:impactTime];
                 stateDimension = length(xout(1,:));
                 preImpactState = zeros(stateDimension,1);
-                for i = 1:1:stateDimension
-                    preImpactState(i) = interp1(tout,xout(:,i),impactTime,'PCHIP');
+                for j = 1:1:stateDimension
+                    preImpactState(j) = interp1(tout,xout(:,j),impactTime,'PCHIP');
                 end
                 break;
             end
         end
         previousDistance = distanceToImpLink;
     end
-
-end
-
 end

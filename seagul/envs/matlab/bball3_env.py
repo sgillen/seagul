@@ -31,6 +31,7 @@ class BBall3Env(core.Env):
                  init_state=(-pi/4, 0.0, -3*pi/4, 0.025, .5, 0, 0, 0, 0, 0),
                  init_state_weights=(pi, pi, pi, .5, .5, 0, 0, 0, 0, 0),
                  reward_fn=lambda s, a: s[4],
+                 max_steps = 100,
                  ):
 
         self.eng = matlab.engine.start_matlab()
@@ -47,11 +48,14 @@ class BBall3Env(core.Env):
         self.observation_space = spaces.Box(low=low, high=-low, dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([-max_torque, -max_torque, -max_torque]), high=np.array([max_torque, max_torque, max_torque]), dtype=np.float32)
 
+        self.max_steps = max_steps
+        self.cur_step = 0
         self.reset()
 
     def reset(self):
         self.t = 0
         init_state = self.init_state
+        self.cur_step = 0
         #init_state += self.eng.rand(8)*(self.init_state_weights*matlab.single([2.0])) - self.init_state_weights
 
         self.state = init_state
@@ -70,12 +74,19 @@ class BBall3Env(core.Env):
             # self.state.reshape((8,1))
             self.t = np.array(tout[-1]).item()
         else:
+            #print("contact!")
+            #print(impactState)
+            impactState.reshape((10, 1))
             self.state = self.eng.impact(matlab.single(impactState))
             # self.state.reshape((8,1))
             self.t = np.array(impactTime).item()
 
         reward = self.reward_fn(np.array(self.state), action)
         done = self.eng.constraint(self.state)
+
+        self.cur_step += 1
+        if self.cur_step > self.max_steps:
+            done = True
 
         return np.array(self.state, dtype=np.float32).reshape((10,)), reward.item(), done, {"tout": tout, "xout": xout}
 
