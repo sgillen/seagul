@@ -69,11 +69,11 @@ def do_rollout_train(env, policy, W):
 
 
 def postprocess_default(obs, acts, rews):
-    return torch.stack(rews)
+    return torch.stack(rews).sum()
 
 
 class ARSAgent:
-    def __init__(self, env_name, policy, seed, env_config=None, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default, n_postprocess_runs=1):
+    def __init__(self, env_name, policy, seed, env_config=None, n_workers=8, zero_policy=True, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default, n_postprocess_runs=1, reward_stop=None):
         self.env_name = env_name
         self.policy = policy
         self.n_workers = n_workers
@@ -84,6 +84,7 @@ class ARSAgent:
         self.postprocessor = postprocessor
         self.seed = seed
         self.n_postprocess_runs = n_postprocess_runs
+        self.reward_stop = reward_stop
         self.r_hist = []
         self.lr_hist = []
         self.total_epochs = 0
@@ -92,6 +93,11 @@ class ARSAgent:
         if env_config is None:
             env_config = {}
         self.env_config = env_config
+
+        if zero_policy:
+            W = torch.nn.utils.parameters_to_vector(policy.parameters())
+            W = torch.zeros_like(W)
+            torch.nn.utils.vector_to_parameters(W, policy.parameters())
 
     def learn(self, n_epochs):
         torch.autograd.set_grad_enabled(False)
@@ -114,6 +120,11 @@ class ARSAgent:
         exp_dist = torch.distributions.Normal(torch.zeros(self.n_delta, n_param), torch.ones(self.n_delta, n_param))
 
         for epoch in range(n_epochs):
+
+            if len(self.lr_hist) > 2 and self.reward_stop:
+                if self.lr_hist[-1] >= self.reward_stop and self.lr_hist[-2] >= self.reward_stop:
+                    early_stop = True
+                    break
 
             deltas = exp_dist.sample()
             pm_W = torch.cat((W+(deltas*self.exp_noise), W-(deltas*self.exp_noise)))
@@ -166,7 +177,7 @@ class ARSAgent:
             proc.join()
 
         torch.nn.utils.vector_to_parameters(W, self.policy.parameters())
-        return self.lr_hist[learn_start_idx:]
+        return policy, self.lr_hist[learn_start_idx:], locals()
 
 
 if __name__ == "__main__":
