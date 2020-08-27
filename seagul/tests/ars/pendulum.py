@@ -1,4 +1,3 @@
-
 from multiprocessing import Pool
 import torch.nn as nn
 import numpy as np
@@ -9,18 +8,18 @@ import matplotlib.pyplot as plt
 import torch
 import dill
 
-env_name = "Reacher-v2"
+env_name = "Pendulum-v0"
 
 env = gym.make(env_name)
 
 
 def run_and_test(seed, verbose=False):
-    input_size = 17
-    output_size = 6
+    input_size = 3
+    output_size = 1
 
-    model = MLP(input_size, output_size, 0, 0)
+    model = MLP(input_size, output_size, 1, 12)
 
-    agent = ARSAgent(env_name=env_name, policy=model, seed=int(seed), n_workers=8, reward_stop=-15)
+    agent = ARSAgent(env_name=env_name, policy=model, seed=int(seed), n_workers=8, reward_stop=-200)
     model, rewards, var_dict,  = agent.learn(int(1e6))
 
     if verbose:

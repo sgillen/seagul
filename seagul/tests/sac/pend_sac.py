@@ -45,7 +45,7 @@ if __name__ == "__main__" :
          value_fn = MLP(input_size, 1, num_layers, layer_size, activation),
          q1_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation),
          q2_fn = MLP(input_size + output_size, 1, num_layers, layer_size, activation),
-         act_limit=1
+         act_limit=2
     )
 
     # Define our hyper parameters

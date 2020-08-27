@@ -40,9 +40,10 @@ class SACModel:
 
         # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
         m = torch.distributions.normal.Normal(means, std)
-        logp = m.log_prob(samples)
-        logp -= torch.log(torch.clamp(1 - squashed_samples.reshape(-1,1) ** 2, 1e-6, 1)).sum(dim=1).reshape(acts.shape)
-        return acts, logp
+        logp = m.log_prob(samples).sum(dim=1)
+        logp -= torch.log(torch.clamp(1 - squashed_samples ** 2, 1e-6, 1)).sum(dim=1)
+
+        return acts, logp.reshape(-1, 1)
 
 class SACModelActHold:
     """

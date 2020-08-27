@@ -164,17 +164,16 @@ class SACAgent:
                 self.raw_rew_hist.append(torch.sum(ep_rews))
                 print(self.raw_rew_hist[-1])
 
-
-
             progress_bar.update(cur_batch_steps)
 
             for _ in range(min(int(ep_steps), self.iters_per_update)):
+
+                torch.autograd.set_grad_enabled(False)
                 # compute targets for Q and V
                 # ========================================================================
                 replay_obs1, replay_obs2, replay_acts, replay_rews, replay_done = self.replay_buf.sample_batch(self.replay_batch_size)
 
                 q_targ = replay_rews + self.gamma * (1 - replay_done) * self.target_value_fn(replay_obs2)
-                q_targ = q_targ.detach()
 
                 noise = torch.randn(self.replay_batch_size, act_size)
                 sample_acts, sample_logp = self.model.select_action(replay_obs1, noise)
@@ -182,10 +181,12 @@ class SACAgent:
                 q_in = torch.cat((replay_obs1, sample_acts), dim=1)
                 q_preds = torch.cat((self.model.q1_fn(q_in), self.model.q2_fn(q_in)), dim=1)
                 q_min, q_min_idx = torch.min(q_preds, dim=1)
-                q_min = q_min.reshape(-1, 1)
+                q_min = q_min.reshape(-1,1)
 
                 v_targ = q_min - self.alpha * sample_logp
-                v_targ = v_targ.detach()
+                v_targ = v_targ
+
+                torch.autograd.set_grad_enabled(True)
 
                 # q_fn update
                 # ========================================================================
@@ -214,7 +215,7 @@ class SACAgent:
 
                     # predict and calculate loss for the batch
                     val_preds = self.model.value_fn(replay_obs1[cur_sample:cur_sample + self.sgd_batch_size])
-                    val_loss = torch.sum(torch.pow(val_preds - v_targ[cur_sample:cur_sample + self.sgd_batch_size], 2)) / self.replay_batch_size
+                    val_loss = torch.pow(val_preds - v_targ[cur_sample:cur_sample + self.sgd_batch_size], 2).mean()
 
                     # do the normal pytorch update
                     val_opt.zero_grad()
@@ -233,7 +234,7 @@ class SACAgent:
                     local_acts, local_logp = self.model.select_action(replay_obs1[cur_sample:cur_sample + self.sgd_batch_size], noise)
 
                     q_in = torch.cat((replay_obs1[cur_sample:cur_sample + self.sgd_batch_size], local_acts), dim=1)
-                    pol_loss = torch.sum(self.alpha * local_logp - self.model.q1_fn(q_in)) / self.replay_batch_size
+                    pol_loss = (self.alpha * local_logp - self.model.q1_fn(q_in)).mean()
 
                     pol_opt.zero_grad()
                     pol_loss.backward()
@@ -274,15 +275,15 @@ def do_rollout(env, model, num_steps):
     cur_step = 0
 
     while not done:
-        obs = torch.as_tensor(obs, dtype=dtype).detach()
+        obs = torch.as_tensor(obs, dtype=dtype)
         obs1_list.append(obs.clone())
 
         noise = torch.randn(1, act_size)
         act, _ = model.select_action(obs.reshape(1, -1), noise)
-        act = act.detach()
+        act = act
 
         obs, rew, done, _ = env.step(act.numpy().reshape(-1))
-        obs = torch.as_tensor(obs, dtype=dtype).detach()
+        obs = torch.as_tensor(obs, dtype=dtype)
 
         acts_list.append(torch.as_tensor(act.clone(), dtype=dtype))
         rews_list.append(torch.as_tensor(rew, dtype=dtype))
@@ -302,4 +303,4 @@ def do_rollout(env, model, num_steps):
     ep_done = torch.stack(done_list).reshape(-1, 1)
 
     torch.autograd.set_grad_enabled(True)
-    return (ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
+    return ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done
