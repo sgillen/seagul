@@ -3,7 +3,7 @@ import torch
 from torch.utils import data
 import tqdm.auto as tqdm
 import gym
-import dill
+import copy
 
 from seagul.rl.common import ReplayBuffer, update_mean, update_std, RandModel
 
@@ -80,7 +80,7 @@ class SACAgent:
 
         random_model = RandModel(self.model.act_limit, act_size)
         self.replay_buf = ReplayBuffer(obs_size, act_size, self.replay_buf_size)
-        self.target_value_fn = dill.loads(dill.dumps(self.model.value_fn))
+        self.target_value_fn = copy.deepcopy(self.model.value_fn)
 
         pol_opt = torch.optim.Adam(self.model.policy.parameters(), lr=self.sgd_lr)
         val_opt = torch.optim.Adam(self.model.value_fn.parameters(), lr=self.sgd_lr)

@@ -9,7 +9,6 @@ import torch
 import dill
 
 env_name = "HalfCheetah-v2"
-
 env = gym.make(env_name)
 
 
