@@ -184,7 +184,7 @@ class SACAgent:
                 q_min = q_min.reshape(-1,1)
 
                 v_targ = q_min - self.alpha * sample_logp
-                v_targ = v_targ
+                #v_targ = v_targ
 
                 torch.autograd.set_grad_enabled(True)
 
@@ -280,7 +280,6 @@ def do_rollout(env, model, num_steps):
 
         noise = torch.randn(1, act_size)
         act, _ = model.select_action(obs.reshape(1, -1), noise)
-        act = act
 
         obs, rew, done, _ = env.step(act.numpy().reshape(-1))
         obs = torch.as_tensor(obs, dtype=dtype)
