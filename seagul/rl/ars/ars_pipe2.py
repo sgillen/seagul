@@ -73,7 +73,7 @@ def postprocess_default(obs, acts, rews):
 
 
 class ARSAgent:
-    def __init__(self, env_name, policy, seed, env_config=None, n_workers=8, zero_policy=True, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default, n_postprocess_runs=1, reward_stop=None):
+    def __init__(self, env_name, policy, seed, env_config=None, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default, n_postprocess_runs=1, reward_stop=None):
         self.env_name = env_name
         self.policy = policy
         self.n_workers = n_workers
@@ -94,26 +94,21 @@ class ARSAgent:
             env_config = {}
         self.env_config = env_config
 
-        if zero_policy:
-            W = torch.nn.utils.parameters_to_vector(policy.parameters())
-            W = torch.zeros_like(W)
-            torch.nn.utils.vector_to_parameters(W, policy.parameters())
 
     def learn(self, n_epochs):
         torch.autograd.set_grad_enabled(False)
 
-        proc_list = []
-        master_pipe_list = []
-        learn_start_idx = copy.copy(self.total_epochs)
 
-        for i in range(self.n_workers):
-            master_con, worker_con= Pipe()
-            proc = Process(target=worker_fn, args=(worker_con, self.env_name, self.env_config, self.policy, self.postprocessor, self.seed, self.n_postprocess_runs))
-            proc.start()
-            proc_list.append(proc)
-            master_pipe_list.append(master_con)
+        task_path = os.path.dirname(os.path.realpath(__file__))
+        home_path = task_path + "/../../../../.."
 
-        W = torch.nn.utils.parameters_to_vector(self.policy.parameters())
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        env = VecEnv(rsg_anymal.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'],
+             normalize_ob = False, normalize_rew = False)
+
+    
+        self.W = torch.zeros(obs_dim, act_dim)
         n_param = W.shape[0]
 
         torch.manual_seed(self.seed)
