@@ -24,7 +24,6 @@ def update_std(data, cur_std, cur_steps):
         new_var[new_var < 1e-6] = cur_var[new_var < 1e-6]
         return np.sqrt((new_var * new_steps + cur_var * cur_steps) / (cur_steps + new_steps))
 
-
 def worker_fn(worker_q, master_q, env_name, env_config, postprocess, seed):
     env = gym.make(env_name, **env_config)
     env.seed(int(seed))
@@ -69,7 +68,23 @@ def postprocess_default(rews, obs,acts):
     return rews
 
 
+class ARSModel:
+    """
+    Just here to be compatible with the rest of seagul, ARS has such a simple policy that it doesn't really matter
+    """
+    def __init__(self, W, state_mean, state_std):
+        self.W = W
+        self.state_mean = state_mean
+        self.state_std = state_std
+
+    def step(self, obs):
+        action = self.W.T@((obs - self.state_mean)/self.state_std)
+        return action, None, None, None
+
 class ARSAgent:
+    """
+    TODO
+    """
     def __init__(self, env_name, seed, env_config=None, n_workers=24, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default):
         self.env_name = env_name
         self.n_workers = n_workers
@@ -83,11 +98,15 @@ class ARSAgent:
         self.lr_hist = []
         self.total_epochs = 0
         self.total_steps = 0
+        self.model = None
         
         if env_config is None:
             env_config = {}
         self.env_config = env_config
 
+        env = gym.make(self.env_name, **self.env_config)
+                
+                
         self.W = np.zeros((env.observation_space.shape[0], env.action_space.shape[0]))
         self.state_mean = np.zeros(env.observation_space.shape[0])
         self.state_std = np.ones(env.observation_space.shape[0])
@@ -118,6 +137,9 @@ class ARSAgent:
             #import ipdb; ipdb.set_trace()
             pm_W = np.concatenate((W_flat+(deltas*self.exp_noise), W_flat-(deltas*self.exp_noise)))
 
+            import time
+            start = time.time()
+
             for i,Ws in enumerate(pm_W):
                 master_q_list[i % self.n_workers].put((Ws.reshape(self.W.shape[0], self.W.shape[1]) ,self.state_mean,self.state_std))
                 
@@ -125,7 +147,11 @@ class ARSAgent:
             for i, _ in enumerate(pm_W):
                 results.append(worker_q_list[i % self.n_workers].get())
 
-            states = np.array([]).reshape(0,env.observation_space.shape[0])
+            end = time.time()
+            t = (end - start)
+
+                
+            states = np.array([]).reshape(0,self.W.shape[0])
             p_returns = []
             m_returns = []
             l_returns = []
@@ -147,7 +173,7 @@ class ARSAgent:
             m_returns = np.stack(m_returns)[top_idx]
             l_returns = np.stack(l_returns)[top_idx]
 
-            print(f"{epoch} : {np.mean(top_returns, axis=0)}") 
+            print(f"{epoch} : mean return: {np.mean(top_returns, axis=0)}, fps:{states.shape[0]/t}") 
 
             self.lr_hist.append(l_returns.mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
@@ -167,7 +193,9 @@ class ARSAgent:
         for proc in proc_list:
             proc.join()
 
-        return self.lr_hist[learn_start_idx:]
+
+        self.model = ARSModel(self.W, self.state_mean, self.state_std)
+        return self.model, self.lr_hist[learn_start_idx:], locals()
 
 
 if __name__ == "__main__":
