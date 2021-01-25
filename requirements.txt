@@ -112,7 +112,7 @@ lazy-object-proxy==1.5.0
 libarchive-c==2.9
 llvmlite==0.32.1
 locket==0.2.0
-lxml==4.5.1
+lxml==4.6.2
 lz4==3.0.2
 Markdown==3.1.1
 MarkupSafe==1.1.1
