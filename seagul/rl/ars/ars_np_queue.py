@@ -1,11 +1,9 @@
 import gym
 from multiprocessing import Process,Queue
 import copy
-import cProfile
-import os
 from numpy.random import default_rng
 import numpy as np
-
+import time
 
 
 def update_mean(data, cur_mean, cur_steps):
@@ -23,6 +21,7 @@ def update_std(data, cur_std, cur_steps):
         new_var = np.std(data, 0) ** 2
         new_var[new_var < 1e-6] = cur_var[new_var < 1e-6]
         return np.sqrt((new_var * new_steps + cur_var * cur_steps) / (cur_steps + new_steps))
+
 
 def worker_fn(worker_q, master_q, env_name, env_config, postprocess, seed):
     env = gym.make(env_name, **env_config)
@@ -55,6 +54,7 @@ def do_rollout_train(env, policy, postprocess):
         act_list.append(np.array(actions))
         reward_list.append(reward)
 
+
     state_arr = np.stack(state_list)
     act_arr = np.stack(act_list)
     preprocess_sum = np.array(sum(reward_list))
@@ -81,11 +81,13 @@ class ARSModel:
         action = self.W.T@((obs - self.state_mean)/self.state_std)
         return action, None, None, None
 
+
 class ARSAgent:
     """
     TODO
     """
-    def __init__(self, env_name, seed, env_config=None, n_workers=24, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default):
+    def __init__(self, env_name, seed, env_config=None, n_workers=24, n_delta=32, n_top=16,
+                 step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default):
         self.env_name = env_name
         self.n_workers = n_workers
         self.step_size = step_size
@@ -98,20 +100,22 @@ class ARSAgent:
         self.lr_hist = []
         self.total_epochs = 0
         self.total_steps = 0
+        self.reward_stop = reward_stop
         self.model = None
-        
+
         if env_config is None:
             env_config = {}
         self.env_config = env_config
 
         env = gym.make(self.env_name, **self.env_config)
-                
-                
+
         self.W = np.zeros((env.observation_space.shape[0], env.action_space.shape[0]))
         self.state_mean = np.zeros(env.observation_space.shape[0])
         self.state_std = np.ones(env.observation_space.shape[0])
 
-    def learn(self, n_epochs):
+        self.W_list = []
+
+    def learn(self, n_epochs, verbose=True):
         proc_list = []
         master_q_list = []
         worker_q_list = []
@@ -131,13 +135,18 @@ class ARSAgent:
         rng = default_rng()         
 
         for epoch in range(n_epochs):
+
+            if len(self.lr_hist) > 2 and self.reward_stop:
+                if self.lr_hist[-1] >= self.reward_stop and self.lr_hist[-2] >= self.reward_stop:
+                    early_stop = True
+                    break
             
             W_flat = self.W.flatten()
+            self.W_list.append(np.copy(W_flat))
             deltas = rng.standard_normal((self.n_delta, n_param))
             #import ipdb; ipdb.set_trace()
             pm_W = np.concatenate((W_flat+(deltas*self.exp_noise), W_flat-(deltas*self.exp_noise)))
 
-            import time
             start = time.time()
 
             for i,Ws in enumerate(pm_W):
@@ -149,7 +158,6 @@ class ARSAgent:
 
             end = time.time()
             t = (end - start)
-
                 
             states = np.array([]).reshape(0,self.W.shape[0])
             p_returns = []
@@ -160,7 +168,6 @@ class ARSAgent:
             for p_result, m_result in zip(results[:self.n_delta], results[self.n_delta:]):
                 ps, pr, plr = p_result
                 ms, mr, mlr = m_result
-#                import ipdb; ipdb.set_trace()
 
                 states = np.concatenate((states, ms, ps), axis=0)
                 p_returns.append(pr)
@@ -173,7 +180,8 @@ class ARSAgent:
             m_returns = np.stack(m_returns)[top_idx]
             l_returns = np.stack(l_returns)[top_idx]
 
-            print(f"{epoch} : mean return: {np.mean(top_returns, axis=0)}, fps:{states.shape[0]/t}") 
+            if verbose:
+                print(f"{epoch} : mean return: {np.mean(top_returns, axis=0)}, fps:{states.shape[0]/t}")
 
             self.lr_hist.append(l_returns.mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
@@ -192,7 +200,6 @@ class ARSAgent:
             q.put("STOP")
         for proc in proc_list:
             proc.join()
-
 
         self.model = ARSModel(self.W, self.state_mean, self.state_std)
         return self.model, self.lr_hist[learn_start_idx:], locals()
