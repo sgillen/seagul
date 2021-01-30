@@ -45,6 +45,6 @@
         <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
         <material name="geom" texture="texgeom" texuniform="true"/>
         <!-- <hfield   name="MyHField"  file="/home/sgillen/work/scratch/hmap.png" size = "1 1 1 0.1" /> -->
-        <hfield   name="MyHField"  nrow="2" ncol="1000" size = "200 1 1 .1" />
+        <hfield   name="MyHField"  nrow="2" ncol="1000" size = "200 10 1 .1" />
     </asset>
 </mujoco>
