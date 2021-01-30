@@ -2,7 +2,7 @@ from multiprocessing import Pool
 import torch.nn as nn
 import numpy as np
 import gym
-from seagul.rl.ars.ars_pipe2 import ARSAgent
+from seagul.rl.ars.ars_np_queue import ARSAgent
 from seagul.nn import MLP
 import matplotlib.pyplot as plt
 import torch
@@ -13,12 +13,7 @@ env = gym.make(env_name)
 
 
 def run_and_test(seed, verbose=False):
-    input_size = 17
-    output_size = 6
-
-    model = MLP(input_size, output_size, 0, 0)
-
-    agent = ARSAgent(env_name=env_name, policy=model, seed=int(seed), n_workers=8, reward_stop=3000)
+    agent = ARSAgent(env_name=env_name, seed=int(seed), n_workers=8, reward_stop=3000)
     model, rewards, var_dict,  = agent.learn(int(1e6))
 
     if verbose:
