@@ -39,6 +39,8 @@ class MetaARSAgent:
                 for j in range(num_agents_to_copy):
                     print(f"copying agent {sorted_idx[i]} into {sorted_idx[len(top_agents) + i*num_agents_to_copy+j]}")
                     bad_agents[i*num_agents_to_copy+j].W = np.copy(top_agents[i].W)
+                    bad_agents[i*num_agents_to_copy+j].state_mean = np.copy(top_agents[i].state_mean)
+                    bad_agents[i*num_agents_to_copy+j].state_std = np.copy(top_agents[i].state_std)
 
             self.ml_hist.append(top_agents[0].lr_hist[-1])
 
