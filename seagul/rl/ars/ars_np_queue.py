@@ -113,7 +113,6 @@ class ARSAgent:
         self.state_mean = np.zeros(env.observation_space.shape[0])
         self.state_std = np.ones(env.observation_space.shape[0])
 
-        self.W_list = []
 
     def learn(self, n_epochs, verbose=True):
         proc_list = []
@@ -142,7 +141,6 @@ class ARSAgent:
                     break
             
             W_flat = self.W.flatten()
-            self.W_list.append(np.copy(W_flat))
             deltas = rng.standard_normal((self.n_delta, n_param))
             #import ipdb; ipdb.set_trace()
             pm_W = np.concatenate((W_flat+(deltas*self.exp_noise), W_flat-(deltas*self.exp_noise)))
@@ -180,8 +178,8 @@ class ARSAgent:
             m_returns = np.stack(m_returns)[top_idx]
             l_returns = np.stack(l_returns)[top_idx]
 
-            if verbose:
-                print(f"{epoch} : mean return: {np.mean(top_returns, axis=0)}, fps:{states.shape[0]/t}")
+            if verbose and epoch % 10 == 0:
+                print(f"{epoch} : mean return: {l_returns.mean()}, fps:{states.shape[0]/t}")
 
             self.lr_hist.append(l_returns.mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
