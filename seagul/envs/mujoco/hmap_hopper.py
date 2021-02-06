@@ -3,6 +3,7 @@ from gym import utils
 from gym.envs.mujoco import mujoco_env
 import numpy as np
 import mujoco_py as mj
+import math
 from seagul.resources import getResourcePath
 
 
@@ -14,7 +15,6 @@ class HmapHopperEnv(HopperEnv):
         if slope == 0:
             self.model.hfield_data[:] = .5
         else:
-
             ramp_length = int(.5//abs(slope))
 
             ncol = 1000
@@ -33,6 +33,25 @@ class HmapHopperEnv(HopperEnv):
             self.model.hfield_data[cur_x:ncol] = cur_height
             self.model.hfield_data[ncol+cur_x:] = cur_height
 
+
+    def get_height(self, offset=0):
+        pos = self.sim.data.qpos[1] + offset
+        max_pos = self.model.hfield_size[0,0]*2
+        nrow = self.model.hfield_nrow
+        ncol = self.model.hfield_ncol
+        
+        max_height = self.model.hfield_size[0,2]
+        init_pos = 80
+        
+        index = (init_pos + pos)/max_pos * ncol[0]
+
+        li = math.floor(index)
+        ui = math.ceil(index)
+        a = index - int(index)
+        
+        return ((1 - a)*self.model.hfield_data[li] + a*self.model.hfield_data[ui])*max_height
+
+
         # n_steps = 50
         # step_length = 500//n_steps
         # step_incr = 1/n_steps
@@ -50,11 +69,23 @@ class HmapHopperEnv(HopperEnv):
         # self.model.hfield_data[cur_x+step_length:ncol] = 1
         # self.model.hfield_data[ncol+cur_x+step_length:] = 1
 
+
+
+    def _get_obs(self):
+        
+        pos = self.sim.data.qpos.flat[1:]
+        pos[0] -= self.get_height(0) - 5
+        vel = self.sim.data.qvel.flat
+
+        return np.concatenate([pos, vel, np.array([self.get_height(1), self.get_height(2)])])
+
+        
     def step(self, a):
         ob, reward, done, _ = super().step(a)
         s = self.state_vector()
         posafter, height, ang = self.sim.data.qpos[0:3]
         done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and (abs(ang) < .2))
+
         return ob, reward, done, _
         
     def viewer_setup(self):
