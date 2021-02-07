@@ -8,30 +8,45 @@ from seagul.resources import getResourcePath
 
 
 class HmapHopperEnv(HopperEnv):
-    def __init__(self, slope):
+    def __init__(self, slope=0, random=False):
         mujoco_env.MujocoEnv.__init__(self, getResourcePath() + "/hmap_hopper.xml", 4)
         utils.EzPickle.__init__(self)
+        self.cur_x = int(81*(1000/400))
+        self.cur_height = .5
+        self.model.hfield_data[:] = self.cur_height
 
-        if slope == 0:
-            self.model.hfield_data[:] = .5
+        if random:
+            while True:
+                try:
+                    slope = (np.random.random() - .5)*.02
+                    self.make_slope(slope,ramp_length=50)
+                except:
+                    break # lol
+
         else:
-            ramp_length = int(.5//abs(slope))
+            self.make_slope(slope)
 
+                
+    def make_slope(self, slope, ramp_length=None):
+        if slope == 0:
+            self.model.hfield_data[:] = self.cur_height
+        else:
+            if ramp_length is None:
+                ramp_length = int(self.cur_height//abs(slope))
+                
             ncol = 1000
-            cur_x = int(81*(1000/400))
-            cur_height = .5
-            self.model.hfield_data[:] = cur_height
             
             for step in range(ramp_length):
-                cur_height = np.clip(cur_height + slope, 0,1)
-                self.model.hfield_data[cur_x] = cur_height
-                self.model.hfield_data[ncol+cur_x] = cur_height
-                cur_x +=1
-                
+                self.cur_height = np.clip(self.cur_height + slope, 0,1)
+                self.model.hfield_data[self.cur_x] = self.cur_height
+                self.model.hfield_data[ncol+self.cur_x] = self.cur_height
+                self.cur_x +=1
 
-                
-            self.model.hfield_data[cur_x:ncol] = cur_height
-            self.model.hfield_data[ncol+cur_x:] = cur_height
+            self.model.hfield_data[self.cur_x:ncol] = self.cur_height
+            self.model.hfield_data[ncol+self.cur_x:] = self.cur_height
+
+        if self.viewer:
+            mj.functions.mjr_uploadHField(self.model, self.sim.render_contexts[0].con, 0)
 
 
     def get_height(self, offset=0):
@@ -48,8 +63,9 @@ class HmapHopperEnv(HopperEnv):
         li = math.floor(index)
         ui = math.ceil(index)
         a = index - int(index)
-        
+
         return ((1 - a)*self.model.hfield_data[li] + a*self.model.hfield_data[ui])*max_height
+    
 
 
         # n_steps = 50
@@ -97,3 +113,4 @@ class HmapHopperEnv(HopperEnv):
         self.viewer.cam.elevation = 0
 
         mj.functions.mjr_uploadHField(self.model, self.sim.render_contexts[0].con, 0)
+                
