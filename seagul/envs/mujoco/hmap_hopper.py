@@ -5,21 +5,22 @@ import numpy as np
 import mujoco_py as mj
 import math
 from seagul.resources import getResourcePath
+import random
 
 
 class HmapHopperEnv(HopperEnv):
-    def __init__(self, slope=0, random=False):
+    def __init__(self, slope=0, slope_set=None):
         mujoco_env.MujocoEnv.__init__(self, getResourcePath() + "/hmap_hopper.xml", 4)
         utils.EzPickle.__init__(self)
         self.cur_x = int(81*(1000/400))
         self.cur_height = .5
         self.model.hfield_data[:] = self.cur_height
-
-        if random:
+        
+        if slope_set:
             while True:
                 try:
-                    slope = (np.random.random() - .5)*.02
-                    self.make_slope(slope,ramp_length=50)
+                    slope = random.choice(slope_set)
+                    self.make_slope(slope, ramp_length=15)
                 except:
                     break # lol
 
@@ -101,6 +102,17 @@ class HmapHopperEnv(HopperEnv):
         s = self.state_vector()
         posafter, height, ang = self.sim.data.qpos[0:3]
         done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and (abs(ang) < .2))
+
+        # set done = true if anything but the foot and ground are in contact.
+        ncon = self.unwrapped.sim.data.ncon
+        for i in range(ncon):
+            geom1 = self.unwrapped.sim.data.contact[i].geom1
+            geom2 = self.unwrapped.sim.data.contact[i].geom2
+            if not (geom1 == 4 or geom1 == 0):
+                done = True
+            if not (geom2 == 4 or geom2 == 0):
+                done = True
+
 
         return ob, reward, done, _
         
