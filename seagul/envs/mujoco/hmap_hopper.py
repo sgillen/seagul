@@ -15,15 +15,14 @@ class HmapHopperEnv(HopperEnv):
         self.cur_x = int(81*(1000/400))
         self.cur_height = .5
         self.model.hfield_data[:] = self.cur_height
-        
-        if slope_set:
-            while True:
-                try:
-                    slope = random.choice(slope_set)
-                    self.make_slope(slope, ramp_length=15)
-                except:
-                    break # lol
 
+        self.ramp_length = 15
+        self.course_length = 1000 - self.cur_x
+
+        if slope_set:
+            for _ in range(self.course_length//self.ramp_length):
+                slope = random.choice(slope_set)
+                self.make_slope(slope, ramp_length=15)
         else:
             self.make_slope(slope)
 
