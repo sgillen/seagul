@@ -13,8 +13,8 @@ class HmapHopperEnv(HopperEnv):
         mujoco_env.MujocoEnv.__init__(self, getResourcePath() + "/hmap_hopper.xml", 4)
         utils.EzPickle.__init__(self)
         self.cur_x = int(81*(1000/400))
-        self.cur_height = .5
-        self.model.hfield_data[:] = self.cur_height
+        self.cur_hfield_val = .5
+        self.model.hfield_data[:] = self.cur_hfield_val
 
         self.ramp_length = 15
         self.course_length = 1000 - self.cur_x
@@ -29,21 +29,21 @@ class HmapHopperEnv(HopperEnv):
                 
     def make_slope(self, slope, ramp_length=None):
         if slope == 0:
-            self.model.hfield_data[:] = self.cur_height
+            self.model.hfield_data[:] = self.cur_hfield_val
         else:
             if ramp_length is None:
-                ramp_length = int(self.cur_height//abs(slope))
+                ramp_length = int(self.cur_hfield_val//abs(slope))
                 
             ncol = 1000
             
             for step in range(ramp_length):
-                self.cur_height = np.clip(self.cur_height + slope, 0,1)
-                self.model.hfield_data[self.cur_x] = self.cur_height
-                self.model.hfield_data[ncol+self.cur_x] = self.cur_height
+                self.cur_hfield_val = np.clip(self.cur_hfield_val + slope, 0,1)
+                self.model.hfield_data[self.cur_x] = self.cur_hfield_val
+                self.model.hfield_data[ncol+self.cur_x] = self.cur_hfield_val
                 self.cur_x +=1
 
-            self.model.hfield_data[self.cur_x:ncol] = self.cur_height
-            self.model.hfield_data[ncol+self.cur_x:] = self.cur_height
+            self.model.hfield_data[self.cur_x:ncol] = self.cur_hfield_val
+            self.model.hfield_data[ncol+self.cur_x:] = self.cur_hfield_val
 
         if self.viewer:
             mj.functions.mjr_uploadHField(self.model, self.sim.render_contexts[0].con, 0)
@@ -90,10 +90,13 @@ class HmapHopperEnv(HopperEnv):
     def _get_obs(self):
         
         pos = self.sim.data.qpos.flat[1:]
-        pos[0] -= self.get_height(0) - 5
+        pos[0] -= self.get_height(0) - self.model.hfield_size[0,2]/2
         vel = self.sim.data.qvel.flat
 
-        return np.concatenate([pos, vel, np.array([self.get_height(1), self.get_height(2)])])
+
+        rel_height1 = self.get_height(0) - self.get_height(1)
+        rel_height2 = self.get_height(0) - self.get_height(2) 
+        return np.concatenate([pos, vel, np.array([rel_height1, rel_height2])])
 
         
     def step(self, a):
