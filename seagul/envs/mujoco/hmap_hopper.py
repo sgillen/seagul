@@ -50,7 +50,7 @@ class HmapHopperEnv(HopperEnv):
 
 
     def get_height(self, offset=0):
-        pos = self.sim.data.qpos[1] + offset
+        pos = self.sim.data.qpos[0] + offset
         max_pos = self.model.hfield_size[0,0]*2
         nrow = self.model.hfield_nrow
         ncol = self.model.hfield_ncol
@@ -88,11 +88,10 @@ class HmapHopperEnv(HopperEnv):
 
 
     def _get_obs(self):
-        
         pos = self.sim.data.qpos.flat[1:]
-        pos[0] -= self.get_height(0) - self.model.hfield_size[0,2]/2
-        vel = self.sim.data.qvel.flat
+        pos[0] -= (self.get_height(0) - self.model.hfield_size[0,2]/2)
 
+        vel = self.sim.data.qvel.flat
 
         rel_height1 = self.get_height(0) - self.get_height(1)
         rel_height2 = self.get_height(0) - self.get_height(2) 
