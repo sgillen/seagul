@@ -9,7 +9,7 @@ import random
 
 
 class HmapHopperEnv(HopperEnv):
-    def __init__(self, slope=0, slope_set=None):
+    def __init__(self, slope_set):
         mujoco_env.MujocoEnv.__init__(self, getResourcePath() + "/hmap_hopper.xml", 4)
         utils.EzPickle.__init__(self)
         self.cur_x = int(81*(1000/400))
@@ -18,13 +18,15 @@ class HmapHopperEnv(HopperEnv):
 
         self.ramp_length = 15
         self.course_length = 1000 - self.cur_x
+        
 
-        if slope_set:
+        if len(slope_set) == 1:
+            self.make_slope(slope_set[0])
+        else:
             for _ in range(self.course_length//self.ramp_length):
                 slope = random.choice(slope_set)
                 self.make_slope(slope, ramp_length=15)
-        else:
-            self.make_slope(slope)
+
 
                 
     def make_slope(self, slope, ramp_length=None):
