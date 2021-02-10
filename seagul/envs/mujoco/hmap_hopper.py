@@ -101,6 +101,7 @@ class HmapHopperEnv(HopperEnv):
         
     def step(self, a):
         ob, reward, done, _ = super().step(a)
+        reward -= .9
         s = self.state_vector()
         posafter, height, ang = self.sim.data.qpos[0:3]
         done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and (abs(ang) < .2))
