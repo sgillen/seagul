@@ -16,7 +16,7 @@ class HmapHopperEnv(HopperEnv):
         self.cur_hfield_val = .5
         self.model.hfield_data[:] = self.cur_hfield_val
 
-        self.ramp_length = 15
+        self.ramp_length = 1
         self.course_length = 1000 - self.cur_x
         
 
