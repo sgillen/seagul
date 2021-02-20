@@ -90,6 +90,8 @@ def fit_model(
 
             # predict and calculate loss for the batch
             action_preds = model(local_states)
+            # import ipdb; ipdb.set_trace()
+            
             loss = loss_fn(action_preds, local_actions)
             epoch_loss += loss.detach()  # only used for metrics
 
@@ -144,12 +146,12 @@ class MLP(nn.Module):
         self.state_std = torch.ones(input_size, requires_grad=False)
 
     def forward(self, data):
-
+                
+        data = (torch.as_tensor(data) - self.state_means) / self.state_std
+        
         if self.input_bias is not None:
             data += self.input_bias
-
-        data = (torch.as_tensor(data) - self.state_means) / self.state_std
-
+        
         for layer in self.layers:
             data = self.activation(layer(data))
 

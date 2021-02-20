@@ -16,3 +16,4 @@ from seagul.envs.classic_control.acroswitchsin import SGAcroSwitchSinEnv
 
 from seagul.envs.classic_control.sym_pendulum import PendulumSymEnv
 from seagul.envs.classic_control.dt_pendulum import PendulumDtEnv
+

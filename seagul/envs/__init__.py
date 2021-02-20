@@ -14,6 +14,11 @@ register(id="lorenz-v0", entry_point="seagul.envs.simple_nonlinear:LorenzEnv")
 register(id="linear_z-v0", entry_point="seagul.envs.simple_nonlinear:LinearEnv")
 register(id="gen_nonlin-v0", entry_point="seagul.envs.simple_nonlinear:GenEnv")
 register(id="linear_z2d-v0", entry_point="seagul.envs.simple_nonlinear:LinearEnv2D")
+register(id="tree-v0", entry_point="seagul.envs.simple_nonlinear:TreeEnv", max_episode_steps=1000)
+register(id="pixel_tree-v0", entry_point="seagul.envs.simple_nonlinear:PixelTreeEnv", max_episode_steps=1000)
+
+
+
 
 
 #register(id="dyn_car-v0", entry_point="seagul.envs.car:DynCarEnv")
