@@ -9,44 +9,89 @@ import random
 
 
 class HmapHopperEnv(HopperEnv):
-    def __init__(self, slope_set):
+    def __init__(self, slope_set=None, random=True):
         mujoco_env.MujocoEnv.__init__(self, getResourcePath() + "/hmap_hopper.xml", 4)
         utils.EzPickle.__init__(self)
+
+        
+        #if slope_set is None:
+
         self.cur_x = int(81*(1000/400))
         self.cur_hfield_val = .5
         self.model.hfield_data[:] = self.cur_hfield_val
 
-        self.ramp_length = 1
-        self.course_length = 1000 - self.cur_x
+        self.ramp_length = 5
         
+        ncol = self.model.hfield_ncol.item()
+        self.course_length = ncol - self.cur_x
+        self.random = random;
+        #        self.slope_set = [-0.01, 0.0, 0.01]
 
-        if len(slope_set) == 1:
-            self.make_slope(slope_set[0])
+
+        if slope_set is None:
+            self.slope_set = [0.0]
         else:
+            self.slope_set = slope_set
+        
+        # if random:
+        #     self.make_slope(slope_set[0])
+        # else:
+        #     for _ in range(self.course_length//self.ramp_length):
+        #         slope = random.choice(slope_set)
+        #         self.make_slope(slope, ramp_length=15)
+
+
+                
+
+    def reset(self):
+        obs = super().reset()
+
+        self.cur_x = int(81*(1000/400))
+        self.cur_hfield_val = .5
+        self.model.hfield_data[:] = self.cur_hfield_val
+
+        
+       # print(self.slope_set)
+        if self.random:
             for _ in range(self.course_length//self.ramp_length):
-                slope = random.choice(slope_set)
-                self.make_slope(slope, ramp_length=15)
-
-
-                
-    def make_slope(self, slope, ramp_length=None):
-        if slope == 0:
-            self.model.hfield_data[:] = self.cur_hfield_val
+                slope = random.choice(self.slope_set)
+                self.make_slope(slope, ramp_length=self.ramp_length)
         else:
-            if ramp_length is None:
-                ramp_length = int(self.cur_hfield_val//abs(slope))
+            slope = random.choice(self.slope_set)
+
+            try:
+                self.make_slope(slope)
+            except:
+                print(self.slope_set)
+                print()
+                print(slope)
                 
-            ncol = 1000
+
+        if self.viewer:
+            mj.functions.mjr_uploadHField(self.model, self.sim.render_contexts[0].con, 0)
+
+
+        return obs
+
+
+    def make_slope(self, slope, ramp_length=None):
+        ncol = self.model.hfield_ncol.item()
+        if ramp_length is None and slope != 0:
+            ramp_length = int(self.cur_hfield_val//abs(slope))
+        elif ramp_length is None and slope == 0:
+            ramp_length =  ncol - self.cur_x
+                
+
             
-            for step in range(ramp_length):
-                self.cur_hfield_val = np.clip(self.cur_hfield_val + slope, 0,1)
-                self.model.hfield_data[self.cur_x] = self.cur_hfield_val
-                self.model.hfield_data[ncol+self.cur_x] = self.cur_hfield_val
-                self.cur_x +=1
-
-            self.model.hfield_data[self.cur_x:ncol] = self.cur_hfield_val
-            self.model.hfield_data[ncol+self.cur_x:] = self.cur_hfield_val
-
+        for step in range(ramp_length):
+            self.cur_hfield_val = np.clip(self.cur_hfield_val + slope, 0,1)
+            self.model.hfield_data[self.cur_x] = self.cur_hfield_val
+            self.model.hfield_data[ncol+self.cur_x] = self.cur_hfield_val
+            self.cur_x +=1
+            
+        self.model.hfield_data[self.cur_x:ncol] = self.cur_hfield_val
+        self.model.hfield_data[ncol+self.cur_x:] = self.cur_hfield_val
+        
         if self.viewer:
             mj.functions.mjr_uploadHField(self.model, self.sim.render_contexts[0].con, 0)
 
@@ -88,35 +133,49 @@ class HmapHopperEnv(HopperEnv):
         # self.model.hfield_data[ncol+cur_x+step_length:] = 1
 
 
-
     def _get_obs(self):
-        pos = self.sim.data.qpos.flat[1:]
+        pos = np.copy(self.sim.data.qpos.flat[1:])
         pos[0] -= (self.get_height(0) - self.model.hfield_size[0,2]/2)
-
         vel = self.sim.data.qvel.flat
 
-        rel_height1 = self.get_height(0) - self.get_height(1)
-        rel_height2 = self.get_height(0) - self.get_height(2) 
-        return np.concatenate([pos, vel, np.array([rel_height1, rel_height2])])
+        # rel_height1 =  self.get_height(1) - self.get_height(0)
+        # rel_height2 =  self.get_height(2) - self.get_height(0)
+        # measured_slope = (rel_height2 - rel_height1)/(1000/400)
+        measured_slope = (self.get_height(1) - self.get_height(0))/(1000/400)
+        return np.concatenate([pos, vel, np.array([measured_slope])])
 
         
     def step(self, a):
         ob, reward, done, _ = super().step(a)
         reward -= .9
         s = self.state_vector()
-        posafter, height, ang = self.sim.data.qpos[0:3]
-        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and (abs(ang) < .2))
+        height, ang = self._get_obs()[:2]
+        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and
+                    (height > .7) and (abs(ang) < .4))
+
+        # if done:
+        #     print((np.isfinite(s).all(), (np.abs(s[2:]) < 100).all(),
+        #             (height > .7), (abs(ang) < .4)))
+
 
         # set done = true if anything but the foot and ground are in contact.
         ncon = self.unwrapped.sim.data.ncon
         for i in range(ncon):
             geom1 = self.unwrapped.sim.data.contact[i].geom1
             geom2 = self.unwrapped.sim.data.contact[i].geom2
-            if not (geom1 == 4 or geom1 == 0):
+            if not (geom1 == 4 or geom1 == 3 or geom1 == 0):
                 done = True
-            if not (geom2 == 4 or geom2 == 0):
+                #print(f"contact with body {geom1},{geom2}")
+            if not (geom2 == 4 or geom2 == 3 or geom2 == 0):
                 done = True
+                #print(f"contact with body {geom1},{geom2}")
 
+        if done:
+            reward -= 1000
+        # if done:
+        #     print(np.isfinite(s).all())
+        #     print((np.abs(s[2:]) < 100))
+        #     print()
 
         return ob, reward, done, _
         
