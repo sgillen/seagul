@@ -5,3 +5,4 @@ from seagul.envs.mujoco.su_cartpole_discrete import MJSUCartPoleDiscreteEnv
 from seagul.envs.mujoco.five_link import FiveLinkWalkerEnv
 from seagul.envs.mujoco.det_humanoid import DetHumanoidEnv
 from seagul.envs.mujoco.hmap_hopper import HmapHopperEnv
+from seagul.envs.mujoco.hurdle_hopper import HurdleHopperEnv
