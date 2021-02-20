@@ -13,45 +13,28 @@ class HmapHopperEnv(HopperEnv):
         mujoco_env.MujocoEnv.__init__(self, getResourcePath() + "/hmap_hopper.xml", 4)
         utils.EzPickle.__init__(self)
 
-        
-        #if slope_set is None:
-
-        self.cur_x = int(81*(1000/400))
         self.cur_hfield_val = .5
         self.model.hfield_data[:] = self.cur_hfield_val
-
         self.ramp_length = 5
         
-        ncol = self.model.hfield_ncol.item()
-        self.course_length = ncol - self.cur_x
-        self.random = random;
-        #        self.slope_set = [-0.01, 0.0, 0.01]
-
+        self.ncol = self.model.hfield_ncol.item()
+        self.init_x = 81
+        self.cur_idx = int(self.init_x * (self.ncol / 400))
+        self.course_length = self.ncol - self.cur_idx
+        self.random = random
 
         if slope_set is None:
             self.slope_set = [0.0]
         else:
             self.slope_set = slope_set
-        
-        # if random:
-        #     self.make_slope(slope_set[0])
-        # else:
-        #     for _ in range(self.course_length//self.ramp_length):
-        #         slope = random.choice(slope_set)
-        #         self.make_slope(slope, ramp_length=15)
-
-
-                
 
     def reset(self):
         obs = super().reset()
 
-        self.cur_x = int(81*(1000/400))
+        self.cur_idx = int(self.init_x * (self.ncol / 400))
         self.cur_hfield_val = .5
         self.model.hfield_data[:] = self.cur_hfield_val
 
-        
-       # print(self.slope_set)
         if self.random:
             for _ in range(self.course_length//self.ramp_length):
                 slope = random.choice(self.slope_set)
@@ -62,39 +45,34 @@ class HmapHopperEnv(HopperEnv):
             try:
                 self.make_slope(slope)
             except:
+                print("Error making slope set")
                 print(self.slope_set)
                 print()
                 print(slope)
                 
-
         if self.viewer:
             mj.functions.mjr_uploadHField(self.model, self.sim.render_contexts[0].con, 0)
 
-
         return obs
-
 
     def make_slope(self, slope, ramp_length=None):
         ncol = self.model.hfield_ncol.item()
         if ramp_length is None and slope != 0:
             ramp_length = int(self.cur_hfield_val//abs(slope))
         elif ramp_length is None and slope == 0:
-            ramp_length =  ncol - self.cur_x
-                
+            ramp_length = ncol - self.cur_idx
 
-            
         for step in range(ramp_length):
             self.cur_hfield_val = np.clip(self.cur_hfield_val + slope, 0,1)
-            self.model.hfield_data[self.cur_x] = self.cur_hfield_val
-            self.model.hfield_data[ncol+self.cur_x] = self.cur_hfield_val
-            self.cur_x +=1
+            self.model.hfield_data[self.cur_idx] = self.cur_hfield_val
+            self.model.hfield_data[ncol+self.cur_idx] = self.cur_hfield_val
+            self.cur_idx += 1
             
-        self.model.hfield_data[self.cur_x:ncol] = self.cur_hfield_val
-        self.model.hfield_data[ncol+self.cur_x:] = self.cur_hfield_val
+        self.model.hfield_data[self.cur_idx:ncol] = self.cur_hfield_val
+        self.model.hfield_data[ncol+self.cur_idx:] = self.cur_hfield_val
         
         if self.viewer:
             mj.functions.mjr_uploadHField(self.model, self.sim.render_contexts[0].con, 0)
-
 
     def get_height(self, offset=0):
         pos = self.sim.data.qpos[0] + offset
@@ -112,26 +90,6 @@ class HmapHopperEnv(HopperEnv):
         a = index - int(index)
 
         return ((1 - a)*self.model.hfield_data[li] + a*self.model.hfield_data[ui])*max_height
-    
-
-
-        # n_steps = 50
-        # step_length = 500//n_steps
-        # step_incr = 1/n_steps
-        # ncol = 1000
-        # cur_x = 120
-        # cur_height = 0
-        # self.model.hfield_data[:] = 0
-
-        # for step in range(n_steps-1):
-        #     cur_height += step_incr
-        #     cur_x += step_length 
-        #     self.model.hfield_data[cur_x:cur_x+step_length] = cur_height
-        #     self.model.hfield_data[ncol+cur_x:ncol+cur_x+step_length] = cur_height
-            
-        # self.model.hfield_data[cur_x+step_length:ncol] = 1
-        # self.model.hfield_data[ncol+cur_x+step_length:] = 1
-
 
     def _get_obs(self):
         pos = np.copy(self.sim.data.qpos.flat[1:])
@@ -144,7 +102,6 @@ class HmapHopperEnv(HopperEnv):
         measured_slope = (self.get_height(1) - self.get_height(0))/(1000/400)
         return np.concatenate([pos, vel, np.array([measured_slope])])
 
-        
     def step(self, a):
         ob, reward, done, _ = super().step(a)
         reward -= .9
