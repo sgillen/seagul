@@ -45,6 +45,56 @@ class SACModel:
 
         return acts, logp.reshape(-1, 1)
 
+
+class SACMMultiLinModel:
+    """
+    Model for use with seagul's sac algorithm
+    """
+
+    LOG_STD_MAX = 2
+    LOG_STD_MIN = -20
+
+    def __init__(self, policy, value_fn, q1_fn, q2_fn, act_limit, model_list):
+        self.policy = policy
+        self.value_fn = value_fn
+        self.q1_fn = q1_fn
+        self.q2_fn = q2_fn
+        self.model_list = model_list
+
+        self.num_acts = int(policy.output_layer.out_features / 2)
+        self.act_limit = act_limit
+
+    # Step is the deterministic evaluation of the policy
+    def step(self, state):
+        # (action, value estimate, None, negative log likelihood of the action under current policy parameters)
+        action, logp = self.select_action(state, torch.zeros(1))
+        value = self.value_fn(torch.as_tensor(state))
+        return action, value, None, logp
+
+    # Select action is used internally and is the stochastic evaluation
+    def select_action(self, state, noise):
+        out = self.policy(state)
+        means = out[..., :self.num_acts]
+        logstd = torch.clamp(out[..., self.num_acts:], self.LOG_STD_MIN, self.LOG_STD_MAX)
+        std = torch.exp(logstd)
+
+        # we can speed this up by reusing the same buffer but this is more readable
+        samples = means + std*noise
+        squashed_samples = torch.tanh(samples)
+        acts = squashed_samples * self.act_limit
+
+        model_outs = torch.stack([torch.tensor(model.step(state),requires_grad=False) for model in self.model_list])
+        acts = torch.dot(model_outs, acts)
+
+        # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
+        m = torch.distributions.normal.Normal(means, std)
+        logp = m.log_prob(samples).sum(dim=1)
+        logp -= torch.log(torch.clamp(1 - squashed_samples ** 2, 1e-6, 1)).sum(dim=1)
+
+        return acts, logp.reshape(-1, 1)
+
+
+
 class SACModelActHold:
     """
     Model for use with seagul's sac algorithm
