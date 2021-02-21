@@ -9,7 +9,7 @@ import random
 
 
 class HurdleHopperEnv(HopperEnv):
-    def __init__(self, gap_length, hurdle_height=.54):
+    def __init__(self, gap_length, hurdle_height=.54, gap_set=None):
         self.start_x = 85
         self.neutral_hfield_val = .5
         self.h_length = 4
@@ -24,6 +24,7 @@ class HurdleHopperEnv(HopperEnv):
 
         self.ncol = self.model.hfield_ncol.item()
         self.gap_length = gap_length
+        self.gap_set = gap_set
 
         self.start_idx = int(self.start_x * (self.ncol / 400))
         self.n_hurdles = (self.ncol - self.start_idx) // (self.gap_length + self.h_length)
@@ -32,7 +33,11 @@ class HurdleHopperEnv(HopperEnv):
         obs = super().reset()
 
         self.model.hfield_data[:] = self.neutral_hfield_val
-        self.n_hurdles = (self.ncol - self.start_idx) // (self.gap_length + self.h_length)
+
+        if self.gap_set:
+            self.n_hurdles = (self.ncol - self.start_idx) // (max(self.gap_set) + self.h_length)
+        else:
+            self.n_hurdles = (self.ncol - self.start_idx) // (self.gap_length + self.h_length)
         offset = 0
 
         for h in range(self.n_hurdles):
@@ -40,7 +45,12 @@ class HurdleHopperEnv(HopperEnv):
             _to = self.start_idx + offset + self.h_length
             self.model.hfield_data[_from:_to] = self.hurdle_height
             self.model.hfield_data[(self.ncol + _from):(self.ncol + _to)] = self.hurdle_height
-            offset += (self.gap_length + self.h_length)
+
+            if self.gap_set:
+                gap = random.choice(self.gap_set)
+                offset += (gap + self.h_length)
+            else:
+                offset += (self.gap_length + self.h_length)
             #print(offset)
 
         if self.viewer:
@@ -70,10 +80,6 @@ class HurdleHopperEnv(HopperEnv):
 
         next_hurdle_x = 0
         if self.hurdle_height != self.neutral_hfield_val:
-            cur_x = self.sim.data.qpos[0]
-            max_x = self.model.hfield_size[0, 0] * 2
-            cur_idx = int((self.start_x + cur_x) / max_x * self.ncol)
-
             cur_x = self.sim.data.qpos[0]
             max_x = self.model.hfield_size[0, 0] * 2
             cur_idx = int((self.start_x + cur_x) / max_x * self.ncol)
