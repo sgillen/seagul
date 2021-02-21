@@ -11,6 +11,7 @@ from tqdm import trange
 Utility functions for seagul, all vaguely related to neural networks
 """
 
+
 def fit_model(
     model,
     state_train,
@@ -77,7 +78,6 @@ def fit_model(
     # action_size = action_train.size()[1]
 
     loss_hist = []
-
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     for epoch in range_fn(num_epochs):
@@ -102,7 +102,9 @@ def fit_model(
 
         # after each epoch append the average loss
 
-        loss_hist.append(epoch_loss.cpu().numpy() / len(state_train))
+        #loss_hist.append(epoch_loss.cpu().numpy() / len(state_train))
+        loss_hist.append(epoch_loss)
+
 
     return loss_hist
 
@@ -156,14 +158,12 @@ class MLP(nn.Module):
             data = self.activation(layer(data))
 
         return self.output_activation(self.output_layer(data))
-    
+
     def to(self, place):
         super(MLP, self).to(place)
         self.state_means = self.state_means.to(place)
         self.state_std = self.state_std.to(place)
         return self
-
-
 
 # Nina
 def gaus(x, mu, beta):
