@@ -9,8 +9,8 @@ import random
 
 
 class HurdleHopperEnv(HopperEnv):
-    def __init__(self, gap_length, hurdle_height=.54, gap_set=None):
-        self.start_x = 85
+    def __init__(self, gap_length, hurdle_height=.52, gap_set=None):
+        self.start_x = 84
         self.neutral_hfield_val = .5
         self.h_length = 4
         self.hurdle_height = hurdle_height
