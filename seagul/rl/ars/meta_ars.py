@@ -28,6 +28,8 @@ class MetaARSAgent:
             sorted_idx = sorted(range(len(end_rewards)), key = lambda k: end_rewards[k], reverse=True)
             sorted_agents = [self.agents[k] for k in sorted_idx]
             top_agents = sorted_agents[:self.n_top_agents]
+            import copy
+            self.agents = copy.deepcopy(top_agents)
             bad_agents = sorted_agents[self.n_top_agents:]
 
             num_agents_to_copy = len(bad_agents)//len(top_agents)
