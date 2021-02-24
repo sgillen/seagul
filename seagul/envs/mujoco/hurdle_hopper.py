@@ -9,8 +9,8 @@ import random
 
 
 class HurdleHopperEnv(HopperEnv):
-    def __init__(self, gap_length, hurdle_height=.52, gap_set=None):
-        self.start_x = 84
+    def __init__(self, gap_length=None, hurdle_height=.52, gap_set=None):
+        self.start_x = 82
         self.neutral_hfield_val = .5
         self.h_length = 4
         self.hurdle_height = hurdle_height
@@ -23,8 +23,9 @@ class HurdleHopperEnv(HopperEnv):
         self.model.hfield_data[:] = self.neutral_hfield_val
 
         self.ncol = self.model.hfield_ncol.item()
-        self.gap_length = gap_length
+
         self.gap_set = gap_set
+        self.gap_length = gap_length
 
         self.start_idx = int(self.start_x * (self.ncol / 400))
         self._update_num_hurdles()
@@ -82,7 +83,9 @@ class HurdleHopperEnv(HopperEnv):
     def _get_obs(self):
         self.ncol = self.model.hfield_ncol.item()
         pos = np.copy(self.sim.data.qpos.flat[1:])
-        pos[0] -= (self.get_height(0) - self.model.hfield_size[0,2]/2)
+        #pos[0] -= (self.get_height(0) - self.model.hfield_size[0,2]/2)
+        pos[0] -= self.model.hfield_size[0,2]/2
+
         vel = self.sim.data.qvel.flat
 
         next_hurdle_x = 0
@@ -105,8 +108,8 @@ class HurdleHopperEnv(HopperEnv):
         reward -= .9
         s = self.state_vector()
         height, ang = self._get_obs()[:2]
-        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and
-                    (height > .7) and (abs(ang) < .4))
+        #done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and (height > .7) and (abs(ang) < .4))
+        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and (abs(ang) < .4))
 
         # if done:
         #     print((np.isfinite(s).all(), (np.abs(s[2:]) < 100).all(),
@@ -127,7 +130,7 @@ class HurdleHopperEnv(HopperEnv):
 
         # print(done)
         if done:
-            reward -= 500
+            reward -= 250
         #     #print(reward)
 
         # if done:

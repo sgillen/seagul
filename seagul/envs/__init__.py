@@ -9,7 +9,7 @@ register(id="five_link-v3", max_episode_steps=1000, entry_point="seagul.envs.muj
 register(id="det_humanoid-v1", entry_point="seagul.envs.mujoco:DetHumanoidEnv", max_episode_steps=1000)
 register(id="humanoid_long-v1", entry_point="gym.envs.mujoco:HumanoidEnv")
 register(id="hmap_hopper-v0", entry_point="seagul.envs.mujoco:HmapHopperEnv", max_episode_steps=1000)
-register(id="hurdle_hopper-v0", entry_point="seagul.envs.mujoco:HurdleHopperEnv", max_episode_steps=3000)
+register(id="hurdle_hopper-v0", entry_point="seagul.envs.mujoco:HurdleHopperEnv", max_episode_steps=2000)
 
 register(id="lorenz-v0", entry_point="seagul.envs.simple_nonlinear:LorenzEnv")
 register(id="linear_z-v0", entry_point="seagul.envs.simple_nonlinear:LinearEnv")
