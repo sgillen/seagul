@@ -30,6 +30,7 @@ class HurdleHopperEnv(HopperEnv):
         self.start_idx = int(self.start_x * (self.ncol / 400))
         self._update_num_hurdles()
 
+
     def _update_num_hurdles(self):
         if self.gap_set:
             self.n_hurdles = (self.ncol - self.start_idx) // (max(self.gap_set) + self.h_length)
@@ -42,10 +43,6 @@ class HurdleHopperEnv(HopperEnv):
 
         self.model.hfield_data[:] = self.neutral_hfield_val
 
-        if self.gap_set:
-            self.n_hurdles = (self.ncol - self.start_idx) // (max(self.gap_set) + self.h_length)
-        else:
-            self.n_hurdles = (self.ncol - self.start_idx) // (self.gap_length + self.h_length)
         offset = 0
 
         for h in range(self.n_hurdles):
