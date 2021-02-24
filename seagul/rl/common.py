@@ -3,7 +3,6 @@ import numpy as np
 from torch.distributions import Normal, Categorical
 
 
-
 class ReplayBuffer:
     """
     A simple FIFO experience replay buffer (modifed from from https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
@@ -56,7 +55,6 @@ class ReplayBuffer:
     def sample_batch(self, batch_size=32):
         idxs = np.random.randint(0, self.size, size=batch_size)
         return (self.obs1_buf[idxs], self.obs2_buf[idxs], self.acts_buf[idxs], self.rews_buf[idxs], self.done_buf[idxs])
-
 
 
 def update_mean(data, cur_mean, cur_steps):

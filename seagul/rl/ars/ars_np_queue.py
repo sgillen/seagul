@@ -4,6 +4,7 @@ import copy
 from numpy.random import default_rng
 import numpy as np
 import time
+from seagul.rl.common import make_schedule
 
 
 def update_mean(data, cur_mean, cur_steps):
@@ -87,7 +88,9 @@ class ARSAgent:
     TODO
     """
     def __init__(self, env_name, seed, env_config=None, n_workers=24, n_delta=32, n_top=16,
-                 step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default):
+                 step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default,
+                 step_schedule=None, exp_schedule=None
+                 ):
         self.env_name = env_name
         self.n_workers = n_workers
         self.step_size = step_size
@@ -103,6 +106,9 @@ class ARSAgent:
         self.reward_stop = reward_stop
         self.model = None
 
+        self.step_schedule = step_schedule
+        self.exp_schedule = exp_schedule
+
         if env_config is None:
             env_config = {}
         self.env_config = env_config
@@ -113,12 +119,17 @@ class ARSAgent:
         self.state_mean = np.zeros(env.observation_space.shape[0])
         self.state_std = np.ones(env.observation_space.shape[0])
 
-
     def learn(self, n_epochs, verbose=True):
         proc_list = []
         master_q_list = []
         worker_q_list = []
         learn_start_idx = copy.copy(self.total_epochs)
+
+        if self.step_schedule:
+            step_lookup = make_schedule(self.step_schedule, n_epochs)
+
+        if self.exp_schedule:
+            exp_lookup = make_schedule(self.exp_schedule, n_epochs)
 
         for i in range(self.n_workers):
             master_q = Queue()
@@ -134,6 +145,10 @@ class ARSAgent:
         rng = default_rng()         
 
         for epoch in range(n_epochs):
+            if self.step_schedule:
+                self.step_size = step_lookup(epoch)
+            if self.exp_schedule:
+                self.exp_noise = exp_lookup(epoch)
 
             if len(self.lr_hist) > 2 and self.reward_stop:
                 if self.lr_hist[-1] >= self.reward_stop and self.lr_hist[-2] >= self.reward_stop:
@@ -193,6 +208,7 @@ class ARSAgent:
 
             W_flat = W_flat + (self.step_size / (self.n_delta * np.concatenate((p_returns, m_returns)).std() + 1e-6)) * np.sum((p_returns - m_returns)*deltas[top_idx].T, axis=1)
             self.W = W_flat.reshape(self.W.shape[0], self.W.shape[1])
+
 
         for q in master_q_list:
             q.put("STOP")
