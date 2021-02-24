@@ -11,7 +11,7 @@ from seagul.rl.common import ReplayBuffer, update_mean, update_std, RandModel
 class SACAgent:
     def __init__(self, env_name, model, env_max_steps=0, min_steps_per_update=1, iters_per_update=100,
                  replay_batch_size=64, seed=0, gamma=0.95, polyak=0.995, alpha=0.2, sgd_batch_size=64,
-                 sgd_lr=1e-3, exploration_steps=100, replay_buf_size=int(100000), normalize_steps = 1000,
+                 sgd_lr=1e-3, exploration_steps=100, replay_buf_size=int(100000), normalize_steps=1000,
                  use_gpu=False, reward_stop=None, env_config={}):
         """
         Implements soft actor critic
