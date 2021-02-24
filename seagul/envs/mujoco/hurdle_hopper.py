@@ -83,9 +83,7 @@ class HurdleHopperEnv(HopperEnv):
     def _get_obs(self):
         self.ncol = self.model.hfield_ncol.item()
         pos = np.copy(self.sim.data.qpos.flat[1:])
-        #pos[0] -= (self.get_height(0) - self.model.hfield_size[0,2]/2)
-        pos[0] -= self.model.hfield_size[0,2]/2
-
+        pos[0] -= (self.get_height(0) - self.model.hfield_size[0,2]/2)
         vel = self.sim.data.qvel.flat
 
         next_hurdle_x = 0
@@ -108,8 +106,8 @@ class HurdleHopperEnv(HopperEnv):
         reward -= .9
         s = self.state_vector()
         height, ang = self._get_obs()[:2]
-        #done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and (height > .7) and (abs(ang) < .4))
-        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and (abs(ang) < .4))
+        done = not (np.isfinite(s).all() and (np.abs(s[2:]) < 100).all() and
+                    (height > .7) and (abs(ang) < .4))
 
         # if done:
         #     print((np.isfinite(s).all(), (np.abs(s[2:]) < 100).all(),
@@ -130,7 +128,7 @@ class HurdleHopperEnv(HopperEnv):
 
         # print(done)
         if done:
-            reward -= 250
+            reward -= 500
         #     #print(reward)
 
         # if done:
