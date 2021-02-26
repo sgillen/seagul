@@ -68,22 +68,6 @@ print("Multiple output MLP good")
 model = PPOModel(
     policy = MLP(4, 1, 2, 12),
     value_fn = MLP(4, 1, 2, 12),
-    fixed_std = True
-)
-
-obs = np.zeros(4, dtype=dtype)
-check_ppo_model(model, obs, torch.Size([1]), torch.Size([1]))
-
-obs = np.zeros((1,4), dtype=dtype)
-check_ppo_model(model, obs, torch.Size([1,1]), torch.Size([1,1]))
-
-obs = np.zeros((100,4), dtype=dtype)
-check_ppo_model(model, obs, torch.Size([100,1]), torch.Size([100,1]))
-
-model = PPOModel(
-    policy = MLP(4, 2, 2, 12),
-    value_fn = MLP(4, 1, 2, 12),
-    fixed_std = False
 )
 
 obs = np.zeros(4, dtype=dtype)

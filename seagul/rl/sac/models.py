@@ -79,12 +79,38 @@ class SACMMultiLinModel:
         std = torch.exp(logstd)
 
         # we can speed this up by reusing the same buffer but this is more readable
+
         samples = means + std*noise
         squashed_samples = torch.tanh(samples)
-        acts = squashed_samples * self.act_limit
+        acts = ((squashed_samples * self.act_limit) + self.act_limit)/2
 
-        model_outs = torch.stack([torch.tensor(model.step(state),requires_grad=False) for model in self.model_list])
-        acts = torch.dot(model_outs, acts)
+        #       print(state.shape)
+        #        torch.tensor(model.step(state.T.numpy())
+
+        # import os
+        # #        print(os.getpid(), acts[0,:])
+        # if state.shape[0] != 1:
+        #       pass
+        #     # model_outs = []
+        #     # for model in self.model_list:
+        #     #     Wa = torch.stack([torch.tensor(model.W) for _ in range(state.shape[0])])
+        #     #     obs_n = (state - model.state_mean) / model.state_std
+        #     #     model_out = torch.tensor(torch.bmm(obs_n.reshape(Wa.shape[0], 1, Wa.shape[1]), Wa).reshape(Wa.shape[0], Wa.shape[2]), requires_grad=False, dtype=torch.float32)
+        #     #     model_outs.append(model_out)
+        #     # model_outs = torch.stack(model_outs).reshape(Wa.shape[0], len(model_outs), Wa.shape[-1])
+        #     # #            print(acts.shape, model_outs.shape)
+        #     # acts = torch.bmm(acts.reshape(state.shape[0],1,-1), model_outs).squeeze()
+        
+
+        # else:
+        #     model_outs = torch.stack(
+        #         [torch.tensor(model.step(state.squeeze().numpy())[0], requires_grad=False, dtype=torch.float32) for model in self.model_list]
+        #     )
+        #     acts = torch.mm(acts, model_outs)
+
+
+        #print(self.model_list[0].step(state.T.numpy())[0].shape)
+        
 
         # logp = -((acts - means) ** 2) / (2 * torch.pow(std,2)) - logstd - math.log(math.sqrt(2 * math.pi))
         m = torch.distributions.normal.Normal(means, std)

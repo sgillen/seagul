@@ -30,7 +30,6 @@ class HurdleHopperEnv(HopperEnv):
         self.start_idx = int(self.start_x * (self.ncol / 400))
         self._update_num_hurdles()
 
-
     def _update_num_hurdles(self):
         if self.gap_set:
             self.n_hurdles = (self.ncol - self.start_idx) // (max(self.gap_set) + self.h_length)
@@ -124,9 +123,9 @@ class HurdleHopperEnv(HopperEnv):
 
 
         # print(done)
-        if done:
-            reward -= 500
-        #     #print(reward)
+        # if done:
+        #     reward -= 500
+        # #     #print(reward)
 
         # if done:
         #     print(np.isfinite(s).all())
