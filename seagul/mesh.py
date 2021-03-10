@@ -5,19 +5,60 @@ import torch
 from collections.abc import MutableMapping
 import warnings
 
-class MeshPoint:
-    def __init__(self, identity, point):
-        self.id = identity
-        self.point = point
-        self.freq = 1
+try:
+    from stable_baselines3.common.callbacks import BaseCallback
+
+    class RewardPostprocessCallback(BaseCallback):
+        def __init__(self,
+                     postprocessor,
+                     verbose=0
+                     ):
+            super(RewardPostprocessCallback, self).__init__(verbose)
+            self.postprocessor = postprocessor
+            self.verbose = verbose
+
+        def _on_rollout_end(self) -> None:
+            buf = self.locals['rollout_buffer']
+
+            d = buf.dones
+            n_envs = d.shape[1]
+
+            xz, yz = d.nonzero()
+            done_lists = [[] for _ in range(n_envs)]
+
+            for x, y in zip(xz,yz):
+                done_lists[y].append(x)
+
+            for done_list in done_lists:
+                done_list.append(d.shape[0])
 
 
-class BylMesh(MutableMapping):
+            for i, d_list in enumerate(done_lists):
+                last_idx = 0
+                for j,cur_idx in enumerate(d_list):
+                    self.locals['rollout_buffer'].returns[last_idx:cur_idx, i] = self.postprocessor(buf.observations[last_idx:cur_idx, i,:], buf.actions[last_idx:cur_idx, i,:], buf.returns[last_idx:cur_idx, i])
+
+
+
+
+
+        def _init_callback(self) -> None:
+            pass
+
+        def _on_step(self) -> bool:
+            return True
+
+except ImportError:
+    warnings.warn("Warning, stable baselines 3 not installed, reward post processors won't be define")
+
+
+class BoxMesh(MutableMapping):
     """A dictionary that applies an arbitrary key-altering
        function before accessing the keys"""
 
     def __init__(self, d):
-        self.d = d; self.scale = 1/d
+        self.d = d;
+        self.scale = 1 / d
         self.mesh = dict()
 
     def __getitem__(self, key):
@@ -41,7 +82,6 @@ class BylMesh(MutableMapping):
         round_key[round_key == -0.0] = 0.0
         round_key = tuple(round_key)
         return round_key
-
 
 
 def create_mesh(data, d, initial_mesh=None):
@@ -73,100 +113,14 @@ def create_mesh(data, d, initial_mesh=None):
     return mesh, weights
 
 
-def create_mesh_act(env, policy, d, seed_point, perturbs, reset_fn, snapshot_fn, interp_fn, ref_mean, ref_std):
-    torch.autograd.set_grad_enabled(False)
-    failure_point = np.ones_like(seed_point) * 10
-
-    mesh = BylMesh(d)
-    mesh[failure_point] = MeshPoint(0, failure_point)
-    mesh[seed_point] = MeshPoint(1, seed_point)
-
-    mesh_points = []
-    mesh_points.append(failure_point)
-    mesh_points.append(seed_point)
-
-    transition_list = [[0] * len(perturbs)]  # Failure state always transitions to itself
-
-    cnt = 0;
-    cur_explored_cnt = 0
-    for init_pos in mesh_points:
-        if (init_pos == failure_point).all():
-            continue
-
-        cur_explored_cnt += 1
-        transition_list.append([])
-
-        tmp_points = []
-        tmp_keys = []
-        failed = False
-
-        for pert in perturbs:
-            if failed:
-                break
-            cnt += 1
-
-            step = 0
-            done = False;
-            do_once = 1
-            o = reset_fn(env, init_pos)
-
-            while not done:
-                a = policy(o) + do_once * pert
-                step += 1
-                do_once = 0
-
-                last_o = copy.copy(o)
-
-                o, r, done, _ = env.step(a.numpy())
-
-                if snapshot_fn(o, last_o, step):
-
-                    pt = interp_fn(o, last_o)
-                    key = (pt - ref_mean) / ref_std
-
-                    # weights = pca.singular_values_/pca.singular_values_.max()
-                    # key = weights*pca.transform(key.reshape(1,-1)).reshape(-1)
-
-                    tmp_points.append(copy.copy(pt))
-                    tmp_keys.append(copy.copy(key))
-
-                    if cnt % 1000 == 0:
-                        print("explored: ", cur_explored_cnt, "| added: ", len(mesh), "| ratio: ",
-                              cur_explored_cnt / len(mesh), "| failures: ", mesh[failure_point].freq, "| count: ", cnt)
-                    done = True
-
-                if step > 200:
-                    failed = True
-                    done = True
-
-        if not failed:
-            for p, k in zip(tmp_points, tmp_keys):
-                if k in mesh:
-                    mesh[k].freq += 1
-                else:
-                    mesh_points.append(p)
-                    mesh[k] = MeshPoint(len(mesh_points)-1, p)
-
-                transition_list[-1].append(mesh[k].id)
-
-
-        else:
-            for _ in range(len(perturbs)):
-                mesh[failure_point].freq += 1
-                transition_list[-1].append(mesh[failure_point].id)
-
-    torch.autograd.set_grad_enabled(True)
-    return mesh, mesh_points, np.array(transition_list)
-
-
 def create_box_mesh(data, d, initial_mesh=None):
     """ Creates a mesh from the given data using boxes of size d
     Args:
         data: np.array, the data you want to create a mesh for
-        d: float, the radius for the box used to determine membership in the mesh
+        d: float, the length of the box used to determine membership in the mesh
+        initial_mesh: dict, output from a previous call to create_box_mesh, used to add to a mesh rather than build a new one
     Returns:
-        mesh: list, all the points from data that made it into the mesh
-        weights: how many points from the original set are represented by the corresponding point in the mesh
+        mesh: dict, keys are the mesh point coordinates, values are how many points in the original data set are represented by the mesh point
     """
     if initial_mesh is None:
         initial_mesh = {}
@@ -174,66 +128,59 @@ def create_box_mesh(data, d, initial_mesh=None):
     mesh = initial_mesh
     data = np.asarray(data)
 
-    scale = 1/d
+    scale = 1 / d
 
-    keys = np.round(data*scale, decimals=0)*d
+    keys = np.round(data * scale, decimals=0) * d
     keys[keys == -0.0] = 0.0
 
     for key in keys:
         key = tuple(key)
         if key in mesh:
-            mesh[key] +=1
+            mesh[key] += 1
         else:
             mesh[key] = 1
 
     return mesh
 
 
-
-def mesh_dim(data, init_d=1e-2):
+# Dimensionality calculations ==================================================
+def mesh_dim(data, scaling_factor=1.2, init_d=1, upper_size_ratio=1.0, lower_size_ratio=0.0, d_limit=1e-9):
     """
     Args:
-        data - any np array or torch thing
-        init_d - initial mesh size
+        data - any array like, represents the trajectory you want to compute the dimension of
+        scaling factors - float indicating how much to scale d by for every new mesh
+        init_d - float, initial box size
+        upper_size_ratio - upper_size_ratio*data.shape[0] determines what size of mesh to stop at when finding the upper bound of the curve.
+        lower_size_ratio - lower_size_ratio*data.shape[0] determines what size of mesh to stop at when finding the lower bound of the curve. Usually best to leave at 0.
+        d_limit - smallest d value to allow when seeking the upper_size bound
 
     Returns:
-        mesh_dim, mesh_sizes, d_vals
-
+        mdim: linear fit to the log(mesh) log(d) data, intentional underestimate of the meshing dimensions
+        cdim: the conservative mesh dimension, that is the largest slope from the log log data, an intentional overestimate of the
+        mesh_sizes: sizes of each mesh created during the computation
+        d_vals: box sizes used to create each mesh during the computation
     """
-    scale_factor = 1.5
-    mesh_size_upper = 4/5*data.shape[0]
 
-    mesh = create_box_mesh(data, init_d)
+    mesh_size_upper = np.round(upper_size_ratio * data.shape[0])
+    mesh_size_lower = np.round(np.max((1.0, lower_size_ratio * data.shape[0])))
+    d = init_d
+
+    mesh = create_box_mesh(data, d)
     mesh_sizes = [len(mesh)]
-    d_vals = [init_d]
-#    print("mesh size upper: ", mesh_size_upper)
-#    print("len: ", len(mesh))
-    
-    if len(mesh) < mesh_size_upper:
-        #        print("Warning initial d for mesh too large! auto adjusting")
+    d_vals = [d]
 
-        d = init_d/scale_factor
-        while True:
-            mesh = create_box_mesh(data, d)
-            mesh_sizes.insert(0, len(mesh))
-            d_vals.insert(0, d)
+    while mesh_sizes[0] < mesh_size_upper and d > d_limit:
+        d /= scaling_factor
+        mesh = create_box_mesh(data, d)
+        mesh_sizes.insert(0, len(mesh))
+        d_vals.insert(0, d)
 
-            d = d/scale_factor
-
-            if mesh_sizes[0] > mesh_size_upper or d < 1e-9:
-#                print("d found: ", d, mesh_sizes, data.shape[0])
-                break
-
-    d = init_d*scale_factor
-    while True:
+    d = init_d
+    while mesh_sizes[-1] > mesh_size_lower and d > d_limit:
+        d = d * scaling_factor
         mesh = create_box_mesh(data, d)
         mesh_sizes.append(len(mesh))
         d_vals.append(d)
-
-        if mesh_sizes[-1] == 1:
-            break
-
-        d = d * scale_factor
 
     for i, m in enumerate(mesh_sizes):
         if m < mesh_size_upper:
@@ -243,19 +190,11 @@ def mesh_dim(data, init_d=1e-2):
     xdata = np.log2(d_vals[lin_begin:])
     ydata = np.log2(mesh_sizes[lin_begin:])
 
-    if xdata.shape[0] < 4:
-        return  data.shape[1]/2, data.shape[1]/2 , mesh_sizes,  d_vals
-    
     # Fit a curve to the log log line
     def f(x, m, b):
         return m * x + b
-    with warnings.catch_warnings():
-        warnings.filterwarnings('error')
-        try:
-            popt, pcov = opt.curve_fit(f, xdata, -ydata)
-        except: print(f"covariance failure (probably) {data.shape, mesh_sizes, d_vals}")
 
-
+    popt, pcov = opt.curve_fit(f, xdata, ydata)
 
     # find the largest slope
     min_slope = 0
@@ -264,60 +203,72 @@ def mesh_dim(data, init_d=1e-2):
         if slope < min_slope:
             min_slope = slope
 
-    return popt[0], -min_slope, mesh_sizes, d_vals
-
-
-def conservative_mesh_dim(data, init_d=1e-3):
-    """
-    Args:
-        data - any np array or torch thing
-        init_d - initial mesh size
-
-    Returns:
-        mesh_dim, mesh_sizes, d_vals
-
-    """
-    mesh_sizes = []
-    d_vals = []
-    d = init_d
-    while True:
-        mesh = create_box_mesh(data, d)
-        mesh_sizes.append(len(mesh))
-        d_vals.append(d)
-
-        if mesh_sizes[-1] == 1:
-            break
-
-        d = d * 2
-
-
-
-    min_slope = 0
-    for i in range(len(mesh_sizes)-1):
-        slope = - mesh_sizes[i] - mesh_sizes[i+1]/(d_vals[i+1] - d_vals[i])
-        if slope < min_slope:
-            min_slope = slope
-
-    return -min_slope, mesh_sizes, d_vals
-
-
-def power_var(X, l, ord):
-    diffs = X[l:] - X[:-l]
-    norms = np.zeros(diffs.shape[0])
-    for i,d in enumerate(diffs):
-        norms[i] = np.linalg.norm(d,ord=1)
-        
-    return 1 / (2 * len(X) - l) * np.sum(norms)
-
-# def power_var(X, l, ord):
-#     # Implements the power variation, used for the variation fractal dimension
-#     return 1 / (2 * len(X) - l) * np.sum(np.linalg.norm(X[l:] - X[:-l],ord=ord))
+    return -popt[0], -min_slope, mesh_sizes, d_vals
 
 
 def variation_dim(X, order=1):
     # Implements the order p variation fractal dimension from https://arxiv.org/pdf/1101.1444.pdf (eq 18)
     # order 1 corresponds to the madogram, 2 to the variogram, 1/2 to the rodogram
-    return 2 - 1/(order*np.log(2))*(np.log(power_var(X, 2, order)) - np.log(power_var(X, 1, order)))
+    return 2 - 1 / (order * np.log(2)) * (np.log(power_var(X, 2, order)) - np.log(power_var(X, 1, order)))
+
+
+def power_var(X, l, ord):
+    # The power variation, see variation_dim
+    diffs = X[l:] - X[:-l]
+    norms = np.zeros(diffs.shape[0])
+    for i, d in enumerate(diffs):
+        norms[i] = np.linalg.norm(d, ord=1)
+
+    return 1 / (2 * len(X) - l) * np.sum(norms)
+
+
+# Post processors ==================================================
+def identity(rews, obs, acts):
+    return rews
+
+def madodiv(rews, obs, acts):
+    return rews/variation_dim(obs, order=1)
+
+def variodiv(rews, obs, acts):
+    return rews/variation_dim(obs, order=2)
+
+def radodiv(rews, obs, acts):
+    return rews/variation_dim(obs, order=.5)
+
+def mdim_div2(obs_list, act_list, rew_list):
+    combined_obs = torch.empty(0)
+    combined_rew = torch.empty(0)
+    m = None
+
+    for obs, rew in zip(obs_list, rew_list):
+        if obs.shape[0] == 1000:
+            gait_start = 200
+            combined_obs = torch.cat((combined_obs, obs[gait_start:]))
+            combined_rew = torch.cat((combined_rew, rew))
+        else:
+            m = obs.shape[1] / 2
+
+    if m is None:
+        m, _, _, _ = mesh_dim(combined_obs)
+        m = np.clip(m, 1, obs.shape[1] / 2)
+
+    return (combined_rew / m).sum()
+
+def mdim_div_stable(obs, act, rew):
+    m = None
+
+    if obs.shape[0] == 1000:
+        gait_start = 200
+        target_obs = obs[gait_start:]
+    else:
+        m = obs.shape[1] / 2
+
+    if m is None:
+        m, _, _, _ = mesh_dim(target_obs)
+        m = np.clip(m, 1, obs.shape[1] / 2)
+
+    return (rew / m)
+
 
 
 if __name__ == "__main__":
