@@ -205,7 +205,7 @@ pytest-remotedata==0.3.2
 python-dateutil==2.8.1
 pytz==2020.1
 PyWavelets==1.1.1
-PyYAML==5.3.1
+PyYAML==5.4
 pyzmq==19.0.1
 QtAwesome==0.7.2
 qtconsole @ file:///tmp/build/80754af9/qtconsole_1592848611704/work
