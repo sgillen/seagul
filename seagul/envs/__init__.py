@@ -43,6 +43,12 @@ register(id="su_acro_drake-v0", entry_point="seagul.envs.drake:DrakeAcroEnv")
 
 register(id="bball-v0", entry_point="seagul.envs.matlab:BBallEnv")
 
+
+register(id="ProbeEnv1-v0", entry_point="seagul.envs.probe:ProbeEnv1")
+register(id="ProbeEnv2-v0", entry_point="seagul.envs.probe:ProbeEnv2")
+register(id="ProbeEnv4-v0", entry_point="seagul.envs.probe:ProbeEnv4")
+
+
 # Also go ahead and try to register environments for rllib as well
 
 try:

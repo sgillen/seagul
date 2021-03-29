@@ -30,7 +30,8 @@ def run_and_test(seed, verbose=False):
     # )
 
     import pickle
-    low_level_agent_list = pickle.load(open("./mdim_304045_gap_back", 'rb'))[:2]
+    all_agent_list = pickle.load(open("./mdim_304045_gap_back", 'rb'))
+    agents_3040 = [all_agent_list[0], all_agent_list[1]]
 
     model = SACMMultiLinModel(
          policy = MLP(input_size, output_size*2, num_layers, layer_size, activation),
@@ -38,7 +39,7 @@ def run_and_test(seed, verbose=False):
          q1_fn = MLP(input_size+output_size, 1, num_layers, layer_size, activation),
          q2_fn = MLP(input_size+output_size, 1, num_layers, layer_size, activation),
          act_limit=1,
-         model_list=[a.model for a in low_level_agent_list]
+         model_list=[a.model for a in agents_3040]
     )
 
     print(input_size+output_size)
@@ -46,11 +47,11 @@ def run_and_test(seed, verbose=False):
     agent = SACAgent(env_name=env_name, model=model, seed=int(seed), exploration_steps=5000,
                      min_steps_per_update=500, reward_stop=3000, gamma=1, sgd_batch_size=64,
                      replay_batch_size=256, iters_per_update=1000, env_max_steps=2000,
-                     polyak=.995, env_config={"gap_set":[30, 45], "hurdle_height":.52})
+                     polyak=.995, env_config={"gap_set":[30, 40], "hurdle_height":.52})
 
 
-    model, rewards, var_dict,  = agent.learn(train_steps=1e6)
-    torch.save(var_dict, open("./tmp/" + str(seed), 'wb'), pickle_module=dill)
+    model, rewards, var_dict,  = agent.learn(train_steps=1e5)
+    torch.save(agent, open("./tmp2/" + str(seed), 'wb'), pickle_module=dill)
 
     if verbose:
         if var_dict["early_stop"]:

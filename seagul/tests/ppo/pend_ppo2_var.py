@@ -22,18 +22,18 @@ def run_and_test(seed, verbose=True):
 
     # Define our hyper parameters
     agent = PPOAgent(env_name="Pendulum-v0", model=model, epoch_batch_size=2048, seed=int(seed), sgd_batch_size=64,
-                     lr_schedule=(1e-3,), sgd_epochs=30, target_kl=float('inf'), clip_val=True, reward_stop=-200,
+                     lr_schedule=(3e-4,), sgd_epochs=30, target_kl=float('inf'), clip_val=False, reward_stop=-200, env_no_term_steps=1000,
                      normalize_return=True, normalize_obs=True, normalize_adv=True)
 
     t_model, rewards, var_dict = agent.learn(total_steps = 2e6)
 
     if verbose:
         if var_dict["early_stop"]:
-            print("seed", seed, "achieved 1000 reward in ", len(rewards), "steps")
+            print("seed", seed, "achieved target reward in ", len(rewards), "steps")
         else:
             print("Error: seed:", seed, "failed")
 
-    return rewards, var_dict["early_stop"]
+    return rewards, agent, var_dict
 
 
 if __name__ == "__main__":
@@ -44,14 +44,16 @@ if __name__ == "__main__":
     results = pool.map(run_and_test, seeds)
 
     rewards = []
-    finished = []
+    agents = []
+    vars = []
+
     for result in results:
         rewards.append(result[0])
-        finished.append(result[1])
-    for reward in rewards:
-        plt.plot(reward, alpha=.8)
+        agents.append(result[1])
+        vars.append(result[2])
 
-
+    # for reward in rewards:
+    #     plt.plot(reward, alpha=.8)
 
     #rewards = np.array(rewards).transpose(1, 0)
     #smooth_bounded_curve(rewards, window=10)

@@ -31,14 +31,14 @@ def run_and_test(seed, verbose=False):
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
     value_fn = MLP(input_size, 1, num_layers, layer_size, activation)
-    model = PPOModel(policy, value_fn, init_logstd=-.5, learn_std=True)
+    model = PPOModel(policy, value_fn, init_logstd=0.0, learn_std=True)
 
     agent = PPOAgent(env_name="HalfCheetah-v2", model=model, epoch_batch_size=4096, seed=int(seed), entropy_coef=0.0,
                      sgd_batch_size=4096, lr_schedule=[3e-4, 0], sgd_epochs=50, target_kl=.1, clip_val=True,
                      env_no_term_steps=1000, reward_stop=3000, normalize_return=True, normalize_obs=True,
                      normalize_adv=True)
 
-    t_model, rewards, var_dict = agent.learn(total_steps=5e4)
+    t_model, rewards, var_dict = agent.learn(total_steps=2e6)
 
     torch.save(var_dict, open("./tmp/" + str(seed), 'wb'), pickle_module=dill)
 
@@ -59,19 +59,19 @@ if __name__ == "__main__":
     results = run_and_test(run_and_test(seeds[0]))
     import time
     start = time.time()
-    results = pool.map(run_and_test, seeds)
-    print(start - time.time())
-    rewards = []
-    finished = []
-    for result in results:
-        rewards.append(result[0])
-        finished.append(result[1])
-
-    for reward in rewards:
-        plt.plot(reward, alpha=.8)
-
-    print(finished)
-
-    plt.show()
-
-    ws = torch.load(open(f'/home/sgillen/work/seagul/seagul/tests/ppo/todo/tmp/{seeds[0]}', 'rb'))
+    # results = pool.map(run_and_test, seeds)
+    # print(start - time.time())
+    # rewards = []
+    # finished = []
+    # for result in results:
+    #     rewards.append(result[0])
+    #     finished.append(result[1])
+    #
+    # for reward in rewards:
+    #     plt.plot(reward, alpha=.8)
+    #
+    # print(finished)
+    #
+    # plt.show()
+    #
+    # ws = torch.load(open(f'/home/sgillen/work/seagul/seagul/tests/ppo/todo/tmp/{seeds[0]}', 'rb'))

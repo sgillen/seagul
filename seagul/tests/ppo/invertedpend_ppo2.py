@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 def run_and_test(seed, verbose=True):
     input_size = 4
     output_size = 1
-    layer_size = 16
-    num_layers = 1
+    layer_size = 32
+    num_layers = 2
     activation = nn.ReLU
 
     policy = MLP(input_size, output_size, num_layers, layer_size, activation)
