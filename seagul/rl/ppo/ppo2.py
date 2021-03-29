@@ -99,7 +99,6 @@ class PPOAgent:
         obs_size = env.observation_space.shape[0]
         self.obs_mean = torch.zeros(obs_size)
         self.obs_std = torch.ones(obs_size)
-        self.rew_mean = torch.zeros(1)
         self.rew_std = torch.ones(1)
 
         # set defaults, and decide if we are using a GPU or not
@@ -112,6 +111,11 @@ class PPOAgent:
         self.pol_loss_hist = []
         self.lrv_hist = []
         self.lrp_hist = []
+
+        self.log_std_hist = []
+        self.kl_hist = []
+        self.clip_frac_hist = []
+        self.entropy_hist = []
 
         env.close()
 
@@ -171,11 +175,11 @@ class PPOAgent:
 
                 #print(sum(ep_rew).item())
                 self.raw_rew_hist.append(sum(ep_rew).item())
+                #print("Rew:", sum(ep_rew).item())
                 batch_obs = torch.cat((batch_obs, ep_obs.clone()))
                 batch_act = torch.cat((batch_act, ep_act.clone()))
 
                 if self.normalize_return:
-                    self.rew_mean = update_mean(ep_rew, self.rew_mean, cur_total_steps)
                     self.rew_std = update_std(ep_rew, self.rew_std, cur_total_steps)
                     ep_rew = ep_rew / (self.rew_std + 1e-6)
 
@@ -226,10 +230,15 @@ class PPOAgent:
             sgd_lr = lr_lookup(cur_total_steps)
 
             self.old_model = copy.deepcopy(self.model)
-            self.val_loss_hist.append(val_loss)
-            self.pol_loss_hist.append(pol_loss)
+            self.val_loss_hist.append(val_loss.detach())
+            self.pol_loss_hist.append(pol_loss.detach())
             self.lrp_hist.append(self.pol_opt.state_dict()['param_groups'][0]['lr'])
             self.lrv_hist.append(self.val_opt.state_dict()['param_groups'][0]['lr'])
+            self.kl_hist.append(approx_kl.detach())
+            self.entropy_hist.append(self.model.policy.logstds.detach())
+
+
+
 
             progress_bar.update(cur_batch_steps)
 
@@ -282,6 +291,11 @@ class PPOAgent:
             local_val = batch_discrew[cur_sample:cur_sample + self.sgd_batch_size]
             val_preds = self.model.value_fn(local_obs)
 
+            # print("obs: ", local_obs[:1])
+            # print("val: ", local_val[:1])
+            # print("prd: ", val_preds[:1])
+            # print(); print()
+
             if self.clip_val:
                 with torch.no_grad():
                     old_val_preds = self.old_model.value_fn(local_obs)
@@ -296,6 +310,7 @@ class PPOAgent:
             self.val_opt.zero_grad()
             val_loss.backward()
             self.val_opt.step()
+            #print(val_loss.mean())
 
             return val_loss
 

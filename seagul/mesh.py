@@ -29,10 +29,10 @@ try:
             for x, y in zip(xz,yz):
                 done_lists[y].append(x)
 
-            for done_list in done_lists:
-                done_list.append(d.shape[0])
+            # for done_list in done_lists:
+            #     done_list.append(d.shape[0])
 
-
+            print("hello")
             for i, d_list in enumerate(done_lists):
                 last_idx = 0
                 for j,cur_idx in enumerate(d_list):
@@ -257,6 +257,7 @@ def mdim_div2(obs_list, act_list, rew_list):
 def mdim_div_stable(obs, act, rew):
     m = None
 
+    print(obs.shape[0])
     if obs.shape[0] == 1000:
         gait_start = 200
         target_obs = obs[gait_start:]

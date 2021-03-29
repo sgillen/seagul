@@ -8,7 +8,7 @@ class PPOModel:
     Model for use with seagul's ppo algorithm
     """
 
-    def __init__(self, policy, value_fn, init_logstd=-.5, learn_std=True):
+    def __init__(self, policy, value_fn, init_logstd=0.0, learn_std=True):
         self.policy = policy
         self.value_fn = value_fn
 
@@ -55,4 +55,4 @@ def sample_guassian(means, stds):
 
 # what is the log liklihood of having taken a given action if it came form a Gaussian with stds and means given
 def guassian_logp(means, stds, actions):
-    return -((actions - means) ** 2) / (2 * (stds ** 2)) - torch.log(stds) - np.log(np.sqrt(2 * np.pi))
+    return -((actions - means) ** 2) / (2 * (stds ** 2) + 1e-6) - torch.log(stds) - np.log(np.sqrt(2 * np.pi))

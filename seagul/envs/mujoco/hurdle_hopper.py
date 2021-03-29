@@ -10,7 +10,8 @@ import random
 
 class HurdleHopperEnv(HopperEnv):
     def __init__(self, gap_length=None, hurdle_height=.52, gap_set=None):
-        self.start_x = 82
+        self.hurdle_start_x = 82
+        self.hopper_start_x = 80
         self.neutral_hfield_val = .5
         self.h_length = 4
         self.hurdle_height = hurdle_height
@@ -27,14 +28,14 @@ class HurdleHopperEnv(HopperEnv):
         self.gap_set = gap_set
         self.gap_length = gap_length
 
-        self.start_idx = int(self.start_x * (self.ncol / 400))
+        self.hurdle_start_idx = int(self.hurdle_start_x * (self.ncol / 400))
         self._update_num_hurdles()
 
     def _update_num_hurdles(self):
         if self.gap_set:
-            self.n_hurdles = (self.ncol - self.start_idx) // (max(self.gap_set) + self.h_length)
+            self.n_hurdles = (self.ncol - self.hurdle_start_idx) // (max(self.gap_set) + self.h_length)
         else:
-            self.n_hurdles = (self.ncol - self.start_idx) // (self.gap_length + self.h_length)
+            self.n_hurdles = (self.ncol - self.hurdle_start_idx) // (self.gap_length + self.h_length)
 
     def reset(self):
         obs = super().reset()
@@ -45,8 +46,8 @@ class HurdleHopperEnv(HopperEnv):
         offset = 0
 
         for h in range(self.n_hurdles):
-            _from = self.start_idx + offset
-            _to = self.start_idx + offset + self.h_length
+            _from = self.hurdle_start_idx + offset
+            _to = self.hurdle_start_idx + offset + self.h_length
             self.model.hfield_data[_from:_to] = self.hurdle_height
             self.model.hfield_data[(self.ncol + _from):(self.ncol + _to)] = self.hurdle_height
 
@@ -68,7 +69,7 @@ class HurdleHopperEnv(HopperEnv):
 
         max_height = self.model.hfield_size[0,2]
 
-        index = (self.start_x + pos)/max_pos * self.ncol
+        index = (self.hopper_start_x + pos)/max_pos * self.ncol
 
         li = math.floor(index)
         ui = math.ceil(index)
@@ -81,12 +82,13 @@ class HurdleHopperEnv(HopperEnv):
         pos = np.copy(self.sim.data.qpos.flat[1:])
         pos[0] -= (self.get_height(0) - self.model.hfield_size[0,2]/2)
         vel = self.sim.data.qvel.flat
+        
 
         next_hurdle_x = 0
         if self.hurdle_height != self.neutral_hfield_val:
             cur_x = self.sim.data.qpos[0]
             max_x = self.model.hfield_size[0, 0] * 2
-            cur_idx = int((self.start_x + cur_x) / max_x * self.ncol)
+            cur_idx = int((self.hurdle_start_x + cur_x) / max_x * self.ncol)
             hurdle_idx = np.where(self.model.hfield_data == self.hurdle_height)[0]
 
             if hurdle_idx.size == 0:
@@ -110,7 +112,15 @@ class HurdleHopperEnv(HopperEnv):
         #             (height > .7), (abs(ang) < .4)))
 
         # set done = true if anything but the foot and ground are in contact.
+        max_height = self.model.hfield_size[0,2]
+
         ncon = self.unwrapped.sim.data.ncon
+        #        print(ncon, self.get_height(0))
+        if ncon:
+            if self.get_height(0) >  self.neutral_hfield_val*max_height + .1:
+                #print("done = True", self.get_height(0), ncon)
+                done = True
+            
         for i in range(ncon):
             geom1 = self.unwrapped.sim.data.contact[i].geom1
             geom2 = self.unwrapped.sim.data.contact[i].geom2
@@ -121,6 +131,9 @@ class HurdleHopperEnv(HopperEnv):
                 done = True
                 #print(f"contact with body {geom1},{geom2}")
 
+
+        # if done:
+        #     import ipdb; ipbd.set_trace()
 
         # print(done)
         # if done:
