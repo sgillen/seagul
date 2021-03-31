@@ -257,7 +257,6 @@ def mdim_div2(obs_list, act_list, rew_list):
 def mdim_div_stable(obs, act, rew):
     m = None
 
-    print(obs.shape[0])
     if obs.shape[0] == 1000:
         gait_start = 200
         target_obs = obs[gait_start:]
