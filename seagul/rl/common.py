@@ -1,6 +1,13 @@
-import torch
+
 import numpy as np
-from torch.distributions import Normal, Categorical
+
+try:
+    import torch
+    from torch.distributions import Normal, Categorical
+except:
+    import warnings
+    
+    warnings.warn("Importing torch failed, only numpy algos will be available")
 
 
 class ReplayBuffer:
