@@ -59,13 +59,13 @@ def do_rollout_train(env, policy, postprocess):
     state_arr = np.stack(state_list)
     act_arr = np.stack(act_list)
     preprocess_sum = np.array(sum(reward_list))
-    reward_list = postprocess(np.array(reward_list), state_arr, act_arr)
-    reward_sum = np.asarray(sum(reward_list))
+    reward_list = postprocess(state_arr, act_arr, np.array(reward_list))
+    reward_sum = (np.sum(reward_list).item())
 
     return state_arr, reward_sum, preprocess_sum
 
 
-def postprocess_default(rews, obs,acts):
+def postprocess_default(obs,acts,rews):
     return rews
 
 
@@ -194,7 +194,7 @@ class ARSAgent:
             l_returns = np.stack(l_returns)[top_idx]
 
             if verbose and epoch % 10 == 0:
-                print(f"{epoch} : mean return: {l_returns.mean()}, fps:{states.shape[0]/t}")
+                print(f"{epoch} : mean return: {l_returns.mean()}, top_return: {l_returns.max()}, fps:{states.shape[0]/t}")
 
             self.lr_hist.append(l_returns.mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
