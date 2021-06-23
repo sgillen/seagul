@@ -222,6 +222,44 @@ def power_var(X, l, ord):
     return 1 / (2 * len(X) - l) * np.sum(norms)
 
 
+
+def mesh_find_target_d(data, max_d_guess=10, target_size_ratio=1/2, d_lower_limit=1e-9, interval_target = 1e-6):
+    """
+    Find the first point d such that the mesh size for data is < target_size_ratio * d
+    """
+    max_mesh_size = data.shape[0]
+    target_mesh_size = np.round(target_size_ratio * data.shape[0])
+
+    max_mesh = create_box_mesh(data, d_lower_limit)
+    max_mesh_size = len(max_mesh)
+    if (max_mesh_size < target_mesh_size):
+        warnings.warn(f"mesh size at d lower limit is {max_mesh_size} but target size is {target_mesh_size}, returning the lower limit")
+        return d_lower_limit
+    
+    d = max_d_guess
+    min_mesh = create_box_mesh(data, d)
+    min_mesh_size = len(min_mesh)
+    
+    while min_mesh_size != 1:
+        d = d*2
+        min_mesh = create_box_mesh(data, d)
+        min_mesh_size = len(min_mesh)
+
+    d_upper_limit = d
+
+    while (d_upper_limit - d_lower_limit) > interval_target:
+        d = (d_upper_limit + d_lower_limit) / 2
+        mesh = create_box_mesh(data,d)
+        if (len(mesh) < target_mesh_size):
+            d_upper_limit = d
+        else:
+            d_lower_limit = d
+
+    return (d_upper_limit + d_lower_limit) / 2
+            
+        
+        
+
 # Post processors ==================================================
 def identity(rews, obs, acts):
     return rews
@@ -234,6 +272,28 @@ def variodiv(rews, obs, acts):
 
 def radodiv(rews, obs, acts):
     return rews/variation_dim(obs, order=.5)
+
+
+def mdim_div(obs, acts, rews):
+    if obs.shape[0] == 1000:
+        gait_start = 200
+        m, _, _, _ = mesh_dim(obs[gait_start:])
+        m = np.clip(m, 1, obs.shape[1] / 2)
+    else:
+        m = obs.shape[1] / 2
+
+    return rews / m
+
+def target_d_div(obs,acts,rews):
+    if obs.shape[0] == 1000:
+        gait_start = 200
+        target_d = mesh_find_target_d(obs[gait_start:])
+    else:
+        target_d = 10
+
+    return rews / target_d
+
+
 
 def mdim_div2(obs_list, act_list, rew_list):
     combined_obs = torch.empty(0)
