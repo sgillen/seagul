@@ -25,7 +25,9 @@ def update_std(data, cur_std, cur_steps):
 
 
 def worker_fn(worker_q, master_q, env_name, env_config, postprocess, seed):
+    print("making env")
     env = gym.make(env_name, **env_config)
+    print("env made")
     env.seed(int(seed))
     while True:
         data = master_q.get()
@@ -113,11 +115,20 @@ class ARSAgent:
             env_config = {}
         self.env_config = env_config
 
-        env = gym.make(self.env_name, **self.env_config)
 
-        self.W = np.zeros((env.observation_space.shape[0], env.action_space.shape[0]))
-        self.state_mean = np.zeros(env.observation_space.shape[0])
-        self.state_std = np.ones(env.observation_space.shape[0])
+        if env_name == "bball3-v1":
+            obs_size = 10
+            act_size = 3
+        else:
+            env = gym.make(self.env_name, **self.env_config)
+            obs_size = env.observation_space.shape[0]
+            act_size = env.action_space.shape[0]
+
+        self.W = np.zeros((obs_size, act_size))
+        self.state_mean = np.zeros(obs_size)
+        self.state_std = np.ones(obs_size)
+
+        #        env.close()
 
     def learn(self, n_epochs, verbose=True):
         proc_list = []
@@ -136,6 +147,7 @@ class ARSAgent:
             worker_q = Queue()
             proc = Process(target=worker_fn, args=(worker_q, master_q, self.env_name, self.env_config, self.postprocessor, self.seed))
             proc.start()
+            print(f"started proc {i}")
             proc_list.append(proc)
             master_q_list.append(master_q)
             worker_q_list.append(worker_q)
