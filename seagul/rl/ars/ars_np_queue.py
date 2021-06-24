@@ -62,8 +62,8 @@ def do_rollout_train(env, policy, postprocess):
     act_arr = np.stack(act_list)
     preprocess_sum = np.array(sum(reward_list))
 
-    state_arr_n = (state_arr - policy.state_means)/policy.state_std
-    reward_list = postprocess(state_arr_n, act_arr_n, np.array(reward_list))
+    state_arr_n = (state_arr - policy.state_mean)/policy.state_std
+    reward_list = postprocess(state_arr_n, act_arr, np.array(reward_list))
     reward_sum = (np.sum(reward_list).item())
 
     return state_arr, reward_sum, preprocess_sum
