@@ -36,7 +36,7 @@ def worker_fn(worker_q, master_q, env_name, env_config, postprocess, seed):
             return
         else:
             W,state_mean,state_std = data
-            policy = lambda x : W.T@((x - state_mean)/state_std)
+            policy = ARSModel(W, state_mean, state_std)
             states, returns, log_returns = do_rollout_train(env, policy, postprocess)
             worker_q.put((states, returns, log_returns))
 
@@ -51,7 +51,7 @@ def do_rollout_train(env, policy, postprocess):
     while not done:
         state_list.append(np.copy(obs))
 
-        actions = policy(obs)
+        actions,_,_,_ = policy.step(obs)
         obs, reward, done, _ = env.step(actions)
 
         act_list.append(np.array(actions))
@@ -61,7 +61,9 @@ def do_rollout_train(env, policy, postprocess):
     state_arr = np.stack(state_list)
     act_arr = np.stack(act_list)
     preprocess_sum = np.array(sum(reward_list))
-    reward_list = postprocess(state_arr, act_arr, np.array(reward_list))
+
+    state_arr_n = (state_arr - policy.state_means)/policy.state_std
+    reward_list = postprocess(state_arr_n, act_arr_n, np.array(reward_list))
     reward_sum = (np.sum(reward_list).item())
 
     return state_arr, reward_sum, preprocess_sum
