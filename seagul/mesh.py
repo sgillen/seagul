@@ -223,7 +223,7 @@ def power_var(X, l, ord):
 
 
 
-def mesh_find_target_d(data, max_d_guess=10, target_size_ratio=1/2, d_lower_limit=1e-9, interval_target = 1e-6):
+def mesh_find_target_d(data, max_d_guess=10, target_size_ratio=1/2, d_lower_limit=1e-10, interval_target = 1e-6):
     """
     Find the first point d such that the mesh size for data is < target_size_ratio * d
     """
@@ -233,7 +233,7 @@ def mesh_find_target_d(data, max_d_guess=10, target_size_ratio=1/2, d_lower_limi
     max_mesh = create_box_mesh(data, d_lower_limit)
     max_mesh_size = len(max_mesh)
     if (max_mesh_size < target_mesh_size):
-        warnings.warn(f"mesh size at d lower limit is {max_mesh_size} but target size is {target_mesh_size}, returning the lower limit")
+        print(f"warning: mesh size at d lower limit is {max_mesh_size} but target size is {target_mesh_size}, returning the lower limit")
         return d_lower_limit
     
     d = max_d_guess
@@ -292,6 +292,16 @@ def target_d_div(obs,acts,rews):
         target_d = 10
 
     return rews / target_d
+
+
+def target_d_divn(obs,acts,rews):
+    if obs.shape[0] == 1000:
+        gait_start = 200
+        target_d = mesh_find_target_d(obs[gait_start:])
+    else:
+        target_d = 10
+
+    return rews * (-np.log(target_d) + 20.0) / 20.0, 
 
 
 
