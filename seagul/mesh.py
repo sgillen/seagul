@@ -304,6 +304,24 @@ def target_d_divn(obs,acts,rews):
     return rews * (-np.log(target_d) + 20.0) / 20.0, 
 
 
+def target_d_6(obs,acts,rews):
+    if obs.shape[0] == 1000:
+        gait_start = 200
+        target_d = mesh_find_target_d(obs[gait_start:])
+    else:
+        target_d = 10
+        
+#    Guassian centered at D
+    D = -2
+    scale = np.sqrt(1/.5 - 1)
+    return rews / (((np.log(target_d)-2)*scale)**2 + 1)
+        
+
+
+
+
+
+
 
 def mdim_div2(obs_list, act_list, rew_list):
     combined_obs = torch.empty(0)

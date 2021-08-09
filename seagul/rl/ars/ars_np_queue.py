@@ -25,9 +25,7 @@ def update_std(data, cur_std, cur_steps):
 
 
 def worker_fn(worker_q, master_q, env_name, env_config, postprocess, seed):
-    print("making env")
     env = gym.make(env_name, **env_config)
-    print("env made")
     env.seed(int(seed))
     while True:
         data = master_q.get()
@@ -149,7 +147,6 @@ class ARSAgent:
             worker_q = Queue()
             proc = Process(target=worker_fn, args=(worker_q, master_q, self.env_name, self.env_config, self.postprocessor, self.seed))
             proc.start()
-            print(f"started proc {i}")
             proc_list.append(proc)
             master_q_list.append(master_q)
             worker_q_list.append(worker_q)
