@@ -342,7 +342,7 @@ def mdim_div2(obs_list, act_list, rew_list):
 
     return (combined_rew / m).sum()
 
-def mdim_div_stable(obs, act, rew):
+def mdim_div_stable(obs, act, rew, mdim_kwargs):
     m = None
 
     if obs.shape[0] == 1000:
@@ -352,7 +352,7 @@ def mdim_div_stable(obs, act, rew):
         m = obs.shape[1] / 2
 
     if m is None:
-        m, _, _, _ = mesh_dim(target_obs)
+        m, _, _, _ = mesh_dim(target_obs, **mdim_kwargs)
         m = np.clip(m, 1, obs.shape[1] / 2)
 
     return (rew / m)
