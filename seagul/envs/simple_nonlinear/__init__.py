@@ -4,3 +4,5 @@
 # from seagul.envs.simple_nonlinear.generic import GenEnv
 from seagul.envs.simple_nonlinear.tree_game import TreeEnv
 from seagul.envs.simple_nonlinear.pixel_tree import PixelTreeEnv
+from seagul.envs.simple_nonlinear.tree_simple import TreeSimple
+from seagul.envs.simple_nonlinear.tree_multi import TreeMulti
