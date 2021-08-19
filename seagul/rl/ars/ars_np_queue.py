@@ -89,7 +89,7 @@ class ARSAgent:
     """
     TODO
     """
-    def __init__(self, env_name, seed, env_config=None, n_workers=24, n_delta=32, n_top=16,
+    def __init__(self, env_name, seed, env_config=None, n_workers=24, n_delta=32, n_top=32,
                  step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default,
                  step_schedule=None, exp_schedule=None
                  ):

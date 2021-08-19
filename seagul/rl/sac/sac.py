@@ -4,11 +4,9 @@ from torch.utils import data
 import tqdm.auto as tqdm
 import gym
 import copy
-import os
 
 from seagul.rl.common import ReplayBuffer, update_mean, update_std, RandModel
 
-torch.set_default_dtype(torch.float32)
 
 class SACAgent:
     def __init__(self, env_name, model, env_max_steps=0, min_steps_per_update=1, iters_per_update=100,
@@ -31,6 +29,8 @@ class SACAgent:
             alpha: weighting term for the entropy. 0 corresponds to no penalty for deterministic policy
             sgd_batch_size: minibatch size for policy updates
             sgd_lr: initial learning rate for policy optimizer
+            val_lr: initial learning rate for value optimizer
+            q_lr: initial learning rate for q fn optimizer
             exploration_steps: initial number of random actions to take, aids exploration
             replay_buf_size: how big of a replay buffer to use
             use_gpu: determines if we try to use a GPU or not
@@ -73,14 +73,13 @@ class SACAgent:
         if isinstance(env.action_space, gym.spaces.Box):
             act_size = env.action_space.shape[0]
             act_dtype = env.action_space.sample().dtype
-            n_controllers = 2
         else:
             raise NotImplementedError("trying to use unsupported action space", env.action_space)
 
         obs_size = env.observation_space.shape[0]
 
-        random_model = RandModel(self.model.act_limit, n_controllers)
-        self.replay_buf = ReplayBuffer(obs_size, n_controllers, self.replay_buf_size)
+        random_model = RandModel(self.model.act_limit, act_size)
+        self.replay_buf = ReplayBuffer(obs_size, act_size, self.replay_buf_size)
         self.target_value_fn = copy.deepcopy(self.model.value_fn)
 
         pol_opt = torch.optim.Adam(self.model.policy.parameters(), lr=self.sgd_lr)
@@ -110,7 +109,7 @@ class SACAgent:
         norm_obs1 = torch.empty(0)
 
         while cur_total_steps < self.normalize_steps:
-            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = self.do_rollout(env, random_model, self.env_max_steps)
+            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, self.env_max_steps)
             norm_obs1 = torch.cat((norm_obs1, ep_obs1))
 
             ep_steps = ep_rews.shape[0]
@@ -129,13 +128,13 @@ class SACAgent:
             self.target_value_fn.state_means = obs_mean
             self.target_value_fn.state_std = obs_std
 
-            self.model.q1_fn.state_means = torch.cat((obs_mean, torch.zeros(n_controllers)))
-            self.model.q1_fn.state_std = torch.cat((obs_std, torch.ones(n_controllers)))
+            self.model.q1_fn.state_means = torch.cat((obs_mean, torch.zeros(act_size)))
+            self.model.q1_fn.state_std = torch.cat((obs_std, torch.ones(act_size)))
             self.model.q2_fn.state_means = self.model.q1_fn.state_means
             self.model.q2_fn.state_std = self.model.q1_fn.state_std
 
         while cur_total_steps < self.exploration_steps:
-            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = self.do_rollout(env, random_model, self.env_max_steps)
+            ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, random_model, self.env_max_steps)
             self.replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
             ep_steps = ep_rews.shape[0]
@@ -155,7 +154,7 @@ class SACAgent:
             # collect data with the current policy
             # ========================================================================
             while cur_batch_steps < self.min_steps_per_update:
-                ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = self.do_rollout(env, self.model, self.env_max_steps)
+                ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done = do_rollout(env, self.model, self.env_max_steps)
                 self.replay_buf.store(ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done)
 
                 ep_steps = ep_rews.shape[0]
@@ -163,8 +162,8 @@ class SACAgent:
                 cur_total_steps += ep_steps
 
                 self.raw_rew_hist.append(torch.sum(ep_rews))
-                if cur_batch_steps % 100 == 0:
-                    print(f"{os.getpid()} - {cur_total_steps} reward: {self.raw_rew_hist[-1]}")
+                #print(self.raw_rew_hist[-1])
+
 
             progress_bar.update(cur_batch_steps)
 
@@ -177,11 +176,10 @@ class SACAgent:
 
                 q_targ = replay_rews + self.gamma * (1 - replay_done) * self.target_value_fn(replay_obs2)
 
-                noise = torch.randn(self.replay_batch_size, n_controllers)
+                noise = torch.randn(self.replay_batch_size, act_size)
                 sample_acts, sample_logp = self.model.select_action(replay_obs1, noise)
 
                 q_in = torch.cat((replay_obs1, sample_acts), dim=1)
-                #                print(q_in.shape)
                 q_preds = torch.cat((self.model.q1_fn(q_in), self.model.q2_fn(q_in)), dim=1)
                 q_min, q_min_idx = torch.min(q_preds, dim=1)
                 q_min = q_min.reshape(-1,1)
@@ -233,7 +231,7 @@ class SACAgent:
                 for i in range(num_mbatch):
                     cur_sample = i*self.sgd_batch_size
 
-                    noise = torch.randn(replay_obs1[cur_sample:cur_sample + self.sgd_batch_size].shape[0], n_controllers)
+                    noise = torch.randn(replay_obs1[cur_sample:cur_sample + self.sgd_batch_size].shape[0], act_size)
                     local_acts, local_logp = self.model.select_action(replay_obs1[cur_sample:cur_sample + self.sgd_batch_size], noise)
 
                     q_in = torch.cat((replay_obs1[cur_sample:cur_sample + self.sgd_batch_size], local_acts), dim=1)
@@ -263,53 +261,46 @@ class SACAgent:
         return self.model, self.raw_rew_hist, locals()
 
 
-    def do_rollout(self, env, model, num_steps):
-        torch.autograd.set_grad_enabled(False)
-        acts_list = []
-        obs1_list = []
-        obs2_list = []
-        rews_list = []
-        done_list = []
-        
-        dtype = torch.float32
-        act_size = env.action_space.shape[0]
-        n_controllers = 2
-        obs = env.reset()
-        done = False
-        cur_step = 0
-        
-        while not done:
-            obs = torch.as_tensor(obs, dtype=dtype)
-            obs1_list.append(obs.clone())
-            
-            noise = torch.randn(1, n_controllers)
-            c_weights, _ = model.select_action(obs.reshape(1, -1), noise)
-            
-            model_outs = torch.stack(
-                [torch.tensor(m.step(obs.squeeze().numpy())[0], requires_grad=False, dtype=torch.float32) for m in self.model.model_list]
-            )
+def do_rollout(env, model, num_steps):
+    torch.autograd.set_grad_enabled(False)
+    acts_list = []
+    obs1_list = []
+    obs2_list = []
+    rews_list = []
+    done_list = []
 
-            act = torch.mm(c_weights.reshape(1,-1), model_outs)
-            
-            obs, rew, done, _ = env.step(act.numpy().reshape(-1))
-            obs = torch.as_tensor(obs, dtype=dtype)
-            
-            acts_list.append(torch.as_tensor(c_weights.clone(), dtype=dtype))
-            rews_list.append(torch.as_tensor(rew, dtype=dtype))
-            obs2_list.append(obs.clone())
-            
-            if cur_step < num_steps:
-                done_list.append(torch.as_tensor(done))
-            else:
-                done_list.append(torch.as_tensor(False))
-                
-            cur_step += 1
-            
-        ep_obs1 = torch.stack(obs1_list)
-        ep_acts = torch.stack(acts_list).reshape(-1, n_controllers)
-        ep_rews = torch.stack(rews_list).reshape(-1, 1)
-        ep_obs2 = torch.stack(obs2_list)
-        ep_done = torch.stack(done_list).reshape(-1, 1)
-        
-        torch.autograd.set_grad_enabled(True)
-        return ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done
+    dtype = torch.float32
+    act_size = env.action_space.shape[0]
+    obs = env.reset()
+    done = False
+    cur_step = 0
+
+    while not done:
+        obs = torch.as_tensor(obs, dtype=dtype)
+        obs1_list.append(obs.clone())
+
+        noise = torch.randn(1, act_size)
+        act, _ = model.select_action(obs.reshape(1, -1), noise)
+
+        obs, rew, done, _ = env.step(act.numpy().reshape(-1))
+        obs = torch.as_tensor(obs, dtype=dtype)
+
+        acts_list.append(torch.as_tensor(act.clone(), dtype=dtype))
+        rews_list.append(torch.as_tensor(rew, dtype=dtype))
+        obs2_list.append(obs.clone())
+
+        if cur_step < num_steps:
+            done_list.append(torch.as_tensor(done))
+        else:
+            done_list.append(torch.as_tensor(False))
+
+        cur_step += 1
+
+    ep_obs1 = torch.stack(obs1_list)
+    ep_acts = torch.stack(acts_list).reshape(-1, act_size)
+    ep_rews = torch.stack(rews_list).reshape(-1, 1)
+    ep_obs2 = torch.stack(obs2_list)
+    ep_done = torch.stack(done_list).reshape(-1, 1)
+
+    torch.autograd.set_grad_enabled(True)
+    return ep_obs1, ep_obs2, ep_acts, ep_rews, ep_done
