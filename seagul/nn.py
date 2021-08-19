@@ -131,7 +131,7 @@ class MLP(nn.Module):
         self.output_activation = output_activation()
 
         if input_bias is not None:
-            self.input_bias = Parameter(torch.Tensor(input_size))
+            self.input_bias = Parameter(torch.zeros(input_size))
         else:
             self.input_bias = None
             
