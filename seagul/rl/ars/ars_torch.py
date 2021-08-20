@@ -1,8 +1,9 @@
 import gym
-from multiprocessing import Process,Queue
+from torch.multiprocessing import Process,Queue
 import copy
 from numpy.random import default_rng
 import numpy as np
+import torch
 import time
 from seagul.rl.common import make_schedule
 
@@ -24,7 +25,7 @@ def update_std(data, cur_std, cur_steps):
         return np.sqrt((new_var * new_steps + cur_var * cur_steps) / (cur_steps + new_steps))
 
 
-def worker_fn(worker_q, master_q, env_name, env_config, postprocess, seed):
+def worker_fn(worker_q, master_q, policy, env_name, env_config, postprocess, seed):
     env = gym.make(env_name, **env_config)
     env.seed(int(seed))
     while True:
@@ -33,8 +34,10 @@ def worker_fn(worker_q, master_q, env_name, env_config, postprocess, seed):
             env.close()
             return
         else:
-            W,state_mean,state_std = data
-            policy = ARSModel(W, state_mean, state_std)
+            W_flat,state_mean,state_std = data
+            torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False), policy.parameters())
+            policy.state_means = state_mean
+            policy.state_std = state_std
             states, returns, log_returns = do_rollout_train(env, policy, postprocess)
             worker_q.put((states, returns, log_returns))
 
@@ -49,7 +52,7 @@ def do_rollout_train(env, policy, postprocess):
     while not done:
         state_list.append(np.copy(obs))
 
-        actions,_,_,_ = policy.step(obs)
+        actions = policy(obs).detach().numpy()
         obs, reward, done, _ = env.step(actions)
 
         act_list.append(np.array(actions))
@@ -75,21 +78,34 @@ class ARSModel:
     """
     Just here to be compatible with the rest of seagul, ARS has such a simple policy that it doesn't really matter
     """
-    def __init__(self, W, state_mean, state_std):
-        self.W = W
-        self.state_mean = state_mean
-        self.state_std = state_std
+    def __init__(self, policy, state_mean, state_std):
+        self.policy = policy
 
     def step(self, obs):
-        action = self.W.T@((obs - self.state_mean)/self.state_std)
+        action = self.policy(obs)
         return action, None, None, None
 
 
 class ARSAgent:
     """
-    TODO
+    This is a version of Augmented Random Search (https://arxiv.org/pdf/1803.07055) that uses arbitary pytorch polices. If you just want a linear policy see seagul/ars/rl/ars_np for a version which uses pure numpy but is limited to linear policies. 
+
+    Args:
+        env_name: name of the openAI gym env to solve
+        seed: the random seed to use
+        env_config: dictionary containing kwargs for the environment
+        n_workers: number of workers to use
+        n_delta: number of deltas to try at each update stepx
+        n_top: number of deltas to use in the update calculation at each step
+        step_size: it's the step size... alpha from the original paper.
+        exp_noise: exploration noise, sigma from the paper.
+        reward_stop: reward threshold to stop training at.
+        postprocessor: reward post processor to use, default is none.
+        step_schedule: an iterable of two step sizes to linearly interpolate between as training goes on, overrides step_size
+        exp_schedule:  an iterable of two exp noises to linearly interpolate between as training goes on, overrides step_size
+            
     """
-    def __init__(self, env_name, seed, env_config=None, n_workers=24, n_delta=32, n_top=32,
+    def __init__(self, env_name, policy, seed, env_config=None, n_workers=24, n_delta=32, n_top=32,
                  step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default,
                  step_schedule=None, exp_schedule=None
                  ):
@@ -116,20 +132,19 @@ class ARSAgent:
         self.env_config = env_config
 
 
-        if env_name == "bball3-v1":
-            obs_size = 10
-            act_size = 3
-        else:
-            env = gym.make(self.env_name, **self.env_config)
-            obs_size = env.observation_space.shape[0]
-            act_size = env.action_space.shape[0]
+        env = gym.make(self.env_name, **self.env_config)
+        self.obs_size = env.observation_space.shape[0]
+        self.act_size = env.action_space.shape[0]
 
-        self.W = np.zeros((obs_size, act_size))
-        self.state_mean = np.zeros(obs_size)
-        self.state_std = np.ones(obs_size)
+        self.policy = policy
+        W_torch = torch.nn.utils.parameters_to_vector(policy.parameters())
+        self.W_flat = W_torch.detach().numpy()
+        print(self.W_flat)
+        
+        self.state_mean = np.zeros(self.obs_size)
+        self.state_std = np.ones(self.obs_size)
 
-        #        env.close()
-
+        
     def learn(self, n_epochs, verbose=True):
         proc_list = []
         master_q_list = []
@@ -145,13 +160,13 @@ class ARSAgent:
         for i in range(self.n_workers):
             master_q = Queue()
             worker_q = Queue()
-            proc = Process(target=worker_fn, args=(worker_q, master_q, self.env_name, self.env_config, self.postprocessor, self.seed))
+            proc = Process(target=worker_fn, args=(worker_q, master_q, self.policy, self.env_name, self.env_config, self.postprocessor, self.seed))
             proc.start()
             proc_list.append(proc)
             master_q_list.append(master_q)
             worker_q_list.append(worker_q)
 
-        n_param = self.W.shape[0]*self.W.shape[1]
+        n_param = self.W_flat.shape[0]
 
         rng = default_rng()         
 
@@ -166,15 +181,14 @@ class ARSAgent:
                     early_stop = True
                     break
             
-            W_flat = self.W.flatten()
             deltas = rng.standard_normal((self.n_delta, n_param))
             #import ipdb; ipdb.set_trace()
-            pm_W = np.concatenate((W_flat+(deltas*self.exp_noise), W_flat-(deltas*self.exp_noise)))
+            pm_W = np.concatenate((self.W_flat+(deltas*self.exp_noise), self.W_flat-(deltas*self.exp_noise)))
 
             start = time.time()
 
             for i,Ws in enumerate(pm_W):
-                master_q_list[i % self.n_workers].put((Ws.reshape(self.W.shape[0], self.W.shape[1]) ,self.state_mean,self.state_std))
+                master_q_list[i % self.n_workers].put((Ws ,self.state_mean,self.state_std))
                 
             results = []
             for i, _ in enumerate(pm_W):
@@ -183,7 +197,7 @@ class ARSAgent:
             end = time.time()
             t = (end - start)
                 
-            states = np.array([]).reshape(0,self.W.shape[0])
+            states = np.array([]).reshape(0,self.obs_size)
             p_returns = []
             m_returns = []
             l_returns = []
@@ -217,8 +231,7 @@ class ARSAgent:
             self.total_steps += ep_steps
             self.total_epochs += 1
 
-            W_flat = W_flat + (self.step_size / (self.n_delta * np.concatenate((p_returns, m_returns)).std() + 1e-6)) * np.sum((p_returns - m_returns)*deltas[top_idx].T, axis=1)
-            self.W = W_flat.reshape(self.W.shape[0], self.W.shape[1])
+            self.W_flat = self.W_flat + (self.step_size / (self.n_delta * np.concatenate((p_returns, m_returns)).std() + 1e-6)) * np.sum((p_returns - m_returns)*deltas[top_idx].T, axis=1)
 
 
         for q in master_q_list:
@@ -226,7 +239,12 @@ class ARSAgent:
         for proc in proc_list:
             proc.join()
 
-        self.model = ARSModel(self.W, self.state_mean, self.state_std)
+        torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat), self.policy.parameters())
+        
+        self.policy.state_means = self.state_mean
+        self.policy.state_std = self.state_std
+                        
+        self.model = ARSModel(self.policy)
         return self.model, self.lr_hist[learn_start_idx:], locals()
 
 

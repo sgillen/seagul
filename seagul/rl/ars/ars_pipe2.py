@@ -53,9 +53,9 @@ def do_rollout_train(env, policy, W):
     obs = env.reset()
     done = False
     while not done:
-        state_list.append(torch.as_tensor(obs))
+        state_list.append(torch.a(obs))
 
-        actions = policy(torch.as_tensor(obs))
+        actions = policy(obs)
         obs, reward, done, _ = env.step(actions)
 
         act_list.append(torch.as_tensor(actions))
@@ -73,7 +73,7 @@ def postprocess_default(obs, acts, rews):
 
 
 class ARSAgent:
-    def __init__(self, env_name, policy, seed, env_config=None, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default, n_postprocess_runs=1, reward_stop=None):
+    def __init__(self, env_name, policy, seed, env_config=None, n_workers=8, step_size=.02, n_delta=32, n_top=16, exp_noise=0.03, postprocessor=postprocess_default, use_cuda=False, reward_stop=None):
         self.env_name = env_name
         self.policy = policy
         self.n_workers = n_workers
@@ -89,7 +89,8 @@ class ARSAgent:
         self.lr_hist = []
         self.total_epochs = 0
         self.total_steps = 0
-
+        self.use_cude = use_cuda
+ 
         if env_config is None:
             env_config = {}
         self.env_config = env_config
@@ -98,21 +99,14 @@ class ARSAgent:
     def learn(self, n_epochs):
         torch.autograd.set_grad_enabled(False)
 
+        device = torch.device('cuda' if (torch.cuda.is_available() and self.use_cuda) else 'cpu')
 
-        task_path = os.path.dirname(os.path.realpath(__file__))
-        home_path = task_path + "/../../../../.."
-
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
-        env = VecEnv(rsg_anymal.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'],
-             normalize_ob = False, normalize_rew = False)
-
-    
-        self.W = torch.zeros(obs_dim, act_dim)
+        W = torch.nn.utils.parameters_to_vector(self.policy.parameters())
         n_param = W.shape[0]
 
         torch.manual_seed(self.seed)
         exp_dist = torch.distributions.Normal(torch.zeros(self.n_delta, n_param), torch.ones(self.n_delta, n_param))
+
 
         for epoch in range(n_epochs):
 
