@@ -322,7 +322,7 @@ def do_rollout(env, model, n_steps_complete):
     obs_list = []
     rew_list = []
 
-    dtype = torch.float32
+    dtype = model.policy.dtype
     obs = env.reset()
     done = False
     cur_step = 0

@@ -116,7 +116,7 @@ class MLP(nn.Module):
     """
 
     def __init__(
-            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, bias=True, input_bias=None, dtype=torch.float32):
+            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, bias=True, input_bias=None):
         """
          input_size: how many inputs
          output_size: how many outputs

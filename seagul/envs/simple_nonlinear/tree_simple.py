@@ -41,7 +41,7 @@ class TreeSimple(core.Env):
 
         self.X = np.array([x, y])
 
-        reward = -0.01 * act ** 2 + 1
+        reward = -0.1 * (act ** 2) + 1
 
         if (self.deadzone[0] < x < self.deadzone[1]) and (-self.tol < y < self.tol):
             done = True
