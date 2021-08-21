@@ -25,7 +25,7 @@ def update_std(data, cur_std, cur_steps):
         return np.sqrt((new_var * new_steps + cur_var * cur_steps) / (cur_steps + new_steps))
 
 
-def worker_fn(worker_q, master_q, policy, env_name, env_config, postprocess, seed):
+def worker_fn(worker_q, master_q, model, env_name, env_config, postprocess, seed):
     env = gym.make(env_name, **env_config)
     env.seed(int(seed))
     while True:
@@ -35,14 +35,14 @@ def worker_fn(worker_q, master_q, policy, env_name, env_config, postprocess, see
             return
         else:
             W_flat,state_mean,state_std = data
-            torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False), policy.parameters())
-            policy.state_means = state_mean
-            policy.state_std = state_std
-            states, returns, log_returns = do_rollout_train(env, policy, postprocess)
+            torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False), model.policy.parameters())
+            model.policy.state_means = state_mean
+            model.policy.state_std = state_std
+            states, returns, log_returns = do_rollout_train(env, model, postprocess)
             worker_q.put((states, returns, log_returns))
 
 
-def do_rollout_train(env, policy, postprocess):
+def do_rollout_train(env, model, postprocess):
     state_list = []
     act_list = []
     reward_list = []
@@ -52,7 +52,8 @@ def do_rollout_train(env, policy, postprocess):
     while not done:
         state_list.append(np.copy(obs))
 
-        actions = policy(obs).detach().numpy()
+        actions,_,_,_ = model.step(obs.reshape(1,-1))
+        actions = actions.detach().numpy()
         obs, reward, done, _ = env.step(actions)
 
         act_list.append(np.array(actions))
@@ -63,7 +64,7 @@ def do_rollout_train(env, policy, postprocess):
     act_arr = np.stack(act_list)
     preprocess_sum = np.array(sum(reward_list))
 
-    state_arr_n = (state_arr - policy.state_mean)/policy.state_std
+    state_arr_n = (state_arr - model.policy.state_means)/model.policy.state_std
     reward_list = postprocess(state_arr_n, act_arr, np.array(reward_list))
     reward_sum = (np.sum(reward_list).item())
 
@@ -105,7 +106,7 @@ class ARSAgent:
         exp_schedule:  an iterable of two exp noises to linearly interpolate between as training goes on, overrides step_size
             
     """
-    def __init__(self, env_name, policy, seed, env_config=None, n_workers=24, n_delta=32, n_top=32,
+    def __init__(self, env_name, model, seed, env_config=None, n_workers=24, n_delta=32, n_top=32,
                  step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default,
                  step_schedule=None, exp_schedule=None
                  ):
@@ -136,10 +137,9 @@ class ARSAgent:
         self.obs_size = env.observation_space.shape[0]
         self.act_size = env.action_space.shape[0]
 
-        self.policy = policy
-        W_torch = torch.nn.utils.parameters_to_vector(policy.parameters())
+        self.model = model
+        W_torch = torch.nn.utils.parameters_to_vector(model.policy.parameters())
         self.W_flat = W_torch.detach().numpy()
-        print(self.W_flat)
         
         self.state_mean = np.zeros(self.obs_size)
         self.state_std = np.ones(self.obs_size)
@@ -160,7 +160,7 @@ class ARSAgent:
         for i in range(self.n_workers):
             master_q = Queue()
             worker_q = Queue()
-            proc = Process(target=worker_fn, args=(worker_q, master_q, self.policy, self.env_name, self.env_config, self.postprocessor, self.seed))
+            proc = Process(target=worker_fn, args=(worker_q, master_q, self.model, self.env_name, self.env_config, self.postprocessor, self.seed))
             proc.start()
             proc_list.append(proc)
             master_q_list.append(master_q)
@@ -239,12 +239,11 @@ class ARSAgent:
         for proc in proc_list:
             proc.join()
 
-        torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat), self.policy.parameters())
+        torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat), self.model.policy.parameters())
         
-        self.policy.state_means = self.state_mean
-        self.policy.state_std = self.state_std
+        self.model.policy.state_means = self.state_mean
+        self.model.policy.state_std = self.state_std
                         
-        self.model = ARSModel(self.policy)
         return self.model, self.lr_hist[learn_start_idx:], locals()
 
 

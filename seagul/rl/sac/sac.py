@@ -5,14 +5,15 @@ import tqdm.auto as tqdm
 import gym
 import copy
 
-from seagul.rl.common import ReplayBuffer, update_mean, update_std, RandModel
+from seagul.rl.common import ReplayBuffer, update_mean, update_std, RandModel, make_schedule
+
 
 
 class SACAgent:
     def __init__(self, env_name, model, env_max_steps=0, min_steps_per_update=1, iters_per_update=100,
                  replay_batch_size=64, seed=0, gamma=0.95, polyak=0.995, alpha=0.2, sgd_batch_size=64,
                  sgd_lr=1e-3, exploration_steps=100, replay_buf_size=int(100000), normalize_steps=1000,
-                 use_gpu=False, reward_stop=None, env_config={}):
+                 use_gpu=False, reward_stop=None, env_config={}, sgd_lr_sched=None):
         """
         Implements soft actor critic
 
@@ -36,6 +37,7 @@ class SACAgent:
             use_gpu: determines if we try to use a GPU or not
             reward_stop: reward value to bail at
             env_config: dictionary containing kwargs to pass to your the environment
+            sgd_lr_sched: list of sgd_lrs to interpolate between as training goes on
 
         """
         self.env_name = env_name
@@ -56,6 +58,7 @@ class SACAgent:
         self.use_gpu = use_gpu
         self.reward_stop = reward_stop
         self.env_config = env_config
+        self.sgd_lr_sched = sgd_lr_sched
 
     def learn(self, train_steps):
         """
@@ -86,6 +89,12 @@ class SACAgent:
         val_opt = torch.optim.Adam(self.model.value_fn.parameters(), lr=self.sgd_lr)
         q1_opt = torch.optim.Adam(self.model.q1_fn.parameters(), lr=self.sgd_lr)
         q2_opt = torch.optim.Adam(self.model.q2_fn.parameters(), lr=self.sgd_lr)
+
+        if self.sgd_lr_sched:
+            sgd_lookup = make_schedule(self.sgd_lr_sched, train_steps)
+        else:
+            sgd_lookup = None
+
 
         # seed all our RNGs
         env.seed(self.seed)
@@ -257,6 +266,14 @@ class SACAgent:
                     tar_sd[layer] = self.polyak * tar_sd[layer] + (1 - self.polyak) * val_sd[layer]
 
                 self.target_value_fn.load_state_dict(tar_sd)
+
+
+            #Update LRs
+            if sgd_lookup:
+                pol_opt.param_groups[0]['lr'] = sgd_lookup(cur_total_steps)
+                val_opt.param_groups[0]['lr'] = sgd_lookup(cur_total_steps)
+                q1_opt.param_groups[0]['lr'] = sgd_lookup(cur_total_steps)
+                q2_opt.param_groups[0]['lr'] = sgd_lookup(cur_total_steps)
 
         return self.model, self.raw_rew_hist, locals()
 
