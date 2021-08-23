@@ -17,7 +17,7 @@ class PlanarQuadCopter(gym.Env):
 
     """
 
-    def __init__(self, num_steps=1000, m = 1, J = 1, g = 9.8, B = 2, L = 5, dt = .01):
+    def __init__(self, num_steps=250, m = .25, J = .25, g = 9.8, max_F = 5, max_M = 5, dt = .01, deadzone_x = [3,7], deadzone_y = [3,7]):
         
         
         self.num_steps = 1000
@@ -26,12 +26,17 @@ class PlanarQuadCopter(gym.Env):
         self.m = m
         self.J = J
         self.g = g
-        self.B = B
-        self.L = L
+        self.max_F = max_F
+        self.max_M = max_M
         self.dt = dt
 
         self.act_hold = 1
-
+        
+        obs_high = np.ones(6)*100
+        act_high = np.array([max_F, max_M])
+        
+        self.observation_space = gym.spaces.Box(low=-obs_high, high=obs_high,dtype=np.float32)
+        self.action_space = gym.spaces.Box(low=-act_high, high=act_high,dtype=np.float32)
         self.state = np.zeros(6)
         
 
@@ -45,7 +50,8 @@ class PlanarQuadCopter(gym.Env):
     def step(self, action):
         done = False
 
-        action = np.clip(action, -self.L, self.L)
+        action[0] = np.clip(action[0], -self.max_F, self.max_F)
+        action[1] = np.clip(action[1], -self.max_M, self.max_M)
 
         for _ in range(self.act_hold):
             ns = rk4(self._derivs, action, 0, self.dt, self.state)
@@ -57,7 +63,7 @@ class PlanarQuadCopter(gym.Env):
             self.state[4] = ns[4]
             self.state[5] = ns[5]
 
-        reward = 1
+        reward = -0.01*((self.state[0] - 5)**2 + (self.state[1] - 5)**2)
 
         self.cur_step += 1
         if self.cur_step > self.num_steps:
@@ -73,13 +79,33 @@ class PlanarQuadCopter(gym.Env):
         F = u[0]
         M = u[1]
 
-        dqdt[0] = q[1]
-        dqdt[1] = q[2]
-        dqdt[2] = q[3]
+        dqdt[0] = q[3]
+        dqdt[1] = q[4]
+        dqdt[2] = q[5]
         
         dqdt[3] = F*sin(q[2])/self.m
         dqdt[4] = (F*cos(q[2]) - self.m*self.g)/self.m
         dqdt[5] = -M/self.J
 
         return dqdt
+        
+
+    def render(self, mode=None):
+        pass
+
+    def plot_episode(self, obs):
+        import matplotlib.pyplot as plt
+        plt.plot(obs[:,0], obs[:,1],'o', alpha=.5)
+        plt.plot(obs[0,0], obs[0,1], 'o', color='red')
+
+        arrow_length = np.max(np.abs(np.concatenate([obs[:,0],obs[:,1]])))*.05
+
+        for i,o in enumerate(obs):
+            if i % 5 == 0:
+                plt.arrow(o[0], o[1], arrow_length*sin(o[3]), arrow_length*cos(o[3]), width=0.01)
+
+        plt.axis('equal')
+        plt.xlabel('x')
+        plt.ylabel('y')
+    
         
