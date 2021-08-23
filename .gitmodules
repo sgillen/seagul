@@ -1,3 +1,0 @@
-[submodule "seagul/envs/matlab/bball3_src"]
-	path = seagul/envs/matlab/bball3_src
-	url = https://github.com/ntalele/bouncing_ball
