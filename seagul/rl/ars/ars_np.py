@@ -117,7 +117,7 @@ class ARSAgent:
         self.postprocessor = postprocessor
         self.seed = seed
         self.r_hist = []
-        self.lr_hist = []
+        self.raw_rew_hist = []
         self.total_epochs = 0
         self.total_steps = 0
         self.reward_stop = reward_stop
@@ -176,8 +176,8 @@ class ARSAgent:
             if self.exp_schedule:
                 self.exp_noise = exp_lookup(epoch)
 
-            if len(self.lr_hist) > 2 and self.reward_stop:
-                if self.lr_hist[-1] >= self.reward_stop and self.lr_hist[-2] >= self.reward_stop:
+            if len(self.raw_rew_hist) > 2 and self.reward_stop:
+                if self.raw_rew_hist[-1] >= self.reward_stop and self.raw_rew_hist[-2] >= self.reward_stop:
                     early_stop = True
                     break
             
@@ -222,7 +222,7 @@ class ARSAgent:
             if verbose and epoch % 10 == 0:
                 print(f"{epoch} : mean return: {l_returns.mean()}, top_return: {l_returns.max()}, fps:{states.shape[0]/t}")
 
-            self.lr_hist.append(np.stack(top_returns)[top_idx].mean())
+            self.raw_rew_hist.append(np.stack(top_returns)[top_idx].mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
 
             ep_steps = states.shape[0]
@@ -242,7 +242,7 @@ class ARSAgent:
             proc.join()
 
         self.model = ARSModel(self.W, self.state_mean, self.state_std)
-        return self.model, self.lr_hist[learn_start_idx:], locals()
+        return self.model, self.raw_rew_hist[learn_start_idx:], locals()
 
 
 if __name__ == "__main__":
@@ -278,6 +278,6 @@ if __name__ == "__main__":
     # plt.show()
 
 
-    #plt.plot(agent.lr_hist)
+    #plt.plot(agent.raw_rew_hist)
     #env = gym.make(env_name)
     #state_hist, act_hist, returns = do_rollout(env_name, policy)
