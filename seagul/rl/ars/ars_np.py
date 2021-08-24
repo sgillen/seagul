@@ -222,7 +222,7 @@ class ARSAgent:
             if verbose and epoch % 10 == 0:
                 print(f"{epoch} : mean return: {l_returns.mean()}, top_return: {l_returns.max()}, fps:{states.shape[0]/t}")
 
-            self.lr_hist.append(l_returns.mean())
+            self.lr_hist.append(np.stack(top_returns)[top_idx].mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
 
             ep_steps = states.shape[0]
