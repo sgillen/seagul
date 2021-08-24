@@ -17,10 +17,8 @@ class PlanarQuadCopter(gym.Env):
 
     """
 
-    def __init__(self, num_steps=250, m = .25, J = .25, g = 9.8, max_F = 5, max_M = 5, dt = .01, deadzone_x = [3,7], deadzone_y = [3,7]):
-        
-        
-        self.num_steps = 1000
+    def __init__(self, num_steps=100, m = .25, J = .25, g = 9.8, max_F = 5, max_M = 5, dt = .01, xtarg = 2, ytarg = 2, theta_targ=0):
+        self.num_steps = num_steps
         self.cur_step = 0
 
         self.m = m
@@ -30,25 +28,30 @@ class PlanarQuadCopter(gym.Env):
         self.max_M = max_M
         self.dt = dt
 
+        self.xtarg = xtarg
+        self.ytarg = xtarg
+        self.theta_targ = theta_targ
+
         self.act_hold = 1
         
         obs_high = np.ones(6)*100
         act_high = np.array([max_F, max_M])
         
-        self.observation_space = gym.spaces.Box(low=-obs_high, high=obs_high,dtype=np.float32)
-        self.action_space = gym.spaces.Box(low=-act_high, high=act_high,dtype=np.float32)
+        self.observation_space = gym.spaces.Box(low=-obs_high, high=obs_high)
+        self.action_space = gym.spaces.Box(low=-act_high, high=act_high)
         self.state = np.zeros(6)
         
-
+    def _get_obs(self):
+        return np.array(self.state)
 
     def reset(self):
         self.state = np.zeros(6)
         self.cur_step = 0
-        return self.state.copy()
-    
+        return self._get_obs()
 
     def step(self, action):
         done = False
+        action = np.asarray(action).squeeze()
 
         action[0] = np.clip(action[0], -self.max_F, self.max_F)
         action[1] = np.clip(action[1], -self.max_M, self.max_M)
@@ -63,13 +66,17 @@ class PlanarQuadCopter(gym.Env):
             self.state[4] = ns[4]
             self.state[5] = ns[5]
 
-        reward = -0.01*((self.state[0] - 5)**2 + (self.state[1] - 5)**2)
+        xpen = -0.01*np.clip((self.state[0] - self.xtarg)**2,-4,4)
+        ypen = -0.01*np.clip((self.state[1] - self.ytarg)**2,-4,4)
+        thpen = -0.01*np.clip((self.state[2]- self.theta_targ)**2, -2,2)
+            
+        reward = xpen + ypen + thpen
 
         self.cur_step += 1
         if self.cur_step > self.num_steps:
             done = True
 
-        return self.state.copy(), reward, done, {}
+        return self._get_obs(), reward, done, {}
 
 
     def _derivs(self, t, q, u):
