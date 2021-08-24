@@ -26,6 +26,7 @@ def update_std(data, cur_std, cur_steps):
 
 
 def worker_fn(worker_q, master_q, model, env_name, env_config, postprocess, seed):
+    torch.set_grad_enabled(False)
     env = gym.make(env_name, **env_config)
     env.seed(int(seed))
     while True:
@@ -36,8 +37,8 @@ def worker_fn(worker_q, master_q, model, env_name, env_config, postprocess, seed
         else:
             W_flat,state_mean,state_std = data
             torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False), model.policy.parameters())
-            model.policy.state_means = state_mean
-            model.policy.state_std = state_std
+            model.policy.state_means = torch.from_numpy(state_mean)
+            model.policy.state_std = torch.from_numpy(state_std)
             states, returns, log_returns = do_rollout_train(env, model, postprocess)
             worker_q.put((states, returns, log_returns))
 
@@ -59,12 +60,11 @@ def do_rollout_train(env, model, postprocess):
         act_list.append(np.array(actions))
         reward_list.append(reward)
 
-
     state_arr = np.stack(state_list)
     act_arr = np.stack(act_list)
     preprocess_sum = np.array(sum(reward_list))
 
-    state_arr_n = (state_arr - model.policy.state_means)/model.policy.state_std
+    state_arr_n = (state_arr - np.asarray(model.policy.state_means))/np.asarray(model.policy.state_std)
     reward_list = postprocess(state_arr_n, act_arr, np.array(reward_list))
     reward_sum = (np.sum(reward_list).item())
 
@@ -75,19 +75,20 @@ def postprocess_default(obs,acts,rews):
     return rews
 
 
-class ARSModel:
+class ARSTorchModel:
     """
     Just here to be compatible with the rest of seagul, ARS has such a simple policy that it doesn't really matter
     """
-    def __init__(self, policy, state_mean, state_std):
+    def __init__(self, policy):
         self.policy = policy
 
     def step(self, obs):
-        action = self.policy(obs)
-        return action, None, None, None
+        with torch.no_grad():
+            action = self.policy(obs)
+            return action, None, None, None
 
 
-class ARSAgent:
+class ARSTorchAgent:
     """
     This is a version of Augmented Random Search (https://arxiv.org/pdf/1803.07055) that uses arbitary pytorch polices. If you just want a linear policy see seagul/ars/rl/ars_np for a version which uses pure numpy but is limited to linear policies. 
 
@@ -119,7 +120,7 @@ class ARSAgent:
         self.postprocessor = postprocessor
         self.seed = seed
         self.r_hist = []
-        self.lr_hist = []
+        self.raw_rew_hist = []
         self.total_epochs = 0
         self.total_steps = 0
         self.reward_stop = reward_stop
@@ -146,6 +147,7 @@ class ARSAgent:
 
         
     def learn(self, n_epochs, verbose=True):
+        torch.set_grad_enabled(False)
         proc_list = []
         master_q_list = []
         worker_q_list = []
@@ -176,8 +178,8 @@ class ARSAgent:
             if self.exp_schedule:
                 self.exp_noise = exp_lookup(epoch)
 
-            if len(self.lr_hist) > 2 and self.reward_stop:
-                if self.lr_hist[-1] >= self.reward_stop and self.lr_hist[-2] >= self.reward_stop:
+            if len(self.raw_rew_hist) > 2 and self.reward_stop:
+                if self.raw_rew_hist[-1] >= self.reward_stop and self.raw_rew_hist[-2] >= self.reward_stop:
                     early_stop = True
                     break
             
@@ -221,7 +223,7 @@ class ARSAgent:
             if verbose and epoch % 10 == 0:
                 print(f"{epoch} : mean return: {l_returns.mean()}, top_return: {l_returns.max()}, fps:{states.shape[0]/t}")
 
-            self.lr_hist.append(l_returns.mean())
+            self.raw_rew_hist.append(np.stack(top_returns)[top_idx].mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
 
             ep_steps = states.shape[0]
@@ -240,46 +242,9 @@ class ARSAgent:
             proc.join()
 
         torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat), self.model.policy.parameters())
-        
-        self.model.policy.state_means = self.state_mean
-        self.model.policy.state_std = self.state_std
-                        
-        return self.model, self.lr_hist[learn_start_idx:], locals()
 
+        self.model.policy.state_means = torch.from_numpy(self.state_mean)
+        self.model.policy.state_std = torch.from_numpy(self.state_std)
 
-if __name__ == "__main__":
-    import pybullet_envs
-    import seagul.envs
-    import matplotlib.pyplot as plt
-
-    env_name = "Humanoid-v2"
-    env = gym.make(env_name)
-    in_size = env.observation_space.shape[0]
-    out_size = env.action_space.shape[0]
-
-    from seagul.mesh import variation_dim
-
-    def var_dim_post(rews):
-        return rews/variation_dim(rews)
-
-    import time
-    start = time.time()
-    agent = ARSAgent(env_name, seed=0, n_workers=24, n_delta=240, n_top=240, exp_noise=0.0075)
-    rews = agent.learn(500)
-    print(time.time() - start)
-    print(rews)
-    #plt.plot(rews)
-    #plt.show()
-
-    #
-    # start = time.time()
-    # rews = agent.learn(10)
-    # print(time.time() - start)
-    #
-    # plt.plot(rews)
-    # plt.show()
-
-
-    #plt.plot(agent.lr_hist)
-    #env = gym.make(env_name)
-    #state_hist, act_hist, returns = do_rollout(env_name, policy)
+        torch.set_grad_enabled(True)
+        return self.model, self.raw_rew_hist[learn_start_idx:], locals()

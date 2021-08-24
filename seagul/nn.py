@@ -116,13 +116,15 @@ class MLP(nn.Module):
     """
 
     def __init__(
-            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, bias=True, input_bias=None):
+            self, input_size, output_size, num_layers, layer_size, activation=nn.ReLU, output_activation=nn.Identity, hidden_bias=True, output_bias=True, input_bias=False):
         """
          input_size: how many inputs
          output_size: how many outputs
          num_layers: how many HIDDEN layers
          layer_size: how big each hidden layer should be
          activation: which activation function to use
+         hidden_bias: True sets bias=True for each hidden layer
+         output_bias: Truse sets bias=True for the final linear layer
          input_bias: can add an "input bias" such that the first layer computer activation([x+bi]*W^T + b0)
          """
         super(MLP, self).__init__()
@@ -130,26 +132,26 @@ class MLP(nn.Module):
         self.activation = activation()
         self.output_activation = output_activation()
 
-        if input_bias is not None:
+        if input_bias:
             self.input_bias = Parameter(torch.zeros(input_size))
         else:
             self.input_bias = None
-            
+                    
         if num_layers == 0:
             self.layers = []
-            self.output_layer = nn.Linear(input_size, output_size,bias=bias)
+            self.output_layer = nn.Linear(input_size, output_size,bias=output_bias)
 
         else:
-            self.layers = nn.ModuleList([nn.Linear(input_size, layer_size,bias=bias)])
-            self.layers.extend([nn.Linear(layer_size, layer_size,bias=bias) for _ in range(num_layers-1)])
-            self.output_layer = nn.Linear(layer_size, output_size,bias=bias)
+            self.layers = nn.ModuleList([nn.Linear(input_size, layer_size, bias=hidden_bias)])
+            self.layers.extend([nn.Linear(layer_size, layer_size,bias=hidden_bias) for _ in range(num_layers-1)])
+            self.output_layer = nn.Linear(layer_size, output_size,bias=output_bias)
 
         self.state_means = torch.zeros(input_size, requires_grad=False)
         self.state_std = torch.ones(input_size, requires_grad=False)
 
     def forward(self, data):
                 
-        data = (torch.as_tensor(data) - self.state_means) / self.state_std
+        data = (torch.as_tensor(data, dtype=self.state_means.dtype) - self.state_means) / self.state_std
         
         if self.input_bias is not None:
             data += self.input_bias
