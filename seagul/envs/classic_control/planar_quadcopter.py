@@ -107,5 +107,3 @@ class PlanarQuadCopter(gym.Env):
         plt.axis('equal')
         plt.xlabel('x')
         plt.ylabel('y')
-    
-        

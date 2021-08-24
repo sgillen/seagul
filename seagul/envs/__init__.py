@@ -21,6 +21,8 @@ register(id="bullet_car_ast-v0", entry_point="seagul.envs.bullet:RacecarGymEnvAs
 # register(id="walker2d_five_link-v0", entry_point="seagul.envs.bullet:Walker2DFiveLink")
 
 register(id="planar_quad-v0", entry_point="seagul.envs.classic_control:PlanarQuadCopter")
+register(id="linear-v0", entry_point="seagul.envs.classic_control:LinearEnv")
+
 
 register(id="su_cartpole-v0", entry_point="seagul.envs.classic_control:SUCartPoleEnv")
 register(id="sg_cartpole-v0", entry_point="seagul.envs.classic_control:SGCartPoleEnv")
