@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.random import default_rng
 import gym
 
 
@@ -8,11 +9,13 @@ class LinearEnv(gym.Env):
 
     """
 
-    def __init__(self, A, num_steps = 100, act_limit = 1, reset_range=5, Q = None, R = None):
+    def __init__(self, A, num_steps = 100, act_limit = 1, reset_range=5, seed = None, Q = None, R = None):
         self.A = A
         self.act_limit = act_limit
         self.num_steps = num_steps
         self.reset_range = reset_range
+
+        self.rng = default_rng(seed)
 
         self.num_obs = A.shape[0]
 
@@ -28,8 +31,10 @@ class LinearEnv(gym.Env):
         self.action_space = gym.spaces.Box(low=-act_limit, high=act_limit, shape=(self.num_obs,))
         self.X = np.zeros((1,self.num_obs))
 
+    def seed(self, seed):
+        self.rng = default_rng(seed)
     def reset(self):
-        self.X = np.random.uniform(low=-self.reset_range,high=self.reset_range,size=(1,self.num_obs))
+        self.X = self.rng.uniform(low=-self.reset_range,high=self.reset_range,size=(1,self.num_obs))
         self.cur_step = 0
         return self.X.squeeze()
 
