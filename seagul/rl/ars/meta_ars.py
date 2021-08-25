@@ -1,4 +1,4 @@
-from seagul.rl.ars.ars_np_queue import ARSAgent
+from seagul.rl.ars.ars_np import ARSAgent
 import numpy as np
 
 
@@ -24,7 +24,7 @@ class MetaARSAgent:
             for agent in self.agents:
                 agent.learn(self.epochs_per_meta_update, verbose=verbose)
 
-            end_rewards = [np.mean(agent.lr_hist[-5:]) for agent in self.agents]
+            end_rewards = [np.mean(agent.raw_rew_hist[-5:]) for agent in self.agents]
             sorted_idx = sorted(range(len(end_rewards)), key = lambda k: end_rewards[k], reverse=True)
             sorted_agents = [self.agents[k] for k in sorted_idx]
             top_agents = sorted_agents[:self.n_top_agents]
@@ -35,7 +35,7 @@ class MetaARSAgent:
             num_agents_to_copy = len(bad_agents)//len(top_agents)
 
             for i in range(self.n_top_agents):
-                print(f"Top agent {sorted_idx[i]} had reward: {np.mean(top_agents[i].lr_hist[-5:])}")
+                print(f"Top agent {sorted_idx[i]} had reward: {np.mean(top_agents[i].raw_rew_hist[-5:])}")
 
             for i in range(len(top_agents)):
                 for j in range(num_agents_to_copy):
@@ -44,7 +44,7 @@ class MetaARSAgent:
                     bad_agents[i*num_agents_to_copy+j].state_mean = np.copy(top_agents[i].state_mean)
                     bad_agents[i*num_agents_to_copy+j].state_std = np.copy(top_agents[i].state_std)
 
-            self.ml_hist.append(top_agents[0].lr_hist[-1])
+            self.ml_hist.append(top_agents[0].raw_rew_hist[-1])
 
 if __name__ == "__main__":
     meta_agent = MetaARSAgent("Hopper-v2", n_agents=10, kwargs={"step_size": .05, "exp_noise": .05})
