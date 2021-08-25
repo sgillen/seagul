@@ -1,9 +1,10 @@
 from gym import core, spaces
+from numpy.random import default_rng
 import numpy as np
 
 
 class TreeSimple(core.Env):
-    def __init__(self, L=5.0, init_y=2, g=-5, dt=.1, tol=.1, N=5):
+    def __init__(self, L=5.0, init_y=2, g=-5, dt=.1, tol=.1, N=5, seed=None):
         self.L = L
         self.init_y = init_y
         self.g = g
@@ -11,17 +12,19 @@ class TreeSimple(core.Env):
         self.tol = tol
         self.N = N
 
+        self.rng = default_rng(seed)
+
         self.observation_space = spaces.Box(low=np.array([-10.0, -10.0]), high=np.array([10.0, 10.0]))
         self.action_space = spaces.Box(low=np.array([-self.L]), high=np.array([self.L]))
 
         self.deadzone = np.array([3, 7])
         self.xrange = np.array([0.0, 10.0])
 
-    def seed(self, seed=None):
-        np.random.seed(seed)
+    def seed(self, seed):
+        self.rng = default_rng(seed)
 
     def reset(self):
-        self.x = np.random.uniform(low=self.xrange[0], high=self.xrange[1])
+        self.x = self.rng.uniform(low=self.xrange[0], high=self.xrange[1])
         self.y = self.init_y
         self.X = np.array([self.x, self.y])
         self.cur_step = 0
