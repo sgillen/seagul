@@ -17,14 +17,14 @@ class TreeSimple(core.Env):
         self.observation_space = spaces.Box(low=np.array([-10.0, -10.0]), high=np.array([10.0, 10.0]))
         self.action_space = spaces.Box(low=np.array([-self.L]), high=np.array([self.L]))
 
-        self.deadzone = np.array([3, 7])
-        self.xrange = np.array([0.0, 10.0])
+        self.deadzone = np.array([-2, 2])
+        self.xrange = np.array([-10.0, 10.0])
 
     def seed(self, seed):
         self.rng = default_rng(seed)
 
     def reset(self):
-        self.x = self.rng.uniform(low=self.xrange[0], high=self.xrange[1])
+        self.x = self.rng.uniform(low=self.deadzone[0], high=self.deadzone[1])
         self.y = self.init_y
         self.X = np.array([self.x, self.y])
         self.cur_step = 0

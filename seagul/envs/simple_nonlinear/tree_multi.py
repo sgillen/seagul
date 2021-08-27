@@ -14,8 +14,8 @@ class TreeMulti(core.Env):
         self.observation_space = spaces.Box(low=np.array([-10.0, -10.0]), high=np.array([10.0, 10.0]))
         self.action_space = spaces.Box(low=np.array([-self.L]), high=np.array([self.L]))
 
-        self.deadzones = [[2, 4],[6,8]]
-        self.xrange = np.array([0.0, 10.0])
+        self.deadzones = [[-4, -2],[2,4]]
+        self.xrange = np.array([-10.0, 10.0])
 
     def seed(self, seed=None):
         np.random.seed(seed)
