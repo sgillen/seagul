@@ -5,7 +5,12 @@ from numpy.random import default_rng
 import numpy as np
 import torch
 import time
+import os
 from seagul.rl.common import make_schedule
+
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv, VecFrameStack, VecNormalize, VecTransposeImage
+from stable_baselines3.common.env_util import make_vec_env
+
 
 
 def update_mean(data, cur_mean, cur_steps):
@@ -25,20 +30,42 @@ def update_std(data, cur_std, cur_steps):
         return np.sqrt((new_var * new_steps + cur_var * cur_steps) / (cur_steps + new_steps))
 
 
-def worker_fn(worker_q, master_q, model, env_name, env_config, postprocess, seed):
+def worker_fn(worker_q, master_q, zoo_path, algo, env_id, postprocess, seed):
     torch.set_grad_enabled(False)
-    env = gym.make(env_name, **env_config)
-    env.seed(int(seed))
+
+    import sys
+    sys.path.append(zoo_path + "/utils/")
+    from utils import ALGOS, get_latest_run_id, get_saved_hyperparams
+    from utils import get_wrapper_class
+
+    folder = zoo_path + "/rl-trained-agents/"
+    exp_id = get_latest_run_id(os.path.join(folder, algo), env_id)
+    log_path = os.path.join(folder, algo, f"{env_id}_{exp_id}")
+    stats_path = os.path.join(log_path, env_id)
+    model_path = os.path.join(log_path, f"{env_id}.zip")
+    normalize_path = os.path.join(os.path.dirname(model_path), env_id)
+    normalize_path = os.path.join(normalize_path, "vecnormalize.pkl")
+    
+    hyperparams, stats_path = get_saved_hyperparams(stats_path, norm_reward=True, test_mode=False)
+    env_wrapper = get_wrapper_class(hyperparams)
+
+    env = make_vec_env(env_id, wrapper_class=env_wrapper, vec_env_cls=DummyVecEnv)
+    env = VecNormalize.load(normalize_path, env)
+
+    model = ALGOS[algo].load(model_path, env=env, device='cpu')
+
+    env.seed(seed)
     while True:
         data = master_q.get()
         if data == "STOP":
+            print("Closing")
             env.close()
             return
         else:
             W_flat,state_mean,state_std = data
-            torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False), model.policy.parameters())
-            model.policy.state_means = torch.from_numpy(state_mean)
-            model.policy.state_std = torch.from_numpy(state_std)
+            torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False).float(), model.policy.action_net.parameters())
+            #model.policy.state_means = torch.from_numpy(state_mean)
+            #model.policy.state_std = torch.from_numpy(state_std)
             states, returns, log_returns = do_rollout_train(env, model, postprocess)
             worker_q.put((states, returns, log_returns))
 
@@ -53,18 +80,17 @@ def do_rollout_train(env, model, postprocess):
     while not done:
         state_list.append(np.copy(obs))
 
-        actions,_,_,_ = model.step(obs.reshape(1,-1))
-        actions = actions.detach().numpy()
+        actions,_= model.predict(obs, deterministic=True)
         obs, reward, done, _ = env.step(actions)
-
-        act_list.append(np.array(actions))
+        
+        act_list.append(np.copy(actions))
         reward_list.append(reward)
 
-    state_arr = np.stack(state_list)
-    act_arr = np.stack(act_list)
+    state_arr = np.stack(state_list).squeeze()
+    act_arr = np.stack(act_list).squeeze()
     preprocess_sum = np.array(sum(reward_list))
 
-    state_arr_n = (state_arr - np.asarray(model.policy.state_means))/np.asarray(model.policy.state_std)
+    state_arr_n = env.normalize_obs(state_arr).squeeze()
     reward_list = postprocess(state_arr_n, act_arr, np.array(reward_list))
     reward_sum = (np.sum(reward_list).item())
 
@@ -75,20 +101,20 @@ def postprocess_default(obs,acts,rews):
     return rews
 
 
-class ARSTorchModel:
-    """
-    Just here to be compatible with the rest of seagul, ARS has such a simple policy that it doesn't really matter
-    """
-    def __init__(self, policy):
-        self.policy = policy
+# class ARSZooModel:
+#     """
+#     Just here to be compatible with the rest of seagul, ARS has such a simple policy that it doesn't really matter
+#     """
+#     def __init__(self, policy):
+#         self.policy = policy
 
-    def step(self, obs):
-        with torch.no_grad():
-            action = self.policy(obs)
-            return action, None, None, None
+#     def step(self, obs):
+#         with torch.no_grad():
+#             action = self.policy(obs)
+#             return action, None, None, None
 
 
-class ARSTorchAgent:
+class ARSZooAgent:
     """
     This is a version of Augmented Random Search (https://arxiv.org/pdf/1803.07055) that uses arbitary pytorch polices. If you just want a linear policy see seagul/ars/rl/ars_np for a version which uses pure numpy but is limited to linear policies. 
 
@@ -107,11 +133,12 @@ class ARSTorchAgent:
         exp_schedule:  an iterable of two exp noises to linearly interpolate between as training goes on, overrides step_size
             
     """
-    def __init__(self, env_name, model, seed, env_config=None, n_workers=24, n_delta=32, n_top=32,
+    def __init__(self, env_name, algo_to_load, seed=None, env_config=None, n_workers=24, n_delta=32, n_top=32,
                  step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default,
-                 step_schedule=None, exp_schedule=None
+                 step_schedule=None, exp_schedule=None, zoo_path = "/home/sgillen/work/external/rl-baselines3-zoo"
                  ):
         self.env_name = env_name
+        self.algo_to_load = algo_to_load
         self.n_workers = n_workers
         self.step_size = step_size
         self.n_delta = n_delta
@@ -119,12 +146,12 @@ class ARSTorchAgent:
         self.exp_noise = exp_noise
         self.postprocessor = postprocessor
         self.seed = seed
+        self.zoo_path = zoo_path
         self.r_hist = []
         self.raw_rew_hist = []
         self.total_epochs = 0
         self.total_steps = 0
         self.reward_stop = reward_stop
-        self.model = None
 
         self.step_schedule = step_schedule
         self.exp_schedule = exp_schedule
@@ -133,13 +160,31 @@ class ARSTorchAgent:
             env_config = {}
         self.env_config = env_config
 
+        import sys
+        sys.path.append(zoo_path + "/utils/")
+        from utils import ALGOS, get_latest_run_id, get_saved_hyperparams
+        from utils import get_wrapper_class
 
-        env = gym.make(self.env_name, **self.env_config)
+        folder = zoo_path + "/rl-trained-agents/"
+        exp_id = get_latest_run_id(os.path.join(folder, algo_to_load), env_name)
+        log_path = os.path.join(folder, algo_to_load, f"{env_name}_{exp_id}")
+        stats_path = os.path.join(log_path, env_name)
+        model_path = os.path.join(log_path, f"{env_name}.zip")
+        normalize_path = os.path.join(os.path.dirname(model_path), env_name)
+        normalize_path = os.path.join(normalize_path, "vecnormalize.pkl")
+
+        
+        hyperparams, stats_path = get_saved_hyperparams(stats_path, norm_reward=True, test_mode=False)
+        env_wrapper = get_wrapper_class(hyperparams)
+
+        env = make_vec_env(env_name, wrapper_class=env_wrapper, vec_env_cls=DummyVecEnv)
+        env = VecNormalize.load(normalize_path, env)
+
         self.obs_size = env.observation_space.shape[0]
         self.act_size = env.action_space.shape[0]
-
-        self.model = model
-        W_torch = torch.nn.utils.parameters_to_vector(model.policy.parameters())
+        
+        self.model = ALGOS[algo_to_load].load(model_path, env=env, device='cpu')
+        W_torch = torch.nn.utils.parameters_to_vector(self.model.policy.parameters())
         self.W_flat = W_torch.detach().numpy()
         
         self.state_mean = np.zeros(self.obs_size)
@@ -162,7 +207,7 @@ class ARSTorchAgent:
         for i in range(self.n_workers):
             master_q = Queue()
             worker_q = Queue()
-            proc = Process(target=worker_fn, args=(worker_q, master_q, self.model, self.env_name, self.env_config, self.postprocessor, self.seed))
+            proc = Process(target=worker_fn, args=(worker_q, master_q, self.zoo_path, self.algo_to_load, self.env_name, self.postprocessor, self.seed))
             proc.start()
             proc_list.append(proc)
             master_q_list.append(master_q)
@@ -243,8 +288,8 @@ class ARSTorchAgent:
 
         torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat), self.model.policy.parameters())
 
-        self.model.policy.state_means = torch.from_numpy(self.state_mean)
-        self.model.policy.state_std = torch.from_numpy(self.state_std)
+        # self.model.policy.state_means = torch.from_numpy(self.state_mean)
+        # self.model.policy.state_std = torch.from_numpy(self.state_std)
 
         torch.set_grad_enabled(True)
         return self.model, self.raw_rew_hist[learn_start_idx:], locals()
