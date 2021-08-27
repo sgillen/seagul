@@ -127,7 +127,6 @@ class ARSSwitchingAgent:
         self.r_hist = []
         self.raw_rew_hist = []
         self.total_epochs = 0
-        self.total_steps = 0
         self.reward_stop = reward_stop
         self.classifier = classifier
         self.model = None
@@ -148,9 +147,10 @@ class ARSSwitchingAgent:
         for model in model_list:
             Wtorch = torch.nn.utils.parameters_to_vector(model.policy.parameters())
             self.W_flat_list.append(Wtorch.detach().numpy())
-        
-        self.state_mean = np.zeros(self.obs_size)
-        self.state_std = np.ones(self.obs_size)
+
+        self.total_steps_list = [0 for _ in range(len(model_list))]
+        self.state_mean_list = [np.zeros(self.obs_size) for _ in range(len(model_list))]
+        self.state_std_list = [np.ones(self.obs_size) for _ in range(len(model_list))]
 
     def learn(self, n_epochs, verbose=True):
         proc_list = []
@@ -196,7 +196,7 @@ class ARSSwitchingAgent:
             states_list = []
 
             with torch.no_grad():
-                for W_flat in self.W_flat_list:
+                for model_i, W_flat in enumerate(self.W_flat_list):
                     deltas = rng.standard_normal((self.n_delta, n_param))
                     delta_list.append(deltas)
 
@@ -206,7 +206,7 @@ class ARSSwitchingAgent:
                     start = time.time()
 
                     for i, Ws in enumerate(W_plus_delta):
-                        master_q_list[i % self.n_workers].put((Ws ,self.state_mean,self.state_std, seeds[i]))
+                        master_q_list[i % self.n_workers].put((Ws ,self.state_mean_list[model_i], self.state_std_list[model_i], seeds[i]))
 
                     results = []
                     for i, _ in enumerate(W_plus_delta):
@@ -215,7 +215,7 @@ class ARSSwitchingAgent:
                     end = time.time()
                     t = (end - start)
 
-                    states = np.array([]).reshape(0,self.obs_size)
+                    states = []
                     p_returns = []
                     m_returns = []
                     top_returns = []
@@ -224,15 +224,24 @@ class ARSSwitchingAgent:
                         ps, pr, plr = p_result
                         ms, mr, mlr = m_result
 
-                        states = np.concatenate((states, ms, ps), axis=0)
                         p_returns.append(pr)
                         m_returns.append(mr)
-                        top_returns.append(max(pr,mr))
+
+                        top_returns.append(max([pr, mr]))
+                        top_states = [ps, ms][np.argmax([pr, mr]).item()]
+                        states.append(top_states)
 
                     states_list.append(states)
                     top_returns_list.append(top_returns)
                     m_returns_list.append(m_returns)
                     p_returns_list.append(p_returns)
+
+                    concat_states = np.concatenate(states)
+                    self.state_mean_list[model_i] = update_mean(concat_states, self.state_mean_list[model_i], self.total_steps_list[model_i])
+                    self.state_std_list[model_i] = update_std(concat_states, self.state_std_list[model_i], self.total_steps_list[model_i])
+
+                    ep_steps = concat_states.shape[0]
+                    self.total_steps_list[model_i] += ep_steps
 
             # Classifier Update ======================================================================================
             T = np.array(top_returns_list)
@@ -242,14 +251,19 @@ class ARSSwitchingAgent:
             Xtrain = []
 
             for i, y in enumerate(Y):
-                for x in states_list[y]:
+                # print(f"states_lists[0][{i}][0] = {states_list[0][i][0]}")
+                # print(f"states_lists[1][{i}][0] = {states_list[1][i][0]}")
+                for x in states_list[y][i]:
                     Xtrain.append(x)
                     Ytrain.append(y)
 
             Xtrain = np.array(Xtrain, dtype=np.float32)
             Ytrain = np.array(Ytrain)
 
-            loss_hist = fit_model(self.classifier, Xtrain, Ytrain, 5, batch_size=2048, loss_fn=torch.nn.CrossEntropyLoss())
+            print(Xtrain.shape)
+            print(Ytrain.shape)
+
+            loss_hist = fit_model(self.classifier, Xtrain, Ytrain, 5, batch_size=64, loss_fn=torch.nn.CrossEntropyLoss())
 
             # ARS Update  ============================================================================================
             with torch.no_grad():
@@ -276,20 +290,17 @@ class ARSSwitchingAgent:
                     top_idx = sorted(range(len(top_returns)), key=lambda k: top_returns[k], reverse=True)[:self.n_top]
                     p_returns = np.stack(p_returns)[top_idx]
                     m_returns = np.stack(m_returns)[top_idx]
-
+                    #print(f"{i} : {self.model_list[i].policy.state_dict()}")
+                    #print(f" {i} : {self.W_flat_list[i]}")
                     self.W_flat_list[i] = self.W_flat_list[i] + (self.step_size / (self.n_delta * np.concatenate((p_returns, m_returns)).std() + 1e-6)) * np.sum((p_returns - m_returns) * deltas[top_idx].T, axis=1)
-
+                    #print(f"{i} : {self.model_list[i].policy.state_dict()}")
+                    print(f" {i} : {self.W_flat_list[i]}")
                 # if verbose and epoch % 10 == 0:
                 #     print(f"{epoch} : mean return: {l_returns.mean()}, top_return: {l_returns.max()}, fps:{states.shape[0]/t}")
 
                 # self.raw_rew_hist.append(np.stack(top_returns)[top_idx].mean())
                 # self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
 
-                # self.state_mean = update_mean(states, self.state_mean, self.total_steps)
-                # self.state_std = update_std(states, self.state_std, self.total_steps)
-
-                ep_steps = states.shape[0]
-                self.total_steps += ep_steps
                 self.total_epochs += 1
 
         for q in master_q_list:
@@ -297,11 +308,11 @@ class ARSSwitchingAgent:
         for proc in proc_list:
             proc.join()
 
-        print(self.model_list[0].policy.state_dict())
+        #print(f" model 0 state dict before: {self.model_list[0].policy.state_dict()}")
         for i, _ in enumerate(self.model_list):
+            print(f" model {i} w_flat: {self.W_flat_list[i]}")
             torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat_list[i]), self.model_list[i].policy.parameters())
 
-        print(self.model_list[0].policy.state_dict())
 
         self.model = ARSSwitchingModel(self.model_list, self.classifier)
 
