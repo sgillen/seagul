@@ -70,7 +70,7 @@ def fit_model(
 
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
-    state_tensor = torch.as_tensor(state_train)  # make sure that our input is a tensor
+    state_tensor = torch.as_tensor(state_train)
     action_tensor = torch.as_tensor(action_train)
     training_data = data.TensorDataset(state_tensor, action_tensor)
     training_generator = data.DataLoader(training_data, batch_size=batch_size, shuffle=shuffle)
