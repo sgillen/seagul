@@ -28,7 +28,7 @@ def worker_fn(worker_q, master_q, algo, env_id, postprocess, get_trainable, seed
         else:
             torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False), get_trainable(model))
             states, returns, log_returns = do_rollout_train(env, model, postprocess)
-            worker_q.put((states, returns, log_returns))
+            worker_q.put((returns, log_returns))
 
 
 def do_rollout_train(env, model, postprocess):
@@ -65,7 +65,7 @@ def do_rollout_train(env, model, postprocess):
     preprocess_sum = np.array(sum(reward_list))
 
     state_arr_n = state_arr
-        
+
     reward_list = postprocess(state_arr_n, act_arr, np.array(reward_list))
     reward_sum = (np.sum(reward_list).item())
     total_time = time.time() - before_loop
@@ -118,7 +118,6 @@ class ARSZooAgent:
         self.r_hist = []
         self.raw_rew_hist = []
         self.total_epochs = 0
-        self.total_steps = 0
         self.reward_stop = reward_stop
 
         self.step_schedule = step_schedule
@@ -141,8 +140,13 @@ class ARSZooAgent:
         env, model = load_zoo_agent(env_name,algo)
         
         self.model = model
-        
-        self.obs_size = env.observation_space.shape[0]
+
+
+        if type(env.observation_space) == gym.spaces.dict.Dict:
+            self.obs_size = env.observation_space['observation'].shape
+        else:
+            self.obs_size = env.observation_space.shape[0]
+
         self.act_size = env.action_space.shape[0]
         
         W_torch = torch.nn.utils.parameters_to_vector(self.get_trainable(self.model))
@@ -167,7 +171,7 @@ class ARSZooAgent:
         for i in range(self.n_workers):
             master_q = Queue()
             worker_q = Queue()
-            
+
             proc = Process(target=worker_fn, args=(worker_q, master_q, self.algo, self.env_name, self.postprocessor, self.get_trainable, self.seed))
             proc.start()
             proc_list.append(proc)
@@ -205,17 +209,15 @@ class ARSZooAgent:
             end = time.time()
             t = (end - start)
                 
-            states = np.array([]).reshape(0,self.obs_size)
             p_returns = []
             m_returns = []
             l_returns = []
             top_returns = []
 
             for p_result, m_result in zip(results[:self.n_delta], results[self.n_delta:]):
-                ps, pr, plr = p_result
-                ms, mr, mlr = m_result
+                pr, plr = p_result
+                mr, mlr = m_result
 
-                states = np.concatenate((states, ms, ps), axis=0)
                 p_returns.append(pr)
                 m_returns.append(mr)
                 l_returns.append(plr); l_returns.append(mlr)
@@ -228,7 +230,7 @@ class ARSZooAgent:
 
             if verbose and epoch % 10 == 0:
                 from seagul.zoo3_utils import do_rollout_stable
-                print(f"{epoch} : mean return: {l_returns.mean()}, top_return: {l_returns.max()}, fps:{states.shape[0]/t}")
+                print(f"{epoch} : mean return: {l_returns.mean()}, top_return: {l_returns.max()}, eps:{self.n_delta*2/t}")
 
                 env, model = load_zoo_agent(self.env_name, self.algo)
                 torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat, requires_grad=False), self.get_trainable(self.model))
@@ -248,9 +250,6 @@ class ARSZooAgent:
             self.raw_rew_hist.append(np.stack(top_returns)[top_idx].mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
 
-            ep_steps = states.shape[0]
-
-            self.total_steps += ep_steps
             self.total_epochs += 1
             self.W_flat = self.W_flat + (self.step_size / (self.n_delta * np.concatenate((p_returns, m_returns)).std() + 1e-6)) * np.sum((p_returns - m_returns)*deltas[top_idx].T, axis=1)
 
