@@ -5,7 +5,7 @@
 >  \- Major General William H. Rupertus 
 
 
-A generic utility library for deep reinforcement learning. I built this throughout my PhD as sort of a personal swiss-army knife for my research. There are many other libraries, big and small, that do most of the same things.
+A generic utility library for deep reinforcement learning. I built this throughout my PhD as sort of a personal swiss-army knife for my research. There are many other libraries, big and small, that do most of the same things, but this one is my favorite. 
 
 Highlights include:
 
@@ -22,7 +22,7 @@ Highlights include:
 
 ## Who should use this?
 
-If you just want to get your feet wet with deep RL there are better places to start, I usually reccomend [stable-baselines3](https://github.com/DLR-RM/stable-baselines3) to newbies. Most of the value of something like this is that I personally know it inside and out, but that won't be an advantage to someone out. 
+If you just want to get your feet wet with deep RL there are better places to start, I usually recomend [stable-baselines3](https://github.com/DLR-RM/stable-baselines3) to newbies. Most of the value of something like this is that I personally know it inside and out, but that won't be an advantage to someone out. 
 
 If you are extending my previous work or something though you are in the right place.
 
