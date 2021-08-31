@@ -6,93 +6,71 @@ import numpy as np
 import torch
 import time
 import os
+from seagul.mesh import mesh_dim
 from seagul.rl.common import make_schedule
-
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv, VecFrameStack, VecNormalize, VecTransposeImage
-from stable_baselines3.common.env_util import make_vec_env
+from seagul.zoo3_utils import load_zoo_agent, OFF_POLICY_ALGOS
 
 
 
-def update_mean(data, cur_mean, cur_steps):
-    new_steps = data.shape[0]
-    return (np.mean(data, 0) * new_steps + cur_mean * cur_steps) / (cur_steps + new_steps)
-
-
-def update_std(data, cur_std, cur_steps):
-    new_steps = data.shape[0]
-
-    if np.isnan(data).any():
-        return cur_std
-    else:
-        cur_var = cur_std ** 2
-        new_var = np.std(data, 0) ** 2
-        new_var[new_var < 1e-6] = cur_var[new_var < 1e-6]
-        return np.sqrt((new_var * new_steps + cur_var * cur_steps) / (cur_steps + new_steps))
-
-
-def worker_fn(worker_q, master_q, zoo_path, algo, env_id, postprocess, seed):
+def worker_fn(worker_q, master_q, algo, env_id, postprocess, get_trainable, seed):
     torch.set_grad_enabled(False)
+    env, model = load_zoo_agent(env_id, algo)
 
-    import sys
-    sys.path.append(zoo_path + "/utils/")
-    from utils import ALGOS, get_latest_run_id, get_saved_hyperparams
-    from utils import get_wrapper_class
-
-    folder = zoo_path + "/rl-trained-agents/"
-    exp_id = get_latest_run_id(os.path.join(folder, algo), env_id)
-    log_path = os.path.join(folder, algo, f"{env_id}_{exp_id}")
-    stats_path = os.path.join(log_path, env_id)
-    model_path = os.path.join(log_path, f"{env_id}.zip")
-    normalize_path = os.path.join(os.path.dirname(model_path), env_id)
-    normalize_path = os.path.join(normalize_path, "vecnormalize.pkl")
+    if seed:
+        env.seed(seed)
     
-    hyperparams, stats_path = get_saved_hyperparams(stats_path, norm_reward=True, test_mode=False)
-    env_wrapper = get_wrapper_class(hyperparams)
-
-    env = make_vec_env(env_id, wrapper_class=env_wrapper, vec_env_cls=DummyVecEnv)
-    env = VecNormalize.load(normalize_path, env)
-
-    model = ALGOS[algo].load(model_path, env=env, device='cpu')
-
-    env.seed(seed)
     while True:
         data = master_q.get()
-        if data == "STOP":
-            print("Closing")
+        W_flat, done = data
+        if done == True:
             env.close()
             return
         else:
-            W_flat,state_mean,state_std = data
-            torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False).float(), model.policy.action_net.parameters())
-            #model.policy.state_means = torch.from_numpy(state_mean)
-            #model.policy.state_std = torch.from_numpy(state_std)
+            torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False), get_trainable(model))
             states, returns, log_returns = do_rollout_train(env, model, postprocess)
             worker_q.put((states, returns, log_returns))
 
 
 def do_rollout_train(env, model, postprocess):
+    import time
+
+    predict_time = 0
+    step_time = 0
+    before_loop = time.time()
+    
     state_list = []
     act_list = []
     reward_list = []
 
     obs = env.reset()
     done = False
+
     while not done:
         state_list.append(np.copy(obs))
 
+        before_predict = time.time()
         actions,_= model.predict(obs, deterministic=True)
+        predict_time += (time.time() - before_predict)
+        
+        before_step = time.time()
         obs, reward, done, _ = env.step(actions)
+        step_time += (time.time() - before_step)
         
         act_list.append(np.copy(actions))
         reward_list.append(reward)
+
 
     state_arr = np.stack(state_list).squeeze()
     act_arr = np.stack(act_list).squeeze()
     preprocess_sum = np.array(sum(reward_list))
 
-    state_arr_n = env.normalize_obs(state_arr).squeeze()
+    state_arr_n = state_arr
+        
     reward_list = postprocess(state_arr_n, act_arr, np.array(reward_list))
     reward_sum = (np.sum(reward_list).item())
+    total_time = time.time() - before_loop
+    
+    #Print(f"{len(reward_list)}: predict_time:{predict_time}------step_time:{step_time}-----unacount_time{total_time - predict_time - step_time}")
 
     return state_arr, reward_sum, preprocess_sum
 
@@ -100,23 +78,15 @@ def do_rollout_train(env, model, postprocess):
 def postprocess_default(obs,acts,rews):
     return rews
 
+def get_on_policy_trainable(model):
+    return model.policy.action_net.parameters()
 
-# class ARSZooModel:
-#     """
-#     Just here to be compatible with the rest of seagul, ARS has such a simple policy that it doesn't really matter
-#     """
-#     def __init__(self, policy):
-#         self.policy = policy
-
-#     def step(self, obs):
-#         with torch.no_grad():
-#             action = self.policy(obs)
-#             return action, None, None, None
-
+def get_off_policy_trainable(model):
+    return model.policy.actor.mu.parameters()
 
 class ARSZooAgent:
     """
-    This is a version of Augmented Random Search (https://arxiv.org/pdf/1803.07055) that uses arbitary pytorch polices. If you just want a linear policy see seagul/ars/rl/ars_np for a version which uses pure numpy but is limited to linear policies. 
+    This is a version of Augmented Random Search (https://arxiv.org/pdf/1803.07055) that uses arbitary pytorch polices. If you just want a linear policy see seagul/ars//ars_np for a version which uses pure numpy but is limited to linear policies. 
 
     Args:
         env_name: name of the openAI gym env to solve
@@ -133,20 +103,18 @@ class ARSZooAgent:
         exp_schedule:  an iterable of two exp noises to linearly interpolate between as training goes on, overrides step_size
             
     """
-    def __init__(self, env_name, algo_to_load, seed=None, env_config=None, n_workers=24, n_delta=32, n_top=32,
+    def __init__(self, env_name, algo, seed=None, env_config=None, n_workers=24, n_delta=32, n_top=None,
                  step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default,
-                 step_schedule=None, exp_schedule=None, zoo_path = "/home/sgillen/work/external/rl-baselines3-zoo"
+                 step_schedule=None, exp_schedule=None, 
                  ):
         self.env_name = env_name
-        self.algo_to_load = algo_to_load
+        self.algo = algo
         self.n_workers = n_workers
         self.step_size = step_size
         self.n_delta = n_delta
-        self.n_top = n_top
         self.exp_noise = exp_noise
         self.postprocessor = postprocessor
         self.seed = seed
-        self.zoo_path = zoo_path
         self.r_hist = []
         self.raw_rew_hist = []
         self.total_epochs = 0
@@ -156,39 +124,31 @@ class ARSZooAgent:
         self.step_schedule = step_schedule
         self.exp_schedule = exp_schedule
 
+        if n_top is None:
+            n_top = n_delta
+        self.n_top = n_top
+        
         if env_config is None:
             env_config = {}
         self.env_config = env_config
 
-        import sys
-        sys.path.append(zoo_path + "/utils/")
-        from utils import ALGOS, get_latest_run_id, get_saved_hyperparams
-        from utils import get_wrapper_class
 
-        folder = zoo_path + "/rl-trained-agents/"
-        exp_id = get_latest_run_id(os.path.join(folder, algo_to_load), env_name)
-        log_path = os.path.join(folder, algo_to_load, f"{env_name}_{exp_id}")
-        stats_path = os.path.join(log_path, env_name)
-        model_path = os.path.join(log_path, f"{env_name}.zip")
-        normalize_path = os.path.join(os.path.dirname(model_path), env_name)
-        normalize_path = os.path.join(normalize_path, "vecnormalize.pkl")
+        if algo in OFF_POLICY_ALGOS:
+            self.get_trainable = get_off_policy_trainable
+        else:
+            self.get_trainable = get_on_policy_trainable  
 
+        env, model = load_zoo_agent(env_name,algo)
         
-        hyperparams, stats_path = get_saved_hyperparams(stats_path, norm_reward=True, test_mode=False)
-        env_wrapper = get_wrapper_class(hyperparams)
-
-        env = make_vec_env(env_name, wrapper_class=env_wrapper, vec_env_cls=DummyVecEnv)
-        env = VecNormalize.load(normalize_path, env)
-
+        self.model = model
+        
         self.obs_size = env.observation_space.shape[0]
         self.act_size = env.action_space.shape[0]
         
-        self.model = ALGOS[algo_to_load].load(model_path, env=env, device='cpu')
-        W_torch = torch.nn.utils.parameters_to_vector(self.model.policy.parameters())
+        W_torch = torch.nn.utils.parameters_to_vector(self.get_trainable(self.model))
         self.W_flat = W_torch.detach().numpy()
-        
-        self.state_mean = np.zeros(self.obs_size)
-        self.state_std = np.ones(self.obs_size)
+
+        env.close()
 
         
     def learn(self, n_epochs, verbose=True):
@@ -207,7 +167,8 @@ class ARSZooAgent:
         for i in range(self.n_workers):
             master_q = Queue()
             worker_q = Queue()
-            proc = Process(target=worker_fn, args=(worker_q, master_q, self.zoo_path, self.algo_to_load, self.env_name, self.postprocessor, self.seed))
+            
+            proc = Process(target=worker_fn, args=(worker_q, master_q, self.algo, self.env_name, self.postprocessor, self.get_trainable, self.seed))
             proc.start()
             proc_list.append(proc)
             master_q_list.append(master_q)
@@ -228,14 +189,14 @@ class ARSZooAgent:
                     early_stop = True
                     break
             
-            deltas = rng.standard_normal((self.n_delta, n_param))
+            deltas = rng.standard_normal((self.n_delta, n_param), dtype=np.float32)
             #import ipdb; ipdb.set_trace()
             pm_W = np.concatenate((self.W_flat+(deltas*self.exp_noise), self.W_flat-(deltas*self.exp_noise)))
 
             start = time.time()
 
             for i,Ws in enumerate(pm_W):
-                master_q_list[i % self.n_workers].put((Ws ,self.state_mean,self.state_std))
+                master_q_list[i % self.n_workers].put((Ws, False))
                 
             results = []
             for i, _ in enumerate(pm_W):
@@ -261,35 +222,45 @@ class ARSZooAgent:
                 top_returns.append(max(pr,mr))
 
             top_idx = sorted(range(len(top_returns)), key=lambda k: top_returns[k], reverse=True)[:self.n_top]
-            p_returns = np.stack(p_returns)[top_idx]
-            m_returns = np.stack(m_returns)[top_idx]
-            l_returns = np.stack(l_returns)[top_idx]
+            p_returns = np.stack(p_returns).astype(np.float32)[top_idx]
+            m_returns = np.stack(m_returns).astype(np.float32)[top_idx]
+            l_returns = np.stack(l_returns).astype(np.float32)[top_idx]
 
             if verbose and epoch % 10 == 0:
+                from seagul.zoo3_utils import do_rollout_stable
                 print(f"{epoch} : mean return: {l_returns.mean()}, top_return: {l_returns.max()}, fps:{states.shape[0]/t}")
 
+                env, model = load_zoo_agent(self.env_name, self.algo)
+                torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat, requires_grad=False), self.get_trainable(self.model))
+                for p in self.get_trainable(self.model):
+                    print(p)
+
+                o,a,r,info = do_rollout_stable(env, self.model)
+                
+                #                o_mdim  = o[200:]
+                o_mdim = o
+                try:
+                    mdim, cdim, _, _ = mesh_dim(o_mdim)
+                    print(f"main thread {self.env_name}:{self.algo}- reward={np.sum(r)}, mdim={mdim}, cdim={cdim}") 
+                except:
+                    print("naned out")
+                    
             self.raw_rew_hist.append(np.stack(top_returns)[top_idx].mean())
             self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
 
             ep_steps = states.shape[0]
-            self.state_mean = update_mean(states, self.state_mean, self.total_steps)
-            self.state_std = update_std(states, self.state_std, self.total_steps)
 
             self.total_steps += ep_steps
             self.total_epochs += 1
-
             self.W_flat = self.W_flat + (self.step_size / (self.n_delta * np.concatenate((p_returns, m_returns)).std() + 1e-6)) * np.sum((p_returns - m_returns)*deltas[top_idx].T, axis=1)
 
-
         for q in master_q_list:
-            q.put("STOP")
+            q.put((None, True))
+
         for proc in proc_list:
             proc.join()
 
-        torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat), self.model.policy.parameters())
-
-        # self.model.policy.state_means = torch.from_numpy(self.state_mean)
-        # self.model.policy.state_std = torch.from_numpy(self.state_std)
+        torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat, requires_grad=False), self.get_trainable(self.model))
 
         torch.set_grad_enabled(True)
         return self.model, self.raw_rew_hist[learn_start_idx:], locals()
