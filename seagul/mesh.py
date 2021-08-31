@@ -364,7 +364,6 @@ def cdim_div_stable_nolen(obs, act, rew, mdim_kwargs={}):
     return (rew / c)
 
 
-
 def mdim_div_stable(obs, act, rew, mdim_kwargs={}):
     m = None
 
@@ -380,6 +379,28 @@ def mdim_div_stable(obs, act, rew, mdim_kwargs={}):
 
     return (rew / m)
 
+
+
+def mdim_div_panda(odict, act, rew):
+    o_list = []
+    ach_list = []
+    des_list = []
+    for thing in odict:
+        o_list.append(thing['observation'])
+        ach_list.append(thing['achieved_goal'])
+        des_list.append(thing['desired_goal'])
+        
+    o = np.stack(o_list).squeeze()
+    ach = np.stack(ach_list).squeeze()
+    des = np.stack(des_list).squeeze()
+
+    try:
+        m,_,_,_ = mesh_dim(o)
+        m = np.clip(m,1,o.shape[1]/2)
+    except:
+        m = o.shape[1]/2
+
+    return (rew/m)
 
 
 
