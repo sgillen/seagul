@@ -38,10 +38,6 @@ try:
                 for j,cur_idx in enumerate(d_list):
                     self.locals['rollout_buffer'].returns[last_idx:cur_idx, i] = self.postprocessor(buf.observations[last_idx:cur_idx, i,:], buf.actions[last_idx:cur_idx, i,:], buf.returns[last_idx:cur_idx, i])
 
-
-
-
-
         def _init_callback(self) -> None:
             pass
 
@@ -183,12 +179,18 @@ def mesh_dim(data, scaling_factor=1.2, init_d=1, upper_size_ratio=1.0, lower_siz
         d_vals.append(d)
 
     for i, m in enumerate(mesh_sizes):
-        if m < mesh_size_upper:
+        if m <= mesh_size_upper:
             lin_begin = i
             break
 
-    xdata = np.log2(d_vals[lin_begin:])
-    ydata = np.log2(mesh_sizes[lin_begin:])
+    for i, m in enumerate(mesh_sizes[::-1]):
+        if m >= mesh_size_lower:
+            lin_end = len(mesh_sizes) - i - 1
+            break
+
+
+    xdata = np.log2(d_vals[lin_begin:lin_end])
+    ydata = np.log2(mesh_sizes[lin_begin:lin_end])
 
     # Fit a curve to the log log line
     def f(x, m, b):
@@ -319,10 +321,6 @@ def target_d_6(obs,acts,rews):
 
 
 
-
-
-
-
 def mdim_div2(obs_list, act_list, rew_list):
     combined_obs = torch.empty(0)
     combined_rew = torch.empty(0)
@@ -342,7 +340,32 @@ def mdim_div2(obs_list, act_list, rew_list):
 
     return (combined_rew / m).sum()
 
-def mdim_div_stable(obs, act, rew, mdim_kwargs):
+
+def mdim_div_stable_nolen(obs, act, rew, mdim_kwargs={}):
+    try:
+        m, _, _, _ = mesh_dim(target_obs, **mdim_kwargs)
+        m = np.clip(m, 1, obs.shape[1] / 2)
+
+    except:
+        m = obs.shape[1] / 2
+
+    
+    return (rew / m)
+
+def cdim_div_stable_nolen(obs, act, rew, mdim_kwargs={}):
+    try:
+        m, c, _, _ = mesh_dim(target_obs, **mdim_kwargs)
+        c = np.clip(m, 1, obs.shape[1] / 2)
+
+    except:
+        c = obs.shape[1] / 2
+
+    
+    return (rew / c)
+
+
+
+def mdim_div_stable(obs, act, rew, mdim_kwargs={}):
     m = None
 
     if obs.shape[0] == 1000:
@@ -356,6 +379,7 @@ def mdim_div_stable(obs, act, rew, mdim_kwargs):
         m = np.clip(m, 1, obs.shape[1] / 2)
 
     return (rew / m)
+
 
 
 
