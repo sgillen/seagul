@@ -396,6 +396,7 @@ def cdim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
 class DualRewardDiv:
     def __init__(self, r2_fnc, r2_fnc_kwargs=None):
         self.r2_fnc = r2_fnc
+        self.__name__ = "DualRewardDiv_" + r2_fnc.__name__
 
         if r2_fnc_kwargs is None:
             r2_fnc_kwargs = {}
@@ -411,6 +412,7 @@ class DualRewardLin:
         self.r2_fnc = r2_fnc
         self.a = a
         self.b = b
+        self.__name__ = "DualRewardDiv_" + r2_fnc.__name__
 
         if r2_fnc_kwargs is None:
             r2_fnc_kwargs = {}
