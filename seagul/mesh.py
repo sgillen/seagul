@@ -3,6 +3,7 @@ import copy
 import scipy.optimize as opt
 import torch
 from collections.abc import MutableMapping
+import collections
 import warnings
 
 try:
@@ -341,32 +342,91 @@ def mdim_div2(obs_list, act_list, rew_list):
     return (combined_rew / m).sum()
 
 
-def mdim_div_stable_nolen(obs, act, rew, mdim_kwargs={}):
+# ===============================================================
+
+
+def dict_to_array(odict):
+    o_list = []
+    ach_list = []
+    des_list = []
+    for thing in odict:
+        o_list.append(thing['observation'])
+        ach_list.append(thing['achieved_goal'])
+        des_list.append(thing['desired_goal'])
+
+
+    o = np.stack(o_list).squeeze()
+    ach = np.stack(ach_list).squeeze()
+    des = np.stack(des_list).squeeze()
+
+    return o, ach, des
+
+
+def mdim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
+    
+    if type(obs[0]) == collections.OrderedDict:
+        obs,_,_ = dict_to_array(obs)
     try:
-        m, _, _, _ = mesh_dim(target_obs, **mdim_kwargs)
-        m = np.clip(m, 1, obs.shape[1] / 2)
+        m, _, _, _ = mesh_dim(obs, **mdim_kwargs)
+        m = np.clip(m, 0, obs.shape[1] / 2)
 
     except:
         m = obs.shape[1] / 2
 
     
-    return (rew / m)
+    return m
 
-def cdim_div_stable_nolen(obs, act, rew, mdim_kwargs={}):
+def cdim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
+    if type(obs[0]) == collections.OrderedDict:
+        obs,_,_ = dict_to_array(obs)
+
     try:
-        m, c, _, _ = mesh_dim(target_obs, **mdim_kwargs)
-        c = np.clip(m, 1, obs.shape[1] / 2)
+        _, c, _, _ = mesh_dim(obs, **mdim_kwargs)
+        c = np.clip(c, 1, obs.shape[1] / 2)
 
     except:
         c = obs.shape[1] / 2
 
     
-    return (rew / c)
+    return c
+
+# ===============================================================
+
+
+class DualRewardDiv:
+    def __init__(self, r2_fnc, r2_fnc_kwargs=None):
+        self.r2_fnc = r2_fnc
+
+        if r2_fnc_kwargs is None:
+            r2_fnc_kwargs = {}
+        
+        self.r2_fnc_kwargs = r2_fnc_kwargs
+
+    def __call__(self, obs, act, r1):
+        return r1/self.r2_fnc(obs, act, r1, **self.r2_fnc_kwargs)
+
+
+class DualRewardLin:
+    def __init__(self, r2_fnc, a = 1, b = 1, r2_fnc_kwargs=None):
+        self.r2_fnc = r2_fnc
+        self.a = a
+        self.b = b
+
+        if r2_fnc_kwargs is None:
+            r2_fnc_kwargs = {}
+        
+        self.r2_fnc_kwargs = r2_fnc_kwargs
+
+    def __call__(self, obs, act, r1):
+        return a*r1 + b*self.r2_fnc(obs, act, r1, **self.r2_fnc_kwargs)
+
+
+
+# ===============================================================
 
 
 def mdim_div_stable(obs, act, rew, mdim_kwargs={}):
-    m = None
-
+    m = None    
     if obs.shape[0] == 1000:
         gait_start = 200
         target_obs = obs[gait_start:]
@@ -380,27 +440,6 @@ def mdim_div_stable(obs, act, rew, mdim_kwargs={}):
     return (rew / m)
 
 
-
-def mdim_div_panda(odict, act, rew):
-    o_list = []
-    ach_list = []
-    des_list = []
-    for thing in odict:
-        o_list.append(thing['observation'])
-        ach_list.append(thing['achieved_goal'])
-        des_list.append(thing['desired_goal'])
-        
-    o = np.stack(o_list).squeeze()
-    ach = np.stack(ach_list).squeeze()
-    des = np.stack(des_list).squeeze()
-
-    try:
-        m,_,_,_ = mesh_dim(o)
-        m = np.clip(m,1,o.shape[1]/2)
-    except:
-        m = o.shape[1]/2
-
-    return (rew/m)
 
 
 

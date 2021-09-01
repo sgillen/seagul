@@ -1,15 +1,18 @@
-# TODO just put this in zoo utils
-
 import numpy as np
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv, VecFrameStack, VecNormalize, VecTransposeImage
 from stable_baselines3.common.env_util import make_vec_env
 import os
 import sys
+import panda_gym
+
+import time
+
+
 
 OFF_POLICY_ALGOS = ["qrdqn", "dqn", "ddpg", "sac", "her", "td3", "tqc"]
 
-def do_rollout_stable(env, model):
+def do_rollout_stable(env, model, render=False, render_wait=0.01):
     state_list = []
     act_list = []
     reward_list = []
@@ -22,6 +25,11 @@ def do_rollout_stable(env, model):
         
         actions,_ = model.predict(obs, deterministic=True)
         obs, reward, done, info = env.step(actions)
+
+        if render:
+            env.render()
+            time.sleep(render_wait)
+        
         act_list.append(np.copy(actions))
         reward_list.append(reward)
 
@@ -33,8 +41,11 @@ def do_rollout_stable(env, model):
 
 
 
-def load_zoo_agent(env_name, algo, seed=None, render=False, zoo_path = "/home/sgillen/work/external/rl-baselines3-zoo"):
+def load_zoo_agent(env_name, algo, seed=None, render=False, env_kwargs = None, zoo_path = "/home/sgillen/work/external/rl-baselines3-zoo"):
 
+
+    if env_kwargs is None:
+        env_kwargs = {}
     
     folder = zoo_path + "/rl-trained-agents/"
     exp_id = get_latest_run_id(os.path.join(folder, algo), env_name)
@@ -47,7 +58,7 @@ def load_zoo_agent(env_name, algo, seed=None, render=False, zoo_path = "/home/sg
     
     hyperparams, stats_path = get_saved_hyperparams(stats_path, norm_reward=True, test_mode=False)
 
-    env = create_test_env(env_name, n_envs=1, hyperparams=hyperparams, stats_path=stats_path, seed=None, log_dir=None, should_render=render)
+    env = create_test_env(env_name, n_envs=1, hyperparams=hyperparams, env_kwargs=env_kwargs, stats_path=stats_path, seed=None, log_dir=None, should_render=render)
                           
     kwargs = dict(seed=seed)
     if algo in OFF_POLICY_ALGOS:
