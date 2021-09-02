@@ -6,9 +6,10 @@ import numpy as np
 import torch
 import time
 import os
-from seagul.mesh import mesh_dim
+from seagul.mesh import mesh_dim, dict_to_array
 from seagul.rl.common import make_schedule
 from seagul.zoo3_utils import load_zoo_agent, OFF_POLICY_ALGOS
+import collections
 
 
 
@@ -228,27 +229,29 @@ class ARSZooAgent:
             m_returns = np.stack(m_returns).astype(np.float32)[top_idx]
             l_returns = np.stack(l_returns).astype(np.float32)[top_idx]
 
+            self.raw_rew_hist.append(np.stack(top_returns)[top_idx].mean())
+            self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
+
+
             if verbose and epoch % 10 == 0:
                 from seagul.zoo3_utils import do_rollout_stable
-                print(f"{epoch} : mean return: {l_returns.mean()}, top_return: {l_returns.max()}, eps:{self.n_delta*2/t}")
-
                 env, model = load_zoo_agent(self.env_name, self.algo)
                 torch.nn.utils.vector_to_parameters(torch.tensor(self.W_flat, requires_grad=False), self.get_trainable(self.model))
-                for p in self.get_trainable(self.model):
-                    print(p)
-
                 o,a,r,info = do_rollout_stable(env, self.model)
+                if type(o[0]) == collections.OrderedDict:
+                    o,_,_ = dict_to_array(o)
+
                 
                 #                o_mdim  = o[200:]
                 o_mdim = o
                 try:
                     mdim, cdim, _, _ = mesh_dim(o_mdim)
-                    print(f"main thread {self.env_name}:{self.algo}- reward={np.sum(r)}, mdim={mdim}, cdim={cdim}") 
                 except:
-                    print("naned out")
+                    mdim = np.nan
+                    cdim = np.nan
+
+                print(f"{epoch} : mean return: {self.raw_rew_hist[-1]}, top_return: {np.stack(top_returns)[top_idx][0]}, mdim: {mdim}, cdim: {cdim}, eps:{self.n_delta*2/t}")
                     
-            self.raw_rew_hist.append(np.stack(top_returns)[top_idx].mean())
-            self.r_hist.append((p_returns.mean() + m_returns.mean())/2)
 
             self.total_epochs += 1
             self.W_flat = self.W_flat + (self.step_size / (self.n_delta * np.concatenate((p_returns, m_returns)).std() + 1e-6)) * np.sum((p_returns - m_returns)*deltas[top_idx].T, axis=1)

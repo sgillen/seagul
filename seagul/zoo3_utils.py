@@ -12,11 +12,13 @@ import time
 
 OFF_POLICY_ALGOS = ["qrdqn", "dqn", "ddpg", "sac", "her", "td3", "tqc"]
 
-def do_rollout_stable(env, model, render=False, render_wait=0.01):
+def do_rollout_stable(env, model, render=False, render_wait=0.01, seed=None):
     state_list = []
     act_list = []
     reward_list = []
 
+    if seed:
+        env.seed(seed)
     obs = env.reset()
     done = False
 
