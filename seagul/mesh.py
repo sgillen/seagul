@@ -390,6 +390,24 @@ def cdim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
     
     return c
 
+
+
+def adim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
+    
+    if type(obs[0]) == collections.OrderedDict:
+        obs,_,_ = dict_to_array(obs)
+    try:
+        m,c, _, _ = mesh_dim(obs, **mdim_kwargs)
+        m = np.clip(m, 0, obs.shape[1] / 2)
+        c = np.clip(m, 0, obs.shape[1] / 2)
+
+    except:
+        m = obs.shape[1] / 2
+
+    
+    return (m+c)/2
+
+
 # ===============================================================
 
 
@@ -435,7 +453,7 @@ class DualRewardLin:
         self.r2_fnc_kwargs = r2_fnc_kwargs
 
     def __call__(self, obs, act, r1):
-        return a*r1 + b*self.r2_fnc(obs, act, r1, **self.r2_fnc_kwargs)
+        return self.a*sum(r1) + self.b*self.r2_fnc(obs, act, r1, **self.r2_fnc_kwargs)
 
 
 
