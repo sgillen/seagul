@@ -22,12 +22,14 @@ def worker_fn(worker_q, master_q, algo, env_id, postprocess, get_trainable, seed
     
     while True:
         data = master_q.get()
-        W_flat, done = data
+        W_flat, done, ep_seed = data
         if done == True:
             env.close()
             return
         else:
             torch.nn.utils.vector_to_parameters(torch.tensor(W_flat,requires_grad=False), get_trainable(model))
+            if ep_seed:
+                env.seed(ep_seed)
             states, returns, log_returns = do_rollout_train(env, model, postprocess)
             worker_q.put((returns, log_returns))
 
@@ -106,7 +108,7 @@ class ARSZooAgent:
     """
     def __init__(self, env_name, algo, seed=None, env_config=None, n_workers=24, n_delta=32, n_top=None,
                  step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default,
-                 step_schedule=None, exp_schedule=None, 
+                 step_schedule=None, exp_schedule=None, epoch_seed=False
                  ):
         self.env_name = env_name
         self.algo = algo
@@ -116,6 +118,7 @@ class ARSZooAgent:
         self.exp_noise = exp_noise
         self.postprocessor = postprocessor
         self.seed = seed
+        self.epoch_seed = epoch_seed
         self.r_hist = []
         self.raw_rew_hist = []
         self.total_epochs = 0
@@ -201,7 +204,11 @@ class ARSZooAgent:
             start = time.time()
 
             for i,Ws in enumerate(pm_W):
-                master_q_list[i % self.n_workers].put((Ws, False))
+                if self.epoch_seed:
+                    epoch_seed = epoch
+                else:
+                    epoch_seed = None
+                master_q_list[i % self.n_workers].put((Ws, False, epoch_seed))
                 
             results = []
             for i, _ in enumerate(pm_W):
@@ -257,7 +264,7 @@ class ARSZooAgent:
             self.W_flat = self.W_flat + (self.step_size / (self.n_delta * np.concatenate((p_returns, m_returns)).std() + 1e-6)) * np.sum((p_returns - m_returns)*deltas[top_idx].T, axis=1)
 
         for q in master_q_list:
-            q.put((None, True))
+            q.put((None, True, None))
 
         for proc in proc_list:
             proc.join()
