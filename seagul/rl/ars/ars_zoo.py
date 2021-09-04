@@ -8,7 +8,7 @@ import time
 import os
 from seagul.mesh import mesh_dim, dict_to_array
 from seagul.rl.common import make_schedule
-from seagul.zoo3_utils import load_zoo_agent, OFF_POLICY_ALGOS
+from seagul.zoo3_utils import load_zoo_agent, OFF_POLICY_ALGOS, SOFT_ALGOS
 import collections
 
 
