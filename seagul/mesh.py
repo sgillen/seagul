@@ -399,10 +399,11 @@ def adim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
     try:
         m,c, _, _ = mesh_dim(obs, **mdim_kwargs)
         m = np.clip(m, 0, obs.shape[1] / 2)
-        c = np.clip(m, 0, obs.shape[1] / 2)
+        c = np.clip(c, 0, obs.shape[1] / 2)
 
     except:
         m = obs.shape[1] / 2
+        c = obs.shape[1] / 2
 
     
     return (m+c)/2
@@ -445,7 +446,7 @@ class DualRewardLin:
         self.r2_fnc = r2_fnc
         self.a = a
         self.b = b
-        self.__name__ = "DualRewardDiv_" + r2_fnc.__name__
+        self.__name__ = "DualRewardLin_" + r2_fnc.__name__
 
         if r2_fnc_kwargs is None:
             r2_fnc_kwargs = {}
