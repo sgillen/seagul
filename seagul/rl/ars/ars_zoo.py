@@ -85,7 +85,7 @@ def get_on_policy_trainable(model):
     return model.policy.action_net.parameters()
 
 def get_off_policy_trainable(model):
-    return model.policy.actor.mu.parameters()
+    return model.policy.actor.parameters()
 
 class ARSZooAgent:
     """
