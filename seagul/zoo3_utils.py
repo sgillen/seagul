@@ -11,6 +11,7 @@ import time
 
 
 OFF_POLICY_ALGOS = ["qrdqn", "dqn", "ddpg", "sac", "her", "td3", "tqc"]
+SOFT_ALGOS = ["sac", "tqc"]
 
 def do_rollout_stable(env, model, render=False, render_wait=0.01, seed=None):
     state_list = []
