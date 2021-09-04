@@ -81,11 +81,27 @@ def do_rollout_train(env, model, postprocess):
 def postprocess_default(obs,acts,rews):
     return rews
 
-def get_on_policy_trainable(model):
+
+
+## Get different trainables for the bullet and classic envs ===============================================
+def get_last_on(model):
     return model.policy.action_net.parameters()
 
-def get_off_policy_trainable(model):
+def get_all_on(model):
+    return model.policy.parameters()
+
+def get_last_off(model):
+    return model.policy.actor.mu[4].parameters()
+
+def get_all_off(model):
+    return model.policy.actor.mu.parameters()
+
+def get_last_soft(model):
+    return model.policy.actor.mu.parameters()
+
+def get_all_soft(model):
     return model.policy.actor.parameters()
+
 
 class ARSZooAgent:
     """
@@ -108,7 +124,7 @@ class ARSZooAgent:
     """
     def __init__(self, env_name, algo, seed=None, env_config=None, n_workers=24, n_delta=32, n_top=None,
                  step_size=.02, exp_noise=0.03, reward_stop=None, postprocessor=postprocess_default,
-                 step_schedule=None, exp_schedule=None, epoch_seed=False
+                 step_schedule=None, exp_schedule=None, epoch_seed=False, train_all=False
                  ):
         self.env_name = env_name
         self.algo = algo
@@ -135,11 +151,22 @@ class ARSZooAgent:
             env_config = {}
         self.env_config = env_config
 
+        
+        if train_all:
+            if algo in SOFT_ALGOS:
+                self.get_trainable = get_all_soft
+            elif algo in OFF_POLICY_ALGOS:
+                self.get_trainable = get_all_off
+            else:
+                self.get_trainable = get_all_on
 
-        if algo in OFF_POLICY_ALGOS:
-            self.get_trainable = get_off_policy_trainable
         else:
-            self.get_trainable = get_on_policy_trainable  
+            if algo in SOFT_ALGOS:
+                self.get_trainable = get_last_soft
+            elif algo in OFF_POLICY_ALGOS:
+                self.get_trainable = get_last_off
+            else:
+                self.get_trainable = get_last_on
 
         env, model = load_zoo_agent(env_name,algo)
         
