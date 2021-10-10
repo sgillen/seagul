@@ -409,6 +409,13 @@ def adim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
     return (m+c)/2
 
 
+def act_squared(o,a,r):
+    if type(o[0]) == collections.OrderedDict:
+        o,ach,des = dict_to_array(o)
+        
+    return np.sum(a**2) #/np.abs(np.mean(np.diff(o, axis=0), axis=0)))
+
+
 # ===============================================================
 
 

@@ -16,7 +16,7 @@ import collections
 def worker_fn(worker_q, master_q, algo, env_id, postprocess, get_trainable, seed):
     torch.set_grad_enabled(False)
     env, model = load_zoo_agent(env_id, algo)
-
+    
     if seed:
         env.seed(seed)
     
@@ -229,12 +229,17 @@ class ARSZooAgent:
             pm_W = np.concatenate((self.W_flat+(deltas*self.exp_noise), self.W_flat-(deltas*self.exp_noise)))
 
             start = time.time()
+            seeds = np.random.randint(1,2**32-1,self.n_delta)
 
             for i,Ws in enumerate(pm_W):
-                if self.epoch_seed:
-                    epoch_seed = epoch
-                else:
-                    epoch_seed = None
+                # if self.epoch_seed:
+                #     epoch_seed = i%self.n_delta
+                # else:
+                #     epoch_seed = None
+
+                epoch_seed = int(seeds[i%self.n_delta])
+                #epoch_seed = None
+                    
                 master_q_list[i % self.n_workers].put((Ws, False, epoch_seed))
                 
             results = []

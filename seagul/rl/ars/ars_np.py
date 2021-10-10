@@ -53,7 +53,7 @@ def do_rollout_train(env, policy, postprocess):
         obs, reward, done, _ = env.step(actions)
 
         act_list.append(np.array(actions))
-        reward_list.append(reward)
+        reward_list.append(reward-1)
 
 
     state_arr = np.stack(state_list)
@@ -134,6 +134,9 @@ class ARSAgent:
         if env_name == "bball3-v1":
             obs_size = 10
             act_size = 3
+        elif env_name == "bball_1dof-v0":
+            obs_size = 4
+            act_size = 1
         else:
             env = gym.make(self.env_name, **self.env_config)
             obs_size = env.observation_space.shape[0]
@@ -233,6 +236,7 @@ class ARSAgent:
             self.total_epochs += 1
 
             W_flat = W_flat + (self.step_size / (self.n_delta * np.concatenate((p_returns, m_returns)).std() + 1e-6)) * np.sum((p_returns - m_returns)*deltas[top_idx].T, axis=1)
+            #import ipdb; ipdb.set_trace()
             self.W = W_flat.reshape(self.W.shape[0], self.W.shape[1])
 
 
@@ -250,7 +254,7 @@ if __name__ == "__main__":
     import seagul.envs
     import matplotlib.pyplot as plt
 
-    env_name = "Humanoid-v2"
+    env_name = "Hopper-v2"
     env = gym.make(env_name)
     in_size = env.observation_space.shape[0]
     out_size = env.action_space.shape[0]
@@ -262,7 +266,7 @@ if __name__ == "__main__":
 
     import time
     start = time.time()
-    agent = ARSAgent(env_name, seed=0, n_workers=24, n_delta=240, n_top=240, exp_noise=0.0075)
+    agent = ARSAgent(env_name, seed=0, n_workers=8, n_delta=8, n_top=8, exp_noise=0.03)
     rews = agent.learn(500)
     print(time.time() - start)
     print(rews)
