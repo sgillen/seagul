@@ -8,12 +8,10 @@ import panda_gym
 
 import time
 
-
-
 OFF_POLICY_ALGOS = ["qrdqn", "dqn", "ddpg", "sac", "her", "td3", "tqc"]
 SOFT_ALGOS = ["sac", "tqc"]
 
-def do_rollout_stable(env, model, render=False, render_wait=0.01, seed=None):
+def do_rollout_stable(env, model, render=False, render_wait=0.01, seed=None, return_on_done=True, num_steps=1000, override_reset=False):
     state_list = []
     act_list = []
     reward_list = []
@@ -23,7 +21,8 @@ def do_rollout_stable(env, model, render=False, render_wait=0.01, seed=None):
     obs = env.reset()
     done = False
 
-    while not done:
+    cur_step = 0
+    while cur_step < num_steps:
         state_list.append(np.copy(obs))
         
         actions,_ = model.predict(obs, deterministic=True)
@@ -35,6 +34,14 @@ def do_rollout_stable(env, model, render=False, render_wait=0.01, seed=None):
         
         act_list.append(np.copy(actions))
         reward_list.append(reward)
+        
+        if done and return_on_done:
+            break
+        cur_step+=1
+        if override_reset:
+            if env.env.needs_reset:
+                print("Needs Reset")
+            env.env.needs_reset=False
 
     state_arr = np.stack(state_list).squeeze()
     act_arr = np.stack(act_list).squeeze()
