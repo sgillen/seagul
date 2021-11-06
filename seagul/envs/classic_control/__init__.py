@@ -20,3 +20,5 @@ from seagul.envs.classic_control.dt_pendulum import PendulumDtEnv
 from seagul.envs.classic_control.deadzone_quadcopter import DeadzoneQuadCopter
 from seagul.envs.classic_control.planar_quadcopter import PlanarQuadCopter
 from seagul.envs.classic_control.linear import LinearEnv
+
+from seagul.envs.classic_control.lqr import LQREnv

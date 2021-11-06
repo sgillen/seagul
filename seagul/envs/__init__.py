@@ -13,6 +13,7 @@ register(id="linear_z-v0", entry_point="seagul.envs.simple_nonlinear:LinearEnv")
 register(id="gen_nonlin-v0", entry_point="seagul.envs.simple_nonlinear:GenEnv")
 register(id="tree_simple-v0", entry_point="seagul.envs.simple_nonlinear:TreeSimple")
 register(id="tree_multi-v0", entry_point="seagul.envs.simple_nonlinear:TreeMulti")
+register(id="lqr-v0", entry_point="seagul.envs.classic_control:LQREnv")
 
 
 register(id="dyn_car-v0", entry_point="seagul.envs.car:DynCarEnv")
