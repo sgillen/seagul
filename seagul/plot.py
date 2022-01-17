@@ -68,7 +68,12 @@ def smooth_bounded_curve(
     ax=None,
     window=100,
     color='k',
-    alpha=.2
+    fill_color = 'k',
+    alpha=.2,
+    lower_bound_fn = np.min,
+    upper_bound_fn = np.max,
+    
+        
 ):
     """
     Plots the (smoothed) average for many time series plots, as well as plotting the min/max on the same figure
@@ -94,6 +99,13 @@ def smooth_bounded_curve(
         ax.set_xlabel("My label") # Can modify whatever you want about the plot afterwards
         plt.show() # not needed in jupyter
 
+    Example: +- std
+        from seagul.plot import smooth_bounded_curve
+        random_data = np.random.random((1000,10))
+        fig, ax = smooth_bounded_curve(random_data, 
+                                       lower_bound_fn = lambda x: np.mean(x)-np.std(x), 
+                                       upper_bound_fn = lambda x: np.mean(x)+np.std(x))
+                                      
     Arguments:
          data: np.array of shape (t,n) where t is the number of timesteps in your data, and n is the number of curves you have
          time_steps: np.array of shape (t,1) containing the timesteps corresponding to the data, if None every datapoint is assigned to one timestep
@@ -101,8 +113,11 @@ def smooth_bounded_curve(
          ax: matplotlib.Axes object to draw the curves on, if None we will make a new object for you
          window: How large of a window to use for the moving average smoothing
          color: what color to make the curve
+         fill_color: what color to make the shaded area
          alpha: alpha to use for the fillin between min and max values
          time_steps: list or np array labeling the x axis, must be same size as reward curves
+         lower_bound_fn: callable to determine the lower bound of the shaded area for each time step
+         upper_bound_fn: callable to determine the upper bound of the shaded area for each time step
 
     Returns:
         fig: figure object if we created one, else None
@@ -121,8 +136,8 @@ def smooth_bounded_curve(
         avg_data += data[:,i]
       
     avg_data /= data.shape[1]
-    min_data = [np.min(data[i,:]) for i in range(data.shape[0])]
-    max_data = [np.max(data[i,:]) for i in range(data.shape[0])]
+    min_data = [lower_bound_fn(data[i,:]) for i in range(data.shape[0])]
+    max_data = [upper_bound_fn(data[i,:]) for i in range(data.shape[0])]
 
     if len(avg_data) > window:
         min_data = pd.Series(min_data).rolling(window, min_periods=10).mean()
@@ -132,7 +147,7 @@ def smooth_bounded_curve(
     if time_steps is None:
         time_steps = [i for i in range(data.shape[0])]
     ax.plot(time_steps, avg_data, color=color, label=label)
-    ax.fill_between(time_steps, min_data, max_data, color=color, alpha=.2)
+    ax.fill_between(time_steps, min_data, max_data, color=fill_color, alpha=.2)
 
     if label != None: # add a legend without multiple labels
         handles, labels = plt.gca().get_legend_handles_labels()
