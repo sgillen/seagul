@@ -9,6 +9,7 @@ import os
 from seagul.mesh import mesh_dim, dict_to_array
 from seagul.rl.common import make_schedule
 from seagul.zoo3_utils import load_zoo_agent, OFF_POLICY_ALGOS, SOFT_ALGOS
+import stable_baselines3
 import collections
 
 
@@ -43,6 +44,7 @@ def do_rollout_train(env, model, postprocess):
     
     state_list = []
     act_list = []
+    mean_list = []
     reward_list = []
 
     obs = env.reset()
@@ -52,28 +54,40 @@ def do_rollout_train(env, model, postprocess):
         state_list.append(np.copy(obs))
 
         before_predict = time.time()
-        actions,_= model.predict(obs, deterministic=True)
+
+        if type(model.policy) == stable_baselines3.common.policies.ActorCriticCnnPolicy:
+            tobs, venv = model.policy.obs_to_tensor(obs)
+            latent_pi, b, latent_sde = model.policy._get_latent(tobs)
+            means = model.policy.action_net(latent_pi)
+            distribution = model.policy._get_action_dist_from_latent(latent_pi, latent_sde)
+            actions = distribution.get_actions(deterministic=True).detach().cpu().numpy()
+        else:
+            actions,_= model.predict(obs, deterministic=True)
+            means = actions
+            
         predict_time += (time.time() - before_predict)
-        
+
         before_step = time.time()
         obs, reward, done, _ = env.step(actions)
         step_time += (time.time() - before_step)
         
         act_list.append(np.copy(actions))
+        mean_list.append(means.detach().cpu().numpy())
         reward_list.append(reward)
 
 
     state_arr = np.stack(state_list).squeeze()
     act_arr = np.stack(act_list).squeeze()
+    mean_arr = np.stack(mean_list).squeeze()
     preprocess_sum = np.array(sum(reward_list))
 
     state_arr_n = state_arr
 
-    reward_list = postprocess(state_arr_n, act_arr, np.array(reward_list))
+    reward_list = postprocess(state_arr_n, mean_arr, np.array(reward_list))
     reward_sum = (np.sum(reward_list).item())
     total_time = time.time() - before_loop
     
-    #Print(f"{len(reward_list)}: predict_time:{predict_time}------step_time:{step_time}-----unacount_time{total_time - predict_time - step_time}")
+    #print(f"{len(reward_list)}: predict_time:{predict_time}------step_time:{step_time}-----unacount_time{total_time - predict_time - step_time}")
 
     return state_arr, reward_sum, preprocess_sum
 
@@ -173,12 +187,16 @@ class ARSZooAgent:
         self.model = model
 
 
+
         if type(env.observation_space) == gym.spaces.dict.Dict:
             self.obs_size = env.observation_space['observation'].shape
         else:
             self.obs_size = env.observation_space.shape[0]
 
-        self.act_size = env.action_space.shape[0]
+        if type(env.action_space) == gym.spaces.discrete.Discrete:
+            self.act_size = 1
+        else:
+            self.act_size = env.action_space.shape[0]
         
         W_torch = torch.nn.utils.parameters_to_vector(self.get_trainable(self.model))
         self.W_flat = W_torch.detach().numpy()

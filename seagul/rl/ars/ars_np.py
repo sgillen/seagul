@@ -44,13 +44,18 @@ def do_rollout_train(env, policy, postprocess):
     act_list = []
     reward_list = []
 
+#    print("reseting")
     obs = env.reset()
+#    print("reset")
+    
     done = False
     while not done:
         state_list.append(np.copy(obs))
 
         actions,_,_,_ = policy.step(obs)
+ #       print("stepping")
         obs, reward, done, _ = env.step(actions)
+ #       print("step")
 
         act_list.append(np.array(actions))
         reward_list.append(reward-1)
@@ -135,8 +140,8 @@ class ARSAgent:
             obs_size = 10
             act_size = 3
         elif env_name == "bball_1dof-v0":
-            obs_size = 4
-            act_size = 1
+            obs_size = 10
+            act_size = 5
         else:
             env = gym.make(self.env_name, **self.env_config)
             obs_size = env.observation_space.shape[0]

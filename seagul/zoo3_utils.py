@@ -51,7 +51,7 @@ def do_rollout_stable(env, model, render=False, render_wait=0.01, seed=None, ret
 
 
 
-def load_zoo_agent(env_name, algo, seed=None, render=False, env_kwargs = None, zoo_path = "/home/sgillen/work/external/rl-baselines3-zoo"):
+def load_zoo_agent(env_name, algo, seed=None, render=False, env_kwargs = None, device='cpu', zoo_path = "/home/sgillen/work/external/rl-baselines3-zoo"):
 
 
     if env_kwargs is None:
@@ -86,7 +86,7 @@ def load_zoo_agent(env_name, algo, seed=None, render=False, env_kwargs = None, z
             "clip_range": lambda _: 0.0,
         }
 
-    model = ALGOS[algo].load(model_path, env=env, custom_objects=custom_objects, device='cpu')
+    model = ALGOS[algo].load(model_path, env=env, custom_objects=custom_objects, device=device)
 
     return env, model
 
