@@ -391,7 +391,6 @@ def cdim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
     return c
 
 
-
 def adim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
     
     if type(obs[0]) == collections.OrderedDict:
@@ -407,6 +406,22 @@ def adim_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
 
     
     return (m+c)/2
+
+
+def adim_act_safe_stable_nolen(obs, act, rew, mdim_kwargs={}):
+    
+    try:
+        m,c, _, _ = mesh_dim(act, **mdim_kwargs)
+        m = np.clip(m, 0, act.shape[1] / 2)
+        c = np.clip(c, 0, act.shape[1] / 2)
+
+    except:
+        m = act.shape[0] / 2
+        c = act.shape[0] / 2
+
+    
+    return (m+c)/2
+
 
 
 def act_squared(o,a,r):
