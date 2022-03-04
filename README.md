@@ -5,7 +5,7 @@
 >  \- Major General William H. Rupertus 
 
 
-A generic utility library for deep reinforcement learning. I built this throughout my PhD as sort of a personal swiss-army knife for my research. There are other libraries, big and small, that do similar things, but this one is mine. 
+A generic utility library for deep reinforcement learning. I built this throughout my PhD as sort of a personal swiss-army knife for my research. There are other libraries that do similar things, this one is mine. 
 
 Highlights include:
 
