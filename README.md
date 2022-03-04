@@ -30,7 +30,7 @@ If you are a student working with me, or someone looking to extend my previous w
 This is a python package, so you can install it with:
 
 ```
-python -m pip install git+https://github.com/sgillen/seagul
+pip install git+https://github.com/sgillen/seagul
 ```
 
 Or if you want to make changes:
