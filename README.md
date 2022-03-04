@@ -17,17 +17,23 @@ Highlights include:
 
 - [Custom OpenAI gym environments](./seagul/envs), That I've studied at some point or another in my research. 
 
-- [Experiment utilities](./seagul/rl/run_utils), For saving RL experiments along with meta data, logs, and a mechanism to restore the trained agents.
+- [Experiment utilities](./seagul/rl/run_utils.py), For saving RL experiments along with meta data, logs, and a mechanism to restore the trained agents.
 
 
 ## Who should use this?
 
 If you just want to get your feet wet with deep RL there are better places to start, I usually recomend [stable-baselines3](https://github.com/DLR-RM/stable-baselines3). Most of the value of something like this is that I personally know it inside and out, but that won't be an advantage to someone out. 
 
-If you are extending my previous work or something though you are in the right place.
+If you are a student working with me, or someone looking to extend my previous work, you've come to the right place.
 
 ## Installation
 This is a python package, so you can install it with:
+
+```
+python -m pip install git+https://github.com/sgillen/seagul
+```
+
+Or if you want to make changes:
 
 ```
 git clone https://github.com/sgillen/seagul
